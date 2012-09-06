@@ -30,6 +30,7 @@ class SGFS(object):
     def _fetch_entity_parents(self, entities):
         
         cache = {}
+        
         entities = copy.deepcopy(list(entities))
         to_resolve = entities[:]
         
@@ -37,8 +38,6 @@ class SGFS(object):
             entity = to_resolve.pop(0)
             
             cache_key = (entity['type'], entity['id'])
-            if cache_key in cache:
-                continue
             cache[cache_key] = entity
             
             # Figure out where to find parents.
@@ -50,21 +49,20 @@ class SGFS(object):
 
             # It is already there.
             if parent_attr in entity:
-                to_resolve.append(entity[parent_attr])
-                continue
+                parent = entity[parent_attr]
             
             # Get the parent.
-            parent = self.shotgun.find(entity['type'], [
-                ('id', 'is', entity['id']),
-            ], (parent_attr, ))[0][parent_attr]
-            parent_key = (parent['type'], parent['id'])
-            if parent_key in cache:
-                parent = cache[parent_key]
             else:
-                to_resolve.append(parent)
+                parent = self.shotgun.find(entity['type'], [
+                    ('id', 'is', entity['id']),
+                ], (parent_attr, ))[0][parent_attr]
             
-            # Mark it down.
+            parent_key = (parent['type'], parent['id'])
+            parent = cache.setdefault(parent_key, parent)
+            
+            # Mark it down, and prepare for next loop.
             entity[parent_attr] = parent
+            to_resolve.append(parent)
         
         return entities
         
