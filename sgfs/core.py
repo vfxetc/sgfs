@@ -20,17 +20,16 @@ class SGFS(object):
         
         self.shotgun = shotgun or shotgun_api3_registry.connect(__test__)
     
-    def context_from_entities(self, entities):
-        """Construct a Context graph which includes all of the given entities."""
-        
-        # If we are given a project then use it for the cache, otherwise query
-        # the 'project.Project.code' for all provided original entities.
-        pass
-    
     def _fetch_entity_parents(self, entities):
+        """Assert a full parental chain all the way up to the root Projects.
+        
+        TODO: Fetch this from tags on disk.
+        
+        Note: All equivalent entities will be the same dictionary.
+        
+        """
         
         cache = {}
-        
         entities = copy.deepcopy(list(entities))
         to_resolve = entities[:]
         
@@ -65,11 +64,24 @@ class SGFS(object):
             to_resolve.append(parent)
         
         return entities
-        
-        # Find all parents that we don't know about until everything is rooted
-        # at a single Project. Look for them in the path cache, eventually.
+    
+    def context_from_entities(self, entities):
+        """Construct a Context graph which includes all of the given entities."""
+            
+        # Resolve all parents up to the Project.
+        entities = self._fetch_entity_parents(entities)
         
         # Error if there are multiple projects.
+        projects = set()
+        for entity in entities:
+            while parent(entity):
+                entity = parent(entity)
+            projects.add(entity['id'])
+        if len(projects) != 1:
+            raise ValueError('There is no common Project parent')
+        
+        # If we are given a project then use it for the cache, otherwise query
+        # the 'project.Project.code' for all provided original entities.        
         
         # Reverse the parent relationships to construct a Context graph
         
