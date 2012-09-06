@@ -1,0 +1,7 @@
+children:
+    Asset:
+        config: /Asset.yml
+        root_path: Assets
+    Sequence:
+        config: /Sequence.yml # Slash is relative to config root.
+        root_path: SEQ

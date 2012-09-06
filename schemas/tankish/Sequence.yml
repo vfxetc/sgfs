@@ -1,0 +1,5 @@
+name_expr: code
+
+children:
+    Shot:
+        config: /Shot.yml
