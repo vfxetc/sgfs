@@ -5,9 +5,11 @@ import itertools
 
 from sgfs import SGFS
 
-from . import fixtures
-fixtures.setup_sequences()
-from .fixtures import *
+
+def setUpModule():
+    from . import fixtures
+    fixtures.setup_sequences()
+    globals().update(fixtures.__dict__)
 
 
 class TestContext(TestCase):

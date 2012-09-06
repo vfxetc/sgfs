@@ -29,6 +29,10 @@ class Session(object):
     
     def find(self, type_, filters, fields=None, *args, **kwargs):
         return [self.as_entity(x) for x in self.shotgun.find(type_, filters, fields, *args, **kwargs)]
+    
+    def find_one(self, type_, filters, fields=None, *args, **kwargs):
+        return self.as_entity(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
+        
 
     
 _parent_fields = {
