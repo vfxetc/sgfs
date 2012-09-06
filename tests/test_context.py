@@ -1,11 +1,19 @@
+from pprint import pprint
+from subprocess import call
 from unittest import TestCase
-import time
-import os
-import itertools
 import datetime
+import itertools
+import os
+import time
 
 import shotgun_api3_registry
 
+from sgfs import SGFS
+from sgfs.utils import parent
+
+
+timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+root = os.path.join(os.path.dirname(__file__), 'root_' + timestamp)
 
 sg = None
 project = {}
@@ -14,17 +22,22 @@ shots = []
 tasks = []
 
 
+
 def mini_uuid():
     return os.urandom(4).encode('hex')
 
 
 def setUpModule():
     
+    if not os.path.exists(root):
+        os.makedirs(root)
+    
     global sg
     sg = shotgun_api3_registry.connect(name='sgfs.tests', server='testing')
     
     project.update(sg.create('Project', dict(
-        name='test_project_%s' % (datetime.datetime.now().strftime('%Y%m%d_%H%M%S')),
+        name='test_project_%s' % (timestamp),
+        sg_code='test_project_%s' % (timestamp), # Only on test server.
         sg_description='For unit testing.',
     )))
     
@@ -50,6 +63,9 @@ def tearDownModule():
     
     return
     
+    if os.path.exists(root):
+        call(['rm', '-rf', root])
+    
     # Delete all entities.
     if not sg:
         return
@@ -62,6 +78,19 @@ def tearDownModule():
 
 class TestContext(TestCase):
     
-    def test_true(self):
-        self.assert_(True)
-    
+    def setUp(self):
+        self.sgfs = SGFS(root=root, shotgun=sg)
+        
+    def test_fetch_single_parent(self):
+        resolved = self.sgfs._fetch_entity_parents([shots[-1]])
+        shot = resolved[0]
+        
+        pprint(shot)
+        pprint(parent(shot))
+        pprint(parent(parent(shot)))
+        
+        self.assertEqual(shot['id'], shots[-1]['id'])
+        self.assertEqual(parent(shot)['id'], sequences[-1]['id'])
+        self.assertEqual(parent(parent(shot))['id'], project['id'])
+        
+        
