@@ -3,7 +3,7 @@ import copy
 
 import shotgun_api3_registry
 
-from . import utils
+from .shotgun import Session
 
 
 class SGFS(object):
@@ -17,53 +17,9 @@ class SGFS(object):
         self.root = root
         
         self.project = project
+        self.shotgun = shotgun
+        self.session = Session(self.shotgun)
         
-        self.shotgun = shotgun or shotgun_api3_registry.connect(__test__)
-    
-    def _fetch_entity_parents(self, entities):
-        """Assert a full parental chain all the way up to the root Projects.
-        
-        TODO: Fetch this from tags on disk.
-        
-        Note: All equivalent entities will be the same dictionary.
-        
-        """
-        
-        cache = {}
-        entities = copy.deepcopy(list(entities))
-        to_resolve = entities[:]
-        
-        while to_resolve:
-            entity = to_resolve.pop(0)
-            
-            cache_key = (entity['type'], entity['id'])
-            cache[cache_key] = entity
-            
-            # Figure out where to find parents.
-            parent_attr = utils.parent_fields.get(entity['type'])
-            
-            # Doesn't have a parent.
-            if not parent_attr:
-                continue
-
-            # It is already there.
-            if parent_attr in entity:
-                parent = entity[parent_attr]
-            
-            # Get the parent.
-            else:
-                parent = self.shotgun.find(entity['type'], [
-                    ('id', 'is', entity['id']),
-                ], (parent_attr, ))[0][parent_attr]
-            
-            parent_key = (parent['type'], parent['id'])
-            parent = cache.setdefault(parent_key, parent)
-            
-            # Mark it down, and prepare for next loop.
-            entity[parent_attr] = parent
-            to_resolve.append(parent)
-        
-        return entities
     
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
