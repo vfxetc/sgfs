@@ -176,7 +176,7 @@ class TestImportantFields(TestCase):
         proj.pprint()
         print
         
-        task.fetch_base()
+        task.fetch_core()
         
         self.assert_('entity' in task)
         self.assert_('project' in task)

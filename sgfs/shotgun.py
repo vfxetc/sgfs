@@ -82,6 +82,11 @@ class Session(object):
             return results[0]
         return None
     
+    def get(self, type_, id_, fetch=True):
+        try:
+            return self.cache[(type_, id_)]
+        except KeyError:
+            return self.find_one(type_, [('id', 'is', id_)])
     
     def _fetch(self, entities, fields, force=False):
         
@@ -111,7 +116,7 @@ class Session(object):
         for type_, entities in by_type.iteritems():
             self._fetch(entities, fields, *args, **kwargs)
 
-    def fetch_bases(self, to_fetch):
+    def fetch_core(self, to_fetch):
         by_type = {}
         for x in to_fetch:
             by_type.setdefault(x['type'], set()).add(x)
@@ -159,7 +164,7 @@ class Session(object):
 class Entity(dict):
     
     def __repr__(self):
-        return '<Entity %s:%s at 0x%x; %s>' % (self.get('type'), self.get('id'), id(self), dict.__repr__(self))
+        return '<Entity %s:%s at 0x%x>' % (self.get('type'), self.get('id'), id(self))
     
     def __hash__(self):
         type_ = self.get('type')
@@ -250,18 +255,55 @@ class Entity(dict):
     def fetch(self, *args, **kwargs):
         self.session.fetch([self], *args, **kwargs)
     
-    def fetch_base(self):
-        self.session.fetch_bases([self])
+    def fetch_core(self):
+        self.session.fetch_core([self])
     
     def fetch_heirarchy(self):
         self.session.fetch_heirarchy([self])
     
     def parent(self, fetch=True):
-        name = self.session._parent_fields[self['type']]
+        
+        try:
+            field = self.session._parent_fields[self['type']]
+        except KeyError:
+            raise KeyError('%s does not have a parent type defined' % self['type'])
+        
+        # Fetch it if it exists (e.g. this isn't a Project) and we are allowed
+        # to fetch.
+        if field and fetch:
+            self.fetch(field)
+            self.setdefault(field, None)
+        
+        return self.get(field)
+    
+    def project(self, fetch=True):
+        
+        # The most straightforward way.
+        try:
+            return self['project']
+        except KeyError:
+            pass
+        
+        # Pass up the parental chain looking for a project.
+        project = None
+        parent = self.parent(fetch=False)
+        if parent:
+            if parent['type'] == 'Project':
+                project = parent
+            else:
+                project = parent.project()
+        
+        # If we were given one from the parent, assume it.
+        if project:
+            self['project'] = project
+            return project
+        
         if fetch:
-            self.fetch(name)
-            self.setdefault(name, None)
-        return self.get(name)
+            # Fetch it ourselves; this should happen to the uppermost in a
+            # heirachy that is not a Project.
+            self.fetch(['project'])
+            return self.setdefault('project', None)
+        
     
     def fetch_to_project(self):
         pass
