@@ -132,6 +132,9 @@ class TestHeirarchy(TestCase):
     def test_fetch_shot_heirarchy(self):
         
         shots = [self.session.merge(x) for x in fixtures.shots]
+        seqs = [self.session.merge(x) for x in fixtures.sequences]
+        proj = self.session.merge(fixtures.project)
+        
         self.session.fetch_heirarchy(shots)
         
         for x in shots:
@@ -149,6 +152,12 @@ class TestHeirarchy(TestCase):
         self.assert_(shots[0].parent() is shots[1].parent())
         self.assert_(shots[0].parent() is not shots[2].parent())
         self.assert_(shots[2].parent() is shots[3].parent())
+        
+        # Backrefs
+        for seq in seqs:
+            self.assert_(seq in proj.backrefs[('Sequence', 'project')])
+        for shot in shots:
+            self.assert_(shot in proj.backrefs[('Shot', 'project')])
 
 
 class TestImportantFields(TestCase):

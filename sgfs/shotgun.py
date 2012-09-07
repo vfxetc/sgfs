@@ -163,6 +163,26 @@ class Session(object):
 
 class Entity(dict):
     
+    @staticmethod
+    def _cache_key(data):
+        type_ = data.get('type')
+        id_ = data.get('id')
+        if type_ and id_:
+            return (type_, id_)
+        elif type_:
+            return ('New-%s' % type_, id(data))
+        else:
+            return ('Unknown', id_)
+    
+    def __init__(self, type_, id_, session):
+        dict.__init__(self, type=type_, id=id_)
+        self.session = session
+        self.backrefs = {}
+    
+    @property
+    def cache_key(self):
+        return self._cache_key(self)
+    
     def __repr__(self):
         return '<Entity %s:%s at 0x%x>' % (self.get('type'), self.get('id'), id(self))
     
@@ -198,25 +218,6 @@ class Entity(dict):
                 print '%s%s = %r' % ('\t' * depth, k, v)
         depth -= 1
         print '\t' * depth + '}'
-                
-    @staticmethod
-    def _cache_key(data):
-        type_ = data.get('type')
-        id_ = data.get('id')
-        if type_ and id_:
-            return (type_, id_)
-        elif type_:
-            return ('New-%s' % type_, id(data))
-        else:
-            return ('Unknown', id_)
-    
-    @property
-    def cache_key(self):
-        return self._cache_key(self)
-        
-    def __init__(self, type_, id_, session):
-        dict.__init__(self, type=type_, id=id_)
-        self.session = session
     
     def __setitem__(self, key, value):
         dict.__setitem__(self, key, self.session.merge(value))
@@ -241,6 +242,9 @@ class Entity(dict):
                     dst[k]['type'] != v['type'] or
                     dst[k]['id']   != v['id']
                 ):
+                    # Establish backref.
+                    v.backrefs.setdefault((dst['type'], k), []).append(dst)
+                    # Set the attribute.
                     dst[k] = v
                 else:
                     self._update(dst[k], v, depth + 1)
