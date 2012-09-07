@@ -4,6 +4,7 @@ import copy
 import shotgun_api3_registry
 
 from .shotgun import Session
+from .context import Context
 
 
 class SGFS(object):
@@ -23,9 +24,11 @@ class SGFS(object):
     
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
-            
-        # Resolve all parents up to the Project.
-        entities = self._fetch_entity_parents(entities)
+        
+        
+        entities = [self.session.merge(x) for x in entities]
+        
+        self.session.fetch_heirarchy(entities)
         
         # Error if there are multiple projects.
         projects = set()

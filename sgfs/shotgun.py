@@ -82,35 +82,36 @@ class Session(object):
             return results[0]
         return None
     
-    def fetch_heirarchy(self, entities):
+    def _fetch_first(self, entities):
+        types = {}
+        for x in entities:
+            types.setdefault(x['type'], set()).add(x)
+        return max(types.iteritems(), key=lambda x: len(x[1]))
+    
+    def fetch_heirarchy(self, to_fetch):
         """Populate the parents as far up as we can go."""
         
-        to_resolve = []
-        while entities or to_resolve:
+        to_resolve = set()
+        while to_fetch or to_resolve:
 
             # Go as far up as we already have for the specified entities.
-            for entity in entities:
+            for entity in to_fetch:
                 while entity.parent(fetch=False):
                     entity = entity.parent()
                 if entity['type'] != 'Project':
-                    to_resolve.append(entity)
+                    to_resolve.add(entity)
             
             # Bail.
             if not to_resolve:
                 break
             
-            # Find the type that we have the most entities of.
-            types = {}
-            for x in to_resolve:
-                types.setdefault(x['type'], []).append(x)
-            entities = max(types.itervalues(), key=len)
-            
-            # Remove them from the list to resolve.
-            to_resolve = [x for x in to_resolve if x['type'] != entities[0]['type']]
+            # Find the type that we have the most entities of, and remove them
+            # from the list to resolve.
+            type_, to_fetch = self._fetch_first(to_resolve)
+            to_resolve.difference_update(to_fetch)
             
             # Fetch the parent names.
-            type_ = entities[0]['type']
-            ids = list(set([x['id'] for x in entities]))
+            ids = [x['id'] for x in to_fetch]
             parent_name = self._parent_fields[type_]
             self.find(type_, [['id', 'in'] + ids], [parent_name])
     
@@ -123,6 +124,13 @@ class Entity(dict):
     
     def __repr__(self):
         return '<Entity %s:%s at 0x%x; %s>' % (self.get('type'), self.get('id'), id(self), dict.__repr__(self))
+    
+    def __hash__(self):
+        type_ = self.get('type')
+        id_ = self.get('id')
+        if not (type_ and id_):
+            raise TypeError('entity must have type and id to be hashable')
+        return hash((type_, id_))
     
     def pprint(self, depth=0, visited=None):
         print '%s:%s at 0x%x;' % (self.get('type'), self.get('id'), id(self)),
