@@ -1,6 +1,8 @@
 from subprocess import call
 import datetime
 import os
+import atexit
+import itertools
 
 import shotgun_api3_registry
 
@@ -58,14 +60,14 @@ def setup_sequences():
         sequences.append(dict(type="Sequence", id=x['id']))
     
     batch = []
-    for seq in sequences:
+    for seq_code, seq in zip(('AA', 'BB'), sequences):
         for shot_i in range(1, 3):
             batch.append(dict(
                 request_type='create',
                 entity_type='Shot',
                 data=dict(
-                    description='Test Shot %s-%s' % (seq['id'], shot_i),
-                    code='%03d_%03d' % (seq['id'], shot_i),
+                    description='Test Shot %s-%s' % (seq_code, shot_i),
+                    code='%s_%03d' % (seq_code, shot_i),
                     sg_sequence=seq,
                     project=project,
                 )
@@ -98,11 +100,9 @@ def setup_tasks():
             
             
     
-
+@atexit.register
 def tear_down():
-    
-    return
-    
+        
     if os.path.exists(root):
         call(['rm', '-rf', root])
     

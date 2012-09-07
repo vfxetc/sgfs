@@ -18,6 +18,7 @@ class TestCase(BaseTestCase):
 
     def setUp(self):
         self.session = Session(sg)
+        
 
 
 class TestEntityMerge(TestCase):
@@ -132,19 +133,5 @@ class TestHeirarchy(TestCase):
         self.assert_(shots[0].parent() is shots[1].parent())
         self.assert_(shots[0].parent() is not shots[2].parent())
         self.assert_(shots[2].parent() is shots[3].parent())
-        
-    # def test_fetch_task_heirarchy(self):
-    #     
-    #     tasks = [self.session.merge(x) for x in fixtures.tasks]
-    #     for x in tasks:
-    #         x.pprint()
-    #         print
-    #     
-    #     self.session.fetch_heirarchy(tasks)
-    #     for x in tasks:
-    #         x.pprint()
-    #         print
-        
-        
         
         
