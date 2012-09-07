@@ -6,10 +6,11 @@ import shotgun_api3_registry
 from sgfs import SGFS
 from sgfs.shotgun import Session, Entity
 
+from . import fixtures
+
 
 def setUpModule():
-    from . import fixtures
-    fixtures.setup_project()
+    fixtures.setup_tasks()
     globals().update(fixtures.__dict__)
     
 
@@ -83,7 +84,7 @@ class TestEntityFetch(TestCase):
         self.assertEqual(shot['project']['id'], project['id'])
         
         shot['project'].fetch(['sg_description'])
-        self.assertEqual(shot['project']['sg_description'], project['sg_description'])
+        self.assert_(shot['project']['sg_description'])
         
         project_entity = self.session.find_one('Project', [
             ('id', 'is', project['id']),
@@ -108,5 +109,42 @@ class TestEntityFetch(TestCase):
         shot.fetch(['project'])
         self.assert_(shot['project'] is proj)
         
-        
+
+class TestHeirarchy(TestCase):
     
+    def test_fetch_shot_heirarchy(self):
+        
+        shots = [self.session.merge(x) for x in fixtures.shots]
+        self.session.fetch_heirarchy(shots)
+        
+        for x in shots:
+            x.pprint()
+            print
+        
+        self.assertEqual(shots[0].parent()['id'], sequences[0]['id'])
+        self.assertEqual(shots[1].parent()['id'], sequences[0]['id'])
+        self.assertEqual(shots[2].parent()['id'], sequences[1]['id'])
+        self.assertEqual(shots[3].parent()['id'], sequences[1]['id'])
+        
+        for shot in shots[1:]:
+            self.assert_(shot.parent().parent() is shots[0].parent().parent())
+        
+        self.assert_(shots[0].parent() is shots[1].parent())
+        self.assert_(shots[0].parent() is not shots[2].parent())
+        self.assert_(shots[2].parent() is shots[3].parent())
+        
+    # def test_fetch_task_heirarchy(self):
+    #     
+    #     tasks = [self.session.merge(x) for x in fixtures.tasks]
+    #     for x in tasks:
+    #         x.pprint()
+    #         print
+    #     
+    #     self.session.fetch_heirarchy(tasks)
+    #     for x in tasks:
+    #         x.pprint()
+    #         print
+        
+        
+        
+        

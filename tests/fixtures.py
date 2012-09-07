@@ -29,30 +29,72 @@ def setup_project():
     if not project:
         if not os.path.exists(root):
             os.makedirs(root)
-        project.update(sg.create('Project', dict(
+        project.update(type="Project", id=sg.create('Project', dict(
             name='test_project_%s' % (timestamp),
             sg_code='test_project_%s' % (timestamp), # Only on test server.
             sg_description='For unit testing.',
-        )))
+        ))['id'])
 
 
 def setup_sequences():
+    
+    if sequences:
+        return
+    
     setup_project()
-    if not sequences:
-        for seq_code in ('AA', 'BB'):
-        
-            sequences.append(sg.create('Sequence', dict(
+    
+    batch = []
+    
+    for seq_code in ('AA', 'BB'):
+        batch.append(dict(
+            request_type='create',
+            entity_type='Sequence',
+            data=dict(
                 code=seq_code,
                 project=project,
-            )))
-        
-            for shot_i in range(1, 3):
-                shots.append(sg.create('Shot', dict(
-                    description='Test Shot %s-%s' % (seq_code, shot_i),
-                    code='%s_%03d' % (seq_code, shot_i),
-                    sg_sequence=sequences[-1],
+            )
+        ))
+    for x in sg.batch(batch):
+        sequences.append(dict(type="Sequence", id=x['id']))
+    
+    batch = []
+    for seq in sequences:
+        for shot_i in range(1, 3):
+            batch.append(dict(
+                request_type='create',
+                entity_type='Shot',
+                data=dict(
+                    description='Test Shot %s-%s' % (seq['id'], shot_i),
+                    code='%03d_%03d' % (seq['id'], shot_i),
+                    sg_sequence=seq,
                     project=project,
-                )))
+                )
+            ))
+    for x in sg.batch(batch):
+        shots.append(dict(type="Shot", id=x['id']))
+    
+
+def setup_tasks():
+    
+    if tasks:
+        return
+    
+    setup_sequences()
+    
+    batch = []
+    for shot in shots:
+        for i in range(3):
+            batch.append(dict(
+                request_type='create',
+                entity_type='Task',
+                data=dict(
+                    entity=shot,
+                    project=project,
+                    content=mini_uuid(),
+                )
+            ))
+    for x in sg.batch(batch):
+        tasks.append(dict(type="Task", id=x['id']))
             
             
     

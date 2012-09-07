@@ -17,28 +17,14 @@ class Session(object):
             raise ValueError('must provide one arg or kwargs, not both')
         data = args[0] if args else kwargs
                 
-        # Non-dicts don't matter; just pass them through.
+        # Non-dicts (including Entities) don't matter; just pass them through.
         if not isinstance(data, dict):
             return data
-        
+            
+        # Pass through entities if they are owned by us.
         if isinstance(data, Entity):
-            
-            # We already own it; pass it through.
-            if data.session is self:
-                return data
-            
-            # Another session owns it; error.
             if data.session is not self:
-                raise ValueError('entity is already in a session')
-            
-            # Something else is already in this session for this key; error.
-            if data.cache_key in self.cache:
-                raise ValueError('%r is already in the session' % data.cache_key)
-            
-            # This is new! Take ownership and cache it.
-            # TODO; take ownership of all of its contents.
-            data.session = self
-            self.cache[data.cache_key] = data
+                raise ValueError('entity not owned by this session')
             return data
         
         # If it already exists, then merge this into the old one.
@@ -67,10 +53,40 @@ class Session(object):
         return [self.merge(x) for x in self.shotgun.find(type_, filters, fields, *args, **kwargs)]
     
     def find_one(self, type_, filters, fields=None, *args, **kwargs):
-        x = self.merge(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
-        # # # print 'FIND_ONE', x
-        return x
+        return self.merge(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
+    
+    def fetch_heirarchy(self, entities):
+        """Populate the parents as far up as we can go."""
         
+        to_resolve = []
+        while entities or to_resolve:
+
+            # Go as far up as we already have for the specified entities.
+            for entity in entities:
+                while entity.parent(fetch=False):
+                    entity = entity.parent()
+                if entity['type'] != 'Project':
+                    to_resolve.append(entity)
+            
+            # Bail.
+            if not to_resolve:
+                break
+            
+            # Find the type that we have the most entities of.
+            types = {}
+            for x in to_resolve:
+                types.setdefault(x['type'], []).append(x)
+            entities = max(types.itervalues(), key=len)
+            
+            # Remove them from the list to resolve.
+            to_resolve = [x for x in to_resolve if x['type'] != entities[0]['type']]
+            
+            # Fetch the parent names.
+            type_ = entities[0]['type']
+            ids = list(set([x['id'] for x in entities]))
+            parent_name = _parent_fields[type_]
+            self.find(type_, [['id', 'in'] + ids], [parent_name])
+    
 
     
 _parent_fields = {
@@ -87,6 +103,32 @@ class Entity(dict):
     def __repr__(self):
         return '<Entity %s:%s at 0x%x; %s>' % (self.get('type'), self.get('id'), id(self), dict.__repr__(self))
     
+    def pprint(self, depth=0, visited=None):
+        print '%s:%s at 0x%x;' % (self.get('type'), self.get('id'), id(self)),
+        
+        visited = visited or set()
+        if id(self) in visited:
+            print '...'
+            return
+        visited.add(id(self))
+        
+        if len(self) <= 2:
+            print '{}'
+            return
+        
+        print '{' 
+        depth += 1
+        for k, v in sorted(self.iteritems()):
+            if k in ('id', 'type'):
+                continue
+            if isinstance(v, Entity):
+                print '%s%s =' % ('\t' * depth, k),
+                v.pprint(depth)
+            else:
+                print '%s%s = %r' % ('\t' * depth, k, v)
+        depth -= 1
+        print '\t' * depth + '}'
+                
     @staticmethod
     def _cache_key(data):
         type_ = data.get('type')
@@ -138,7 +180,7 @@ class Entity(dict):
         
     
     def copy(self):
-        raise RuntimeError("Cannot copy Entities")
+        raise RuntimeError("cannot copy %s" % self.__class__.__name__)
     
     def fetch(self, fields, force=False):
         # print 'FETCH', self, fields
