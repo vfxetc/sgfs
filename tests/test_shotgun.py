@@ -76,15 +76,8 @@ class TestEntityFetch(TestCase):
         shot.fetch(['project'])
         self.assertEqual(shot['project']['id'], project['id'])
         
-        print shot
-        
         shot['project'].fetch(['sg_description'])
-        
-        print shot
-        
-        # self.assertEqual(shot['project']['sg_description'], project['sg_description'])
-        # print shot
-        self.assert_(False)
+        self.assertEqual(shot['project']['sg_description'], project['sg_description'])
         
         
         

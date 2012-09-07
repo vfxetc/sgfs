@@ -10,7 +10,7 @@ class Session(object):
     
     def as_entity(self, data):
         
-        print 'AS_ENTITY', data
+        # print 'AS_ENTITY', data
         
         # Assume the full conversion was already done.
         if isinstance(data, Entity):
@@ -20,7 +20,7 @@ class Session(object):
         key = Entity._cache_key(data)
         if key in self.cache:
             entity = self.cache[key]
-            print 'FOUND IN CACHE', entity
+            # print 'FOUND IN CACHE', entity
             entity.merge(data)
             return entity
         
@@ -41,7 +41,7 @@ class Session(object):
     
     def find_one(self, type_, filters, fields=None, *args, **kwargs):
         x = self.as_entity(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
-        # print 'FIND_ONE', x
+        # # print 'FIND_ONE', x
         return x
         
 
@@ -58,7 +58,7 @@ _parent_fields = {
 class Entity(dict):
     
     def __repr__(self):
-        return '<Entity %s:%s %s>' % (self.get('type'), self.get('id'), dict.__repr__(self))
+        return '<Entity(%x) %s:%s %s>' % (id(self), self.get('type'), self.get('id'), dict.__repr__(self))
     
     @staticmethod
     def _cache_key(data):
@@ -86,22 +86,28 @@ class Entity(dict):
         self._merge(self, other, 0)
     
     def _merge(self, dst, src, depth):
-        print ">>> MERGE", depth, dst, '<-', src
+        # print ">>> MERGE", depth, dst, '<-', src
         for k, v in src.iteritems():
             if isinstance(v, dict):
-                if not isinstance(dst.get(k), Entity):
-                    dst[k] = Entity({}, self.session)
-                self._merge(dst[k], self.session.as_entity(v), depth + 1)
+                # If the destination is not an entity, or the type or ID does
+                # not match (and so is a different entity) then replace it.
+                if (not isinstance(dst.get(k), Entity) or
+                    dst[k].get('type') != v.get('type') or
+                    dst[k].get('id') != v.get('id')
+                ):
+                    dst[k] = self.session.as_entity(v)
+                else:
+                    self._merge(dst[k], self.session.as_entity(v), depth + 1)
             else:
                 dst[k] = v
-        print "<<< MERGE", depth, dst, '<-', src
+        # print "<<< MERGE", depth, dst, '<-', src
         
     
     def copy(self):
         raise RuntimeError("Cannot copy Entities")
     
     def fetch(self, fields, force=False):
-        print 'FETCH', self, fields
+        # print 'FETCH', self, fields
         if force or any(x not in self for x in fields):
             # The session will automatically update us since we are cached.
             self.session.find_one(
