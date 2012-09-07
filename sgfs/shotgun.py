@@ -11,6 +11,8 @@ class Session(object):
     def as_entity(self, data):
         
         # print 'AS_ENTITY', data
+        if not isinstance(data, dict):
+            return data
         
         # Assume the full conversion was already done.
         if isinstance(data, Entity):
@@ -58,14 +60,13 @@ _parent_fields = {
 class Entity(dict):
     
     def __repr__(self):
-        return '<Entity(%x) %s:%s %s>' % (id(self), self.get('type'), self.get('id'), dict.__repr__(self))
+        return '<Entity %s:%s at 0x%x; %s>' % (self.get('type'), self.get('id'), id(self), dict.__repr__(self))
     
     @staticmethod
     def _cache_key(data):
-        try:
-            return (data['type'], data['id'])
-        except KeyError:
-            return id(data)
+        type_ = data.get('type')
+        id_ = data.get('id')
+        return (type_, id_) if type_ and id_ else id(data)
     
     @property
     def cache_key(self):
@@ -73,6 +74,8 @@ class Entity(dict):
         
     def __init__(self, data, session):
         super(Entity, self).__init__(data)
+        self.setdefault('type', None)
+        self.setdefault('id', None)
         
         self.session = session
         self.session.cache[self.cache_key] = self
@@ -88,16 +91,19 @@ class Entity(dict):
     def _merge(self, dst, src, depth):
         # print ">>> MERGE", depth, dst, '<-', src
         for k, v in src.iteritems():
+            
             if isinstance(v, dict):
+                v = self.session.as_entity(v)
                 # If the destination is not an entity, or the type or ID does
                 # not match (and so is a different entity) then replace it.
                 if (not isinstance(dst.get(k), Entity) or
-                    dst[k].get('type') != v.get('type') or
-                    dst[k].get('id') != v.get('id')
+                    dst[k] is v or
+                    dst[k]['type'] != v['type'] or
+                    dst[k]['id']   != v['id']
                 ):
-                    dst[k] = self.session.as_entity(v)
+                    dst[k] = v
                 else:
-                    self._merge(dst[k], self.session.as_entity(v), depth + 1)
+                    self._merge(dst[k], v, depth + 1)
             else:
                 dst[k] = v
         # print "<<< MERGE", depth, dst, '<-', src
@@ -118,11 +124,13 @@ class Entity(dict):
     
     def parent(self, fetch=True):
         name = _parent_fields[self['type']]
-        if name in self:
-            return self[name]
         if fetch:
-            self[name] = self.session.find_one()
-        return entity.get(parent_fields.get(entity['type']))
+            self.fetch([name])
+            self.setdefault(name, None)
+        return self.get(name)
+    
+    def fetch_to_project(self):
+        pass
         
         cache = {}
         entities = copy.deepcopy(list(entities))
