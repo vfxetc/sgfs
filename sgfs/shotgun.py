@@ -1,3 +1,5 @@
+import itertools
+
 
 class Session(object):
     
@@ -8,26 +10,49 @@ class Session(object):
     def __getattr__(self, name):
         return getattr(self.shotgun, name)
     
-    def as_entity(self, data):
+    def as_entity(self, data=None, **kwargs):
         
-        # print 'AS_ENTITY', data
+        # Get our one argument.
+        if data and kwargs:
+            raise ValueError('must provide dict or kwargs, not both')
+        data = data or kwargs
+                
+        # Non-dicts don't matter; just pass them through.
         if not isinstance(data, dict):
             return data
         
-        # Assume the full conversion was already done.
         if isinstance(data, Entity):
+            
+            # We already own it; pass it through.
+            if data.session is self:
+                return data
+            
+            # Another session owns it; error.
+            if data.session is not self:
+                raise ValueError('entity is already in a session')
+            
+            # Something else is already in this session for this key; error.
+            if data.cache_key in self.cache:
+                raise ValueError('%r is already in the session' % data.cache_key)
+            
+            # This is new! Take ownership and cache it.
+            # TODO; take ownership of all of its contents.
+            data.session = self
+            self.cache[data.cache_key] = data
             return data
         
         # If it already exists, then merge this into the old one.
-        key = Entity._cache_key(data)
+        new = Entity(data.get('type'), data.get('id'), self)
+        key = new.cache_key
         if key in self.cache:
             entity = self.cache[key]
-            # print 'FOUND IN CACHE', entity
-            entity.merge(data)
+            entity.update(data)
             return entity
         
-        # New entity.
-        return Entity(data, self)
+        # Return the new one.
+        self.cache[key] = new
+        new.update(data)
+        return new
     
     def create(self, type_, data):
         return self.as_entity(self.shotgun.create(type_, data))
@@ -43,7 +68,7 @@ class Session(object):
     
     def find_one(self, type_, filters, fields=None, *args, **kwargs):
         x = self.as_entity(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
-        # # print 'FIND_ONE', x
+        # # # print 'FIND_ONE', x
         return x
         
 
@@ -66,27 +91,25 @@ class Entity(dict):
     def _cache_key(data):
         type_ = data.get('type')
         id_ = data.get('id')
-        return (type_, id_) if type_ and id_ else id(data)
+        if type_ and id_:
+            return (type_, id_)
+        elif type_:
+            return ('New-%s' % type_, id(data))
+        else:
+            return ('Unknown', id_)
     
     @property
     def cache_key(self):
         return self._cache_key(self)
         
-    def __init__(self, data, session):
-        super(Entity, self).__init__(data)
-        self.setdefault('type', None)
-        self.setdefault('id', None)
-        
+    def __init__(self, type_, id_, session=None):
+        self['type'] = type_
+        self['id'] = id_
         self.session = session
-        self.session.cache[self.cache_key] = self
-        
-        # Recursively resolve child entities.
-        for k, v in self.items():
-            if isinstance(v, dict):
-                self[k] = session.as_entity(v)
     
-    def merge(self, other):
-        self._merge(self, other, 0)
+    def update(self, *args, **kwargs):
+        for x in itertools.chain(args, [kwargs]):
+            self._merge(self, x, 0)
     
     def _merge(self, dst, src, depth):
         # print ">>> MERGE", depth, dst, '<-', src
@@ -106,7 +129,7 @@ class Entity(dict):
                     self._merge(dst[k], v, depth + 1)
             else:
                 dst[k] = v
-        # print "<<< MERGE", depth, dst, '<-', src
+        # print "<<< MERGE", depth, dst
         
     
     def copy(self):
