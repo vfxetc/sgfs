@@ -109,6 +109,9 @@ class Entity(dict):
     def __setitem__(self, key, value):
         dict.__setitem__(self, key, self.session.merge(value))
     
+    def setdefault(self, key, value):
+        dict.setdefault(self, key, self.session.merge(value))
+    
     def update(self, *args, **kwargs):
         for x in itertools.chain(args, [kwargs]):
             self._update(self, x, 0)
