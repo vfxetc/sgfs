@@ -82,32 +82,44 @@ class Session(object):
             return results[0]
         return None
     
-    def _fetch_first(self, entities):
-        types = {}
-        for x in entities:
-            types.setdefault(x['type'], set()).add(x)
-        return max(types.iteritems(), key=lambda x: len(x[1]))
     
-    def fetch(self, to_fetch, fields, force=False):
-
+    def _fetch(self, entities, fields, force=False):
+        
+        types = list(set(x['type'] for x in entities))
+        if len(types) > 1:
+            raise ValueError('can only fetch one type at once')
+        type_ = types[0]
+        
         if isinstance(fields, basestring):
             fields = [fields]
-        
+            
+        ids_ = set()
+        for e in entities:
+            if force or any(f not in e for f in fields):
+                ids_.add(e['id'])
+        if ids_:
+            self.find(
+                type_,
+                [['id', 'in'] + list(ids_)],
+                fields,
+            )
+    
+    def fetch(self, to_fetch, fields, *args, **kwargs):
         by_type = {}
         for x in to_fetch:
             by_type.setdefault(x['type'], set()).add(x)
-        
         for type_, entities in by_type.iteritems():
-            ids_ = []
-            for e in entities:
-                if force or any(f not in e for f in fields):
-                    ids_.append(e['id'])
-            if ids_:
-                self.find(
-                    type_,
-                    [['id', 'in'] + ids_],
-                    fields,
-                )
+            self._fetch(entities, fields, *args, **kwargs)
+
+    def fetch_bases(self, to_fetch):
+        by_type = {}
+        for x in to_fetch:
+            by_type.setdefault(x['type'], set()).add(x)
+        for type_, entities in by_type.iteritems():
+            self._fetch(entities,
+                self._important_fields_for_all +
+                self._important_fields.get(type_, [])
+            )
         
     def fetch_heirarchy(self, to_fetch):
         """Populate the parents as far up as we can go."""
@@ -128,7 +140,10 @@ class Session(object):
             
             # Find the type that we have the most entities of, and remove them
             # from the list to resolve.
-            type_, to_fetch = self._fetch_first(to_resolve)
+            by_type = {}
+            for x in to_resolve:
+                by_type.setdefault(x['type'], set()).add(x)
+            type_, to_fetch = max(by_type.iteritems(), key=lambda x: len(x[1]))
             to_resolve.difference_update(to_fetch)
             
             # Fetch the parent names.
@@ -236,7 +251,10 @@ class Entity(dict):
         self.session.fetch([self], *args, **kwargs)
     
     def fetch_base(self):
-        self.fetch(self.session._important_fields_for_all + self.session._important_fields.get(self['type'], []))
+        self.session.fetch_bases([self])
+    
+    def fetch_heirarchy(self):
+        self.session.fetch_heirarchy([self])
     
     def parent(self, fetch=True):
         name = self.session._parent_fields[self['type']]
