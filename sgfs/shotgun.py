@@ -88,6 +88,27 @@ class Session(object):
             types.setdefault(x['type'], set()).add(x)
         return max(types.iteritems(), key=lambda x: len(x[1]))
     
+    def fetch(self, to_fetch, fields, force=False):
+
+        if isinstance(fields, basestring):
+            fields = [fields]
+        
+        by_type = {}
+        for x in to_fetch:
+            by_type.setdefault(x['type'], set()).add(x)
+        
+        for type_, entities in by_type.iteritems():
+            ids_ = []
+            for e in entities:
+                if force or any(f not in e for f in fields):
+                    ids_.append(e['id'])
+            if ids_:
+                self.find(
+                    type_,
+                    [['id', 'in'] + ids_],
+                    fields,
+                )
+        
     def fetch_heirarchy(self, to_fetch):
         """Populate the parents as far up as we can go."""
         
@@ -211,16 +232,8 @@ class Entity(dict):
     def copy(self):
         raise RuntimeError("cannot copy %s" % self.__class__.__name__)
     
-    def fetch(self, fields, force=False):
-        if isinstance(fields, basestring):
-            fields = [fields]
-        if force or any(x not in self for x in fields):
-            # The session will automatically update us since we are cached.
-            self.session.find_one(
-                self['type'],
-                [('id', 'is', self['id'])],
-                fields,
-            )
+    def fetch(self, *args, **kwargs):
+        self.session.fetch([self], *args, **kwargs)
     
     def fetch_base(self):
         self.fetch(self.session._important_fields_for_all + self.session._important_fields.get(self['type'], []))
