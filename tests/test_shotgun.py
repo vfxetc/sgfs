@@ -14,14 +14,21 @@ def setUpModule():
     
 
 class TestCase(BaseTestCase):
-    pass
+
+    def setUp(self):
+        self.session = Session(sg)
+
+
+class TestEntityMapUpdates(TestCase):
+
+    def test_setitem(self):
+        a = self.session.merge(a=1)
+        a['child'] = dict(b=2)
+        self.assertEqual(a['child']['b'], 2)
+        self.assert_(isinstance(a['child'], Entity))
 
 
 class TestEntityMerge(TestCase):
-    
-
-    def setUp(self):
-        self.session = Session()
     
     def test_recursive_entity(self):
         a = self.session.merge(a=1, child=dict(type='Sequence'))
@@ -42,9 +49,6 @@ class TestEntityMerge(TestCase):
     
     
 class TestEntityFetch(TestCase):
-    
-    def setUp(self):
-        self.session = Session(sg)
     
     @classmethod
     def setUpClass(cls):

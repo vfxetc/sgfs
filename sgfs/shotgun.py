@@ -10,12 +10,12 @@ class Session(object):
     def __getattr__(self, name):
         return getattr(self.shotgun, name)
     
-    def merge(self, data=None, **kwargs):
+    def merge(self, *args, **kwargs):
         
         # Get our one argument.
-        if data and kwargs:
-            raise ValueError('must provide dict or kwargs, not both')
-        data = data or kwargs
+        if len(args) > 1 or args and kwargs:
+            raise ValueError('must provide one arg or kwargs, not both')
+        data = args[0] if args else kwargs
                 
         # Non-dicts don't matter; just pass them through.
         if not isinstance(data, dict):
@@ -102,16 +102,18 @@ class Entity(dict):
     def cache_key(self):
         return self._cache_key(self)
         
-    def __init__(self, type_, id_, session=None):
-        self['type'] = type_
-        self['id'] = id_
+    def __init__(self, type_, id_, session):
+        dict.__init__(self, type=type_, id=id_)
         self.session = session
+    
+    def __setitem__(self, key, value):
+        dict.__setitem__(self, key, self.session.merge(value))
     
     def update(self, *args, **kwargs):
         for x in itertools.chain(args, [kwargs]):
-            self._merge(self, x, 0)
+            self._update(self, x, 0)
     
-    def _merge(self, dst, src, depth):
+    def _update(self, dst, src, depth):
         # print ">>> MERGE", depth, dst, '<-', src
         for k, v in src.iteritems():
             
@@ -126,7 +128,7 @@ class Entity(dict):
                 ):
                     dst[k] = v
                 else:
-                    self._merge(dst[k], v, depth + 1)
+                    self._update(dst[k], v, depth + 1)
             else:
                 dst[k] = v
         # print "<<< MERGE", depth, dst
