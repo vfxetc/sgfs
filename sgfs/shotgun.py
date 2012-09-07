@@ -10,7 +10,7 @@ class Session(object):
     def __getattr__(self, name):
         return getattr(self.shotgun, name)
     
-    def as_entity(self, data=None, **kwargs):
+    def merge(self, data=None, **kwargs):
         
         # Get our one argument.
         if data and kwargs:
@@ -55,19 +55,19 @@ class Session(object):
         return new
     
     def create(self, type_, data):
-        return self.as_entity(self.shotgun.create(type_, data))
+        return self.merge(self.shotgun.create(type_, data))
 
     def update(self, type_, id, data):
-        return self.as_entity(self.shotgun.update(type_, id, data))
+        return self.merge(self.shotgun.update(type_, id, data))
 
     def batch(self, requests):
-        return [self.as_entity(x) if isinstance(x, dict) else x for x in self.shotgun.batch(requests)]
+        return [self.merge(x) if isinstance(x, dict) else x for x in self.shotgun.batch(requests)]
     
     def find(self, type_, filters, fields=None, *args, **kwargs):
-        return [self.as_entity(x) for x in self.shotgun.find(type_, filters, fields, *args, **kwargs)]
+        return [self.merge(x) for x in self.shotgun.find(type_, filters, fields, *args, **kwargs)]
     
     def find_one(self, type_, filters, fields=None, *args, **kwargs):
-        x = self.as_entity(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
+        x = self.merge(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
         # # # print 'FIND_ONE', x
         return x
         
@@ -116,7 +116,7 @@ class Entity(dict):
         for k, v in src.iteritems():
             
             if isinstance(v, dict):
-                v = self.session.as_entity(v)
+                v = self.session.merge(v)
                 # If the destination is not an entity, or the type or ID does
                 # not match (and so is a different entity) then replace it.
                 if (not isinstance(dst.get(k), Entity) or
