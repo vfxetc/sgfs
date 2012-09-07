@@ -9,13 +9,22 @@ class Session(object):
         return getattr(self.shotgun, name)
     
     def as_entity(self, data):
+        
+        print 'AS_ENTITY', data
+        
+        # Assume the full conversion was already done.
         if isinstance(data, Entity):
             return data
+        
+        # If it already exists, then merge this into the old one.
         key = Entity._cache_key(data)
         if key in self.cache:
             entity = self.cache[key]
+            print 'FOUND IN CACHE', entity
             entity.merge(data)
             return entity
+        
+        # New entity.
         return Entity(data, self)
     
     def create(self, type_, data):
@@ -31,7 +40,9 @@ class Session(object):
         return [self.as_entity(x) for x in self.shotgun.find(type_, filters, fields, *args, **kwargs)]
     
     def find_one(self, type_, filters, fields=None, *args, **kwargs):
-        return self.as_entity(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
+        x = self.as_entity(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
+        # print 'FIND_ONE', x
+        return x
         
 
     
@@ -45,6 +56,9 @@ _parent_fields = {
 
 
 class Entity(dict):
+    
+    def __repr__(self):
+        return '<Entity %s:%s %s>' % (self.get('type'), self.get('id'), dict.__repr__(self))
     
     @staticmethod
     def _cache_key(data):
@@ -65,23 +79,29 @@ class Entity(dict):
         
         # Recursively resolve child entities.
         for k, v in self.items():
-            if isinstance(v, dict) and 'type' in v:
-                self[k] = self.__class__(v, session=session)
+            if isinstance(v, dict):
+                self[k] = session.as_entity(v)
     
     def merge(self, other):
-        self._merge_dict(self, other)
+        self._merge(self, other, 0)
     
-    def _merge_dict(self, dst, src):
+    def _merge(self, dst, src, depth):
+        print ">>> MERGE", depth, dst, '<-', src
         for k, v in src.iteritems():
             if isinstance(v, dict):
-                self._merge_dict(dst.setdefault(k, {}), v)
+                if not isinstance(dst.get(k), Entity):
+                    dst[k] = Entity({}, self.session)
+                self._merge(dst[k], self.session.as_entity(v), depth + 1)
             else:
                 dst[k] = v
+        print "<<< MERGE", depth, dst, '<-', src
+        
     
     def copy(self):
         raise RuntimeError("Cannot copy Entities")
     
     def fetch(self, fields, force=False):
+        print 'FETCH', self, fields
         if force or any(x not in self for x in fields):
             # The session will automatically update us since we are cached.
             self.session.find_one(
