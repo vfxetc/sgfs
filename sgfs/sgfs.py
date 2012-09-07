@@ -3,8 +3,8 @@ import copy
 from pprint import pprint
 
 import shotgun_api3_registry
+from sgsession import Session
 
-from .shotgun import Session
 from .context import Context
 
 

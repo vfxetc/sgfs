@@ -1,1 +1,1 @@
-from .core import SGFS
+from .sgfs import SGFS
