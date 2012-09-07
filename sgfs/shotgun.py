@@ -3,6 +3,23 @@ import itertools
 
 class Session(object):
     
+    _parent_fields = {
+        'Asset': 'project',
+        'Project': None,
+        'Sequence': 'project',
+        'Shot': 'sg_sequence',
+        'Task': 'entity',
+    }
+    
+    _important_fields_for_all = ['project']
+    _important_fields = {
+        'Asset': ['code', 'sg_asset_type'],
+        'Project': ['code', 'sg_code'],
+        'Sequence': ['code'],
+        'Shot': ['code', 'sg_sequence'],
+        'Task': ['step', 'entity'],
+    }
+    
     def __init__(self, shotgun=None):
         self.shotgun = shotgun
         self.cache = {}
@@ -50,10 +67,20 @@ class Session(object):
         return [self.merge(x) if isinstance(x, dict) else x for x in self.shotgun.batch(requests)]
     
     def find(self, type_, filters, fields=None, *args, **kwargs):
+        
+        fields = list(fields) if fields else ['id']
+        fields.extend(self._important_fields_for_all)
+        fields.extend(self._important_fields.get(type_, []))
+        
         return [self.merge(x) for x in self.shotgun.find(type_, filters, fields, *args, **kwargs)]
     
-    def find_one(self, type_, filters, fields=None, *args, **kwargs):
-        return self.merge(self.shotgun.find_one(type_, filters, fields, *args, **kwargs))
+    def find_one(self, entity_type, filters, fields=None, order=None, 
+        filter_operator=None, retired_only=False):
+        results = self.find(entity_type, filters, fields, order, 
+            filter_operator, 1, retired_only)
+        if results:
+            return results[0]
+        return None
     
     def fetch_heirarchy(self, entities):
         """Populate the parents as far up as we can go."""
@@ -84,18 +111,12 @@ class Session(object):
             # Fetch the parent names.
             type_ = entities[0]['type']
             ids = list(set([x['id'] for x in entities]))
-            parent_name = _parent_fields[type_]
+            parent_name = self._parent_fields[type_]
             self.find(type_, [['id', 'in'] + ids], [parent_name])
     
 
     
-_parent_fields = {
-    'Task': 'entity',
-    'Shot': 'sg_sequence',
-    'Sequence': 'project',
-    'Asset': 'project',
-    'Project': None,
-}
+
 
 
 class Entity(dict):
@@ -123,7 +144,7 @@ class Entity(dict):
                 continue
             if isinstance(v, Entity):
                 print '%s%s =' % ('\t' * depth, k),
-                v.pprint(depth)
+                v.pprint(depth, visited)
             else:
                 print '%s%s = %r' % ('\t' * depth, k, v)
         depth -= 1
@@ -183,7 +204,8 @@ class Entity(dict):
         raise RuntimeError("cannot copy %s" % self.__class__.__name__)
     
     def fetch(self, fields, force=False):
-        # print 'FETCH', self, fields
+        if isinstance(fields, basestring):
+            fields = [fields]
         if force or any(x not in self for x in fields):
             # The session will automatically update us since we are cached.
             self.session.find_one(
@@ -192,10 +214,13 @@ class Entity(dict):
                 fields,
             )
     
+    def fetch_base(self):
+        self.fetch(self.session._important_fields_for_all + self.session._important_fields.get(self['type'], []))
+    
     def parent(self, fetch=True):
-        name = _parent_fields[self['type']]
+        name = self.session._parent_fields[self['type']]
         if fetch:
-            self.fetch([name])
+            self.fetch(name)
             self.setdefault(name, None)
         return self.get(name)
     

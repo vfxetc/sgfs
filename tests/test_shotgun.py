@@ -74,15 +74,10 @@ class TestEntityFetch(TestCase):
     
     def test_fetch_entity(self):
         
-        shot = self.session.find_one('Shot', [
-            ('code', 'is', self.shot['code']),
-            ('project', 'is', {'type': 'Project', 'id': project['id']}),
-        ])
-        
-        self.assert_('project' not in shot)
-        
-        shot.fetch(['project'])
-        self.assertEqual(shot['project']['id'], project['id'])
+        shot = self.session.find_one('Shot', [('id', 'is', self.shot['id'])])
+                
+        shot.fetch('created_at')
+        self.assert_(shot['created_at'])
         
         shot['project'].fetch(['sg_description'])
         self.assert_(shot['project']['sg_description'])
@@ -98,9 +93,7 @@ class TestEntityFetch(TestCase):
             ('code', 'is', self.shot['code']),
             ('project', 'is', {'type': 'Project', 'id': project['id']}),
         ])
-        
-        self.assert_('sg_sequence' not in shot)
-        
+                
         seq = shot.parent()
         self.assertEqual(seq['id'], self.seq['id'])
         
@@ -133,5 +126,29 @@ class TestHeirarchy(TestCase):
         self.assert_(shots[0].parent() is shots[1].parent())
         self.assert_(shots[0].parent() is not shots[2].parent())
         self.assert_(shots[2].parent() is shots[3].parent())
+
+
+class TestImportantFields(TestCase):
+    
+    def test_task_chain(self):
         
+        task = self.session.merge(fixtures.tasks[0])
+        shot = self.session.merge(fixtures.shots[0])
+        seq = self.session.merge(fixtures.sequences[0])
+        proj = self.session.merge(fixtures.project)
+        
+        task.pprint()
+        shot.pprint()
+        seq.pprint()
+        proj.pprint()
+        print
+        
+        task.fetch_base()
+        task.pprint()
+        print
+        
+        self.session.fetch_heirarchy([task])
+        task.pprint()
+        
+        self.assert_(False)
         
