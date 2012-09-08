@@ -5,7 +5,8 @@ class Context(object):
     def __init__(self, entity):
         self.entity = entity
         self.children = []
-    
+        self.parent = None
+        
     def copy(self):
         return copy.copy(self)
     
@@ -62,10 +63,13 @@ class Context(object):
     
     def iter_linearized(self):
         if not self.children:
-            yield self
+            new = self.copy()
+            new.parent = None
+            yield new
         for child in self.children:
             for child_ctx in child.iter_linearized():
                 ctx = self.copy()
                 ctx.children = [child_ctx]
+                child_ctx.parent = ctx
                 yield ctx
     

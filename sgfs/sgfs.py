@@ -67,6 +67,7 @@ class SGFS(object):
                     to_resolve.append(entity)
             else:
                 parent_context.children.append(context)
+                context.parent = parent_context
         
         # The parent is the root.
         return entity_to_context[projects[0]]

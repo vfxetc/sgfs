@@ -68,6 +68,9 @@ class TestContext(TestCase):
             lin.pprint()
         
         self.assertEqual(len(linearized), 12)
-        self.assertEqual(set(list(x.iter_leafs())[0] for x in linearized), set(ctx.iter_leafs()))
+        self.assertEqual(
+            set(list(x.iter_leafs())[0].entity for x in linearized),
+            set(x.entity for x in ctx.iter_leafs()),
+        )
         
         
