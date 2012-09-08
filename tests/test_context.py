@@ -18,7 +18,7 @@ class TestContext(TestCase):
     def setUp(self):
         self.sgfs = SGFS(root=root, shotgun=sg)
         
-    def test_basics(self):
+    def test_context_from_entities(self):
         
         shots = [self.sgfs.session.merge(x) for x in fixtures.tasks]
         shots[0].pprint()
@@ -28,9 +28,26 @@ class TestContext(TestCase):
         ctx.pprint()
         print
         
+        self.assert_(ctx.is_linear)
+        self.assertEqual(len(ctx.linear_base), 4)
+        self.assertEqual(len(list(ctx.iter_leafs())), 1)
+        
         ctx = self.sgfs.context_from_entities(shots)
         ctx.pprint()
         print
+        
+        self.assert_(not ctx.is_linear)
+        self.assertEqual(len(ctx.linear_base), 1)
+        self.assertEqual(len(list(ctx.iter_leafs())), 12)
+            
+    def test_linearize(self):
+        
+        shots = [self.sgfs.session.merge(x) for x in fixtures.tasks]
+        ctx = self.sgfs.context_from_entities(shots)
+        ctx.pprint()
+        print
+        
+        self.assert_(not ctx.is_linear)
         
         self.assert_(False)
         
