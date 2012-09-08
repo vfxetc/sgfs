@@ -42,9 +42,8 @@ class SGFS(object):
         to_resolve = list(entities)
         while to_resolve:
             
-            print len(to_resolve), [x.cache_key for x in to_resolve]
-            pprint(entity_to_context)
-            
+            # Grab an entity to resolve, build a context for it if it doesn't
+            # already exist, and finish with it if it is the project.
             entity = to_resolve.pop(0)
             try:
                 context = entity_to_context[entity]
@@ -55,10 +54,13 @@ class SGFS(object):
             if entity['type'] == 'Project':
                 continue
             
+            # Grab the entity's parent, link it up of it already has a context
+            # otherwise reschedule them both for resolution.
             parent = entity.parent()
             try:
                 parent_context = entity_to_context[parent]
             except KeyError:
+                # It would be nice to use a different data structure. Oh well.
                 if parent not in to_resolve:
                     to_resolve.append(parent)
                 if entity not in to_resolve:
@@ -66,5 +68,6 @@ class SGFS(object):
             else:
                 parent_context.children.append(context)
                 context.parent = parent_context
-            
+        
+        # The parent is the root.
         return entity_to_context[projects[0]]
