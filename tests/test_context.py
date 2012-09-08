@@ -31,6 +31,10 @@ class TestContext(TestCase):
         self.assert_(ctx.is_linear)
         self.assertEqual(len(ctx.linear_base), 4)
         self.assertEqual(len(list(ctx.iter_leafs())), 1)
+        self.assertEqual(len(list(ctx.iter_by_type(('Project')))), 1)
+        self.assertEqual(len(list(ctx.iter_by_type(('Sequence')))), 1)
+        self.assertEqual(len(list(ctx.iter_by_type(('Shot')))), 1)
+        self.assertEqual(len(list(ctx.iter_by_type(('Task')))), 1)
         
         ctx = self.sgfs.context_from_entities(shots)
         ctx.pprint()
@@ -39,6 +43,10 @@ class TestContext(TestCase):
         self.assert_(not ctx.is_linear)
         self.assertEqual(len(ctx.linear_base), 1)
         self.assertEqual(len(list(ctx.iter_leafs())), 12)
+        self.assertEqual(len(list(ctx.iter_by_type(('Project')))), 1)
+        self.assertEqual(len(list(ctx.iter_by_type(('Sequence')))), 2)
+        self.assertEqual(len(list(ctx.iter_by_type(('Shot')))), 4)
+        self.assertEqual(len(list(ctx.iter_by_type(('Task')))), 12)
             
     def test_linearize(self):
         
@@ -48,6 +56,11 @@ class TestContext(TestCase):
         print
         
         self.assert_(not ctx.is_linear)
+        self.assertEqual(len(ctx.linear_base), 1)
+        self.assertEqual(len(list(ctx.iter_leafs())), 12)
+        self.assertEqual(len(list(ctx.iter_by_type(('Project')))), 1)
+        self.assertEqual(len(list(ctx.iter_by_type(('Sequence')))), 2)
+        self.assertEqual(len(list(ctx.iter_by_type(('Shot')))), 4)
+        self.assertEqual(len(list(ctx.iter_by_type(('Task')))), 12)
         
-        self.assert_(False)
         

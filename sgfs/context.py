@@ -51,3 +51,11 @@ class Context(object):
                 for leaf in child.iter_leafs():
                     yield leaf
     
+    def iter_by_type(self, type_):
+        if self.entity['type'] == type_:
+            yield self
+        for child in self.children:
+            for entity in child.iter_by_type(type_):
+                yield entity
+    
+    
