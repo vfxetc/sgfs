@@ -1,11 +1,13 @@
-
+import copy
 
 class Context(object):
     
     def __init__(self, entity):
         self.entity = entity
-        self.parent = None
         self.children = []
+    
+    def copy(self):
+        return copy.copy(self)
     
     def __repr__(self):
         return '<Context %s:%s at 0x%x>' % (self.entity['type'], self.entity['id'], id(self))
@@ -58,4 +60,12 @@ class Context(object):
             for entity in child.iter_by_type(type_):
                 yield entity
     
+    def iter_linearized(self):
+        if not self.children:
+            yield self
+        for child in self.children:
+            for child_ctx in child.iter_linearized():
+                ctx = self.copy()
+                ctx.children = [child_ctx]
+                yield ctx
     

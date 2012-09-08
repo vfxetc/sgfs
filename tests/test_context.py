@@ -63,4 +63,11 @@ class TestContext(TestCase):
         self.assertEqual(len(list(ctx.iter_by_type(('Shot')))), 4)
         self.assertEqual(len(list(ctx.iter_by_type(('Task')))), 12)
         
+        linearized = list(ctx.iter_linearized())
+        for lin in linearized:
+            lin.pprint()
+        
+        self.assertEqual(len(linearized), 12)
+        self.assertEqual(set(list(x.iter_leafs())[0] for x in linearized), set(ctx.iter_leafs()))
+        
         
