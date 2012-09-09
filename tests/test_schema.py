@@ -52,8 +52,9 @@ class TestSchema(TestCase):
         schema.pprint()
         print
         
-        shots = [self.sgfs.session.merge(x) for x in fixtures.shots]
-        context = self.sgfs.context_from_entities(shots)
+        context = self.sgfs.context_from_entities([
+            self.sgfs.session.merge(x) for x in fixtures.tasks
+        ])
         context.pprint()
         print
         

@@ -1,0 +1,2 @@
+type: include
+condition: task['step']['id'] in (1, 2, 3)
