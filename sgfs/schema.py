@@ -61,9 +61,9 @@ class Schema(object):
         return None
     
     def structure(self, context):
-        return self._structure(context, namespace={})
+        return self._structure(context, globals_={})
     
-    def _structure(self, context, namespace):
+    def _structure(self, context, globals_):
         
         print 'STRUCTURE', context
         
@@ -72,22 +72,21 @@ class Schema(object):
                 self.entity_type, context.entity['type']
             ))
         
-        # Update the execution namespace.
-        namespace.update(self.config)
-        namespace[self.entity_type.lower()] = context.entity
-        namespace['self'] = context.entity
+        globals_[self.entity_type.lower()] = context.entity
+        globals_['self'] = context.entity
+        locals_ = self.config.copy()
         
         children = []
         for child in context.children:
             child_type = child.entity['type']
             if child_type in self.children:
-                children.append(self.children[child_type]._structure(child, namespace.copy()))
+                children.append(self.children[child_type]._structure(child, globals_.copy()))
         
         template = self.template
         if template:
-            return structure.Directory(namespace, children, template=template)
+            return structure.Directory(globals_, locals_, children, template=template)
         else:
-            return structure.Directory(namespace, children)
+            return structure.Directory(globals_, locals_, children)
         
     
 

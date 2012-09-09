@@ -3,21 +3,22 @@ import os
 from . import utils
 
 
-def _get_or_eval(namespace, name, default=None):
-    if name in namespace:
-        return namespace[name]
-    expr_name = name + '_expr'
-    if expr_name in namespace:
-        return utils.eval_expr_or_func(namespace[expr_name], namespace)
+def _get_or_eval(globals_, locals_, name, default=None):
+    for namespace in (locals_, globals_):
+        if name in namespace:
+            return namespace[name]
+        expr_name = name + '_expr'
+        if expr_name in namespace:
+            return utils.eval_expr_or_func(namespace[expr_name], globals_, locals_)
     return default
 
 
 class Structure(object):
     
-    def __init__(self, namespace, children):
+    def __init__(self, globals_, locals_, children):
         self.children = children
-        name = _get_or_eval(namespace, 'name', '')
-        path = _get_or_eval(namespace, 'path', '')
+        name = _get_or_eval(globals_, locals_, 'name', '')
+        path = _get_or_eval(globals_, locals_, 'path', '')
         self.name = os.path.join(path, name)
     
     def pprint(self, depth=0):
@@ -40,8 +41,8 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, namespace, children, template=None):
-        super(Directory, self).__init__(namespace, children)
+    def __init__(self, globals_, locals_, children, template=None):
+        super(Directory, self).__init__(globals_, locals_, children)
         
 
 
