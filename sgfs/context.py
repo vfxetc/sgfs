@@ -29,7 +29,7 @@ class Context(object):
             return
         
         print '{'
-        for i, child in enumerate(self.children):
+        for child in self.children:
             child.pprint(depth + 1)
         print '\t' * depth + '}'
     

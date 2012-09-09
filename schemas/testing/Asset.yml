@@ -1,4 +1,4 @@
-name_expr: sg_asset_type + '/' + code
+name_expr: self['sg_asset_type'] + '/' + sef['code']
 children:
     Task:
-        config: /Task.yml
+        config: Task.yml

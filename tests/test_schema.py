@@ -9,7 +9,7 @@ from . import fixtures
 
 
 def setUpModule():
-    # fixtures.setup_tasks()
+    fixtures.setup_tasks()
     globals().update(fixtures.__dict__)
 
 
@@ -18,10 +18,10 @@ class TestSchema(TestCase):
     def setUp(self):
         self.sgfs = SGFS(root=root, shotgun=sg)
         
-    def test_structure(self):
+    def test_loading(self):
         
         schema = self.sgfs.schema('testing')
-        print schema
+        schema.pprint()
         
         self.assertEqual(schema.entity_type, 'Project')
         self.assertEqual(len(schema.children), 2)
@@ -46,4 +46,20 @@ class TestSchema(TestCase):
         self.assertEqual(stask.entity_type, 'Task')
         self.assertEqual(len(stask.children), 0)
         
+    def test_structure(self):
+        
+        schema = self.sgfs.schema('testing')
+        schema.pprint()
+        print
+        
+        shots = [self.sgfs.session.merge(x) for x in fixtures.shots]
+        context = self.sgfs.context_from_entities(shots)
+        context.pprint()
+        print
+        
+        structure = schema.structure(context)
+        structure.pprint()
+        print
+        
+        self.assert_(False)
         

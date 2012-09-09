@@ -1,2 +1,2 @@
-name_expr: step['short_name']
+name_expr: self['id'] # step['short_name']
 extra_fields: step.short_name

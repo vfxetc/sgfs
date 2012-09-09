@@ -2,24 +2,49 @@ import os
 
 import yaml
 
+from . import structure
+from . import utils
+
+
+
 
 class Schema(object):
     
-    def __init__(self, root, entity_type, spec=None):
+    def __init__(self, root, entity_type, config=None):
         
         self.root = root
         self.entity_type = entity_type
-        self.spec = spec if spec is not None else {}
         
-        path = os.path.join(root, entity_type + '.yml')
-        self.config = yaml.load(open(path).read())
+        # Load the child config over top of the one provided by the parent.
+        self.config = dict(config or {})
+        config_path = os.path.join(root, self.config.get('config', entity_type + '.yml'))
+        if os.path.exists(config_path):
+            self.config.update(yaml.load(open(config_path).read()))
+        elif 'config' in self.config:
+            raise ValueError('%r does not exist' % self.config['config'])
         
+        # Load all the children.
         self.children = {}
-        for type_, spec in self.config.get('children', {}).iteritems():
-            self.children[type_] = Schema(root, type_, spec)
+        for type_, child_config in self.config.get('children', {}).iteritems():
+            self.children[type_] = Schema(root, type_, child_config)
     
     def __repr__(self):
         return '<Schema %s:%s at 0x%x>' % (os.path.basename(self.root), self.entity_type, id(self))
+    
+    def pprint(self, depth=0):
+        print '%s%s at 0x%x' % (
+            '\t' * depth,
+            self.entity_type,
+            id(self)
+        ),
+        if not self.children:
+            print
+            return
+        
+        print '{'
+        for type_, child in sorted(self.children.iteritems()):
+            child.pprint(depth + 1)
+        print '\t' * depth + '}'
     
     @property
     def template(self):
@@ -29,9 +54,40 @@ class Schema(object):
         except KeyError:
             pass
             
-        path = os.path.join(root, path)
-        if os.path.exists(default_template_path):
+        path = os.path.join(self.root, self.entity_type)
+        if os.path.exists(path):
             return path
         
         return None
+    
+    def structure(self, context):
+        return self._structure(context, namespace={})
+    
+    def _structure(self, context, namespace):
+        
+        print 'STRUCTURE', context
+        
+        if self.entity_type != context.entity['type']:
+            raise ValueError('context entity type does not match; %r != %r' % (
+                self.entity_type, context.entity['type']
+            ))
+        
+        # Update the execution namespace.
+        namespace.update(self.config)
+        namespace[self.entity_type.lower()] = context.entity
+        namespace['self'] = context.entity
+        
+        children = []
+        for child in context.children:
+            child_type = child.entity['type']
+            if child_type in self.children:
+                children.append(self.children[child_type]._structure(child, namespace.copy()))
+        
+        template = self.template
+        if template:
+            return structure.Directory(namespace, children, template=template)
+        else:
+            return structure.Directory(namespace, children)
+        
+    
 
