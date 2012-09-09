@@ -45,14 +45,16 @@ class Structure(object):
         self.file = locals_.get('__file__')
         self.file = os.path.basename(self.file) if self.file is not None else None
     
-    def pprint(self, depth=0):
-        print '%s%s %r at 0x%x from %r' % (
-            '\t' * depth,
+    def _repr_headline(self):
+        return '%s %r at 0x%x from %r' % (
             self.__class__.__name__,
             self.name,
             id(self),
             self.file,
-        ),
+        )
+    
+    def pprint(self, depth=0):
+        print '\t' * depth + self._repr_headline(),
         if not self.children:
             print
             return
@@ -113,7 +115,21 @@ class Directory(Structure):
 
 
 class Entity(Directory):
-    pass
+    
+    def __init__(self, globals_, locals_, *args, **kwargs):
+        super(Entity, self).__init__(globals_, locals_, *args, **kwargs)
+        self.entity = globals_['self']
+    
+    def _repr_headline(self):
+        return '%s %s:%s %r at 0x%x from %r' % (
+            self.__class__.__name__,
+            self.entity['type'],
+            self.entity['id'],
+            self.name,
+            id(self),
+            self.file,
+        )
+    
 
 
 class Include(Structure):

@@ -87,9 +87,9 @@ class Schema(object):
         
         template = self.template
         if template:
-            return structure.Directory(globals_, locals_, children, template=template)
+            return structure.Entity(globals_, locals_, children, template=template)
         else:
-            return structure.Directory(globals_, locals_, children)
+            return structure.Entity(globals_, locals_, children)
         
     
 
