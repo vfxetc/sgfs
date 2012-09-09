@@ -42,13 +42,16 @@ class Structure(object):
         name = str(_get_or_eval(globals_, locals_, 'name', ''))
         path = str(_get_or_eval(globals_, locals_, 'path', ''))
         self.name = os.path.join(path, name)
+        self.file = locals_.get('__file__')
+        self.file = os.path.basename(self.file) if self.file is not None else None
     
     def pprint(self, depth=0):
-        print '%s%s %r at 0x%x' % (
+        print '%s%s %r at 0x%x from %r' % (
             '\t' * depth,
             self.__class__.__name__,
             self.name,
-            id(self)
+            id(self),
+            self.file,
         ),
         if not self.children:
             print
@@ -87,6 +90,7 @@ class Directory(Structure):
             for special in [x for x in paths if x.endswith('.yml')]:
                 
                 config = yaml.load(open(special).read()) or {}
+                config['__file__'] = special
                 local_template = os.path.splitext(special)[0]
                 
                 if os.path.exists(local_template):
@@ -95,6 +99,15 @@ class Directory(Structure):
                 
                 self.children.append(Structure.from_config(globals_, config, default_type='directory'))
         
+            # Generic files/directories.
+            for path in [x for x in paths if not x.endswith('.yml')]:
+                default_type = 'directory' if os.path.isdir(path) else 'file'
+                self.children.append(Structure.from_config(
+                    globals_,
+                    {'path': '', 'name': os.path.basename(path)},
+                    default_type=default_type,
+                ))
+                    
         self.children.sort(key=lambda x: x.name)
                     
 

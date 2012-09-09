@@ -20,8 +20,11 @@ class Schema(object):
         config_path = os.path.join(root, self.config.get('config', entity_type + '.yml'))
         if os.path.exists(config_path):
             self.config.update(yaml.load(open(config_path).read()))
+            self.config['__file__'] = config_path
         elif 'config' in self.config:
             raise ValueError('%r does not exist' % self.config['config'])
+        else:
+            self.config['__file__'] = None
         
         # Load all the children.
         self.children = {}
