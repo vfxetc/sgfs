@@ -1,2 +1,1 @@
-name_expr: "'task-%03d' % self['id']" # step['short_name']
-extra_fields: step.short_name
+name_expr: self['step']['short_name']

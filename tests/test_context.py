@@ -3,20 +3,19 @@ from subprocess import call
 from unittest import TestCase
 import itertools
 
-from sgfs import SGFS
+from sgsession import fixtures
 
-from . import fixtures
+from sgfs import SGFS
 
 
 def setUpModule():
     fixtures.setup_tasks()
-    globals().update(fixtures.__dict__)
 
 
 class TestContext(TestCase):
     
     def setUp(self):
-        self.sgfs = SGFS(root=root, shotgun=sg)
+        self.sgfs = SGFS(root=fixtures.root, shotgun=fixtures.sg)
         
     def test_context_from_entities(self):
         
