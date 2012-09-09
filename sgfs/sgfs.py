@@ -2,10 +2,10 @@ import os
 import copy
 from pprint import pprint
 
-import shotgun_api3_registry
 from sgsession import Session
 
 from .context import Context
+from .schema import Schema
 
 
 class SGFS(object):
@@ -20,7 +20,6 @@ class SGFS(object):
         
         self.shotgun = shotgun
         self.session = Session(self.shotgun)
-        
     
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
@@ -71,3 +70,14 @@ class SGFS(object):
         
         # The parent is the root.
         return entity_to_context[projects[0]]
+    
+    def schema(self, name='tankish'):
+        schema_root = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'schemas',
+            name,
+        )
+        if not os.path.exists(schema_root):
+            raise ValueError('schema %r does not exist' % name)
+        return Schema(schema_root, 'Project')
+    
