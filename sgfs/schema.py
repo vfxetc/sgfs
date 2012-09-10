@@ -51,15 +51,19 @@ class Schema(object):
     
     def structure(self, context):
         
+        # Make sure that this schema matches the context we have been asked to
+        # create a structure for.
         if self.entity_type != context.entity['type']:
             raise ValueError('context entity type does not match; %r != %r' % (
                 self.entity_type, context.entity['type']
             ))
         
+        # Create the structure node for this entity.
         structure = Structure.from_context(context, self.config.copy())
         if not structure:
             return
-
+        
+        # Create all of the Context's child nodes as well.
         for child_context in context.children:
             child_type = child_context.entity['type']
             if child_type in self.children:

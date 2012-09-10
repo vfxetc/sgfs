@@ -1,5 +1,6 @@
 import os
 import fnmatch
+import subprocess
 
 import yaml
 
@@ -14,9 +15,6 @@ def _namespace_from_context(context, base=None):
         namespace[head.entity['type']] = head.entity
         head = head.parent
     return namespace
-    
-    
-
 
 
 class Structure(object):
@@ -28,8 +26,8 @@ class Structure(object):
         constructor = {
             'directory': Directory,
             'entity': Entity,
-            'include': Include,
             'file': File,
+            'include': Include,
         }.get(type_)
         if not constructor:
             raise ValueError('could not determine type')
@@ -77,6 +75,15 @@ class Structure(object):
         for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
+    def _calls(self, root):
+        for child in self.children:
+            for x in child._calls(root):
+                yield x
+    
+    def preview(self, root='.'):
+        for args in self._calls(root):
+            print subprocess.list2cmdline(args)
+                
 
 
 class Directory(Structure):
@@ -88,6 +95,13 @@ class Directory(Structure):
         if template:
             self._scan_template(template)
     
+    def _calls(self, root):
+        path = os.path.join(root, self.name).rstrip('/')
+        if not os.path.exists(path):
+            yield ['mkdir', '-p', path]
+        for x in super(Directory, self)._calls(path):
+            yield x
+        
     def _scan_template(self, template):
         
         # Build up the ignore list.
@@ -156,6 +170,15 @@ class File(Structure):
     
     def _repr_headline(self):
         return self.name
+    
+    def _calls(self, root):
+        path = os.path.join(root, self.name).rstrip('/')
+        if not os.path.exists(path):
+            template = self.config.get('template')
+            if template:
+                yield ['cp', '-p', template, path]
+            else:
+                yield ['touch', path]
     
 
 

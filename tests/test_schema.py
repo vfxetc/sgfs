@@ -1,3 +1,4 @@
+import os
 from pprint import pprint
 from subprocess import call
 from unittest import TestCase
@@ -62,6 +63,10 @@ class TestSchema(TestCase):
         print 'STRUCTURE'
         structure = schema.structure(context)
         structure.pprint()
+        print
+        
+        print 'CALLS'
+        structure.preview(os.path.join('$PROJ'))
         print
         
         self.assert_(False)
