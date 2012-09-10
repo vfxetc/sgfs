@@ -2,7 +2,7 @@ import os
 
 import yaml
 
-from . import structure
+from .structure import Structure
 from . import utils
 
 
@@ -18,6 +18,7 @@ class Schema(object):
         self.config = yaml.load(open(self._join_path(config_name)).read())
         
         # Set some defaults on the config.
+        self.config.setdefault('type', 'entity')
         default_template = self._join_path(os.path.splitext(config_name)[0])
         if os.path.exists(default_template):
             self.config.setdefault('template', default_template)
@@ -63,12 +64,19 @@ class Schema(object):
         entities[self.entity_type] = context.entity
         entities['self'] = context.entity
         
-        children = []
-        for child in context.children:
-            child_type = child.entity['type']
+        structure = Structure.from_config(entities, self.config.copy())
+        if not structure:
+            return
+
+        for child_context in context.children:
+            child_type = child_context.entity['type']
             if child_type in self.children:
-                children.append(self.children[child_type]._structure(child, entities.copy()))
+                child_structure = self.children[child_type]._structure(child_context, entities.copy())
+                if child_structure:
+                    structure.children.append(child_structure)
         
-        return structure.Entity(entities, self.config.copy(), children)
+        return structure
+        
+        
 
 

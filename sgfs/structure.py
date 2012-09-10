@@ -59,7 +59,7 @@ class Structure(object):
     
     def pprint(self, depth=0):
         print '\t' * depth + self._repr_headline()
-        for child in self.children:
+        for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
 
@@ -113,8 +113,6 @@ class Directory(Structure):
                     },
                     default_type=default_type,
                 ))
-                    
-        self.children.sort(key=lambda x: x.name)
     
     def _repr_headline(self):
         return (self.name or '.') + '/'
