@@ -69,5 +69,5 @@ class TestSchema(TestCase):
         structure.preview('./project')
         print
         
-        self.assert_(False)
+        # self.assert_(False)
         

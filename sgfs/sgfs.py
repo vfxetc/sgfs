@@ -1,11 +1,17 @@
-import os
-import copy
 from pprint import pprint
+import copy
+import datetime
+import os
+
+import yaml
 
 from sgsession import Session
 
 from .context import Context
 from .schema import Schema
+
+
+TAG_NAME = '.sgfs.yml'
 
 
 class SGFS(object):
@@ -21,6 +27,33 @@ class SGFS(object):
         self.shotgun = shotgun
         self.session = Session(self.shotgun)
     
+    def tag_directory_with_entity(self, path, entity):
+        tag = {
+            'created_at': datetime.datetime.now(),
+            'entity': entity.as_dict(),
+        }
+        serialized = yaml.dump(tag,
+            explicit_start=True,
+            indent=4,
+            default_flow_style=False
+        )
+        with open(os.path.join(path, TAG_NAME), 'a') as fh:
+            fh.write(serialized)
+        
+        # TODO: Add to reverse cache for project.
+        # - get context from path
+        # - get project from start of context
+    
+    def get_directory_tags(self, path):
+        path = os.path.join(path, TAG_NAME)
+        if not os.path.exists(path):
+            return []
+        with open(path) as fh:
+            tags = list(yaml.load_all(fh.read()))
+            for tag in tags:
+                tag['entity'] = self.session.merge(tag['entity'])
+            return tags
+        
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
         
