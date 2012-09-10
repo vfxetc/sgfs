@@ -6,55 +6,70 @@ import yaml
 from . import utils
 
 
-def _get_or_eval(entities, config, name, default=None):
-    for namespace in (config, entities):
-        if name in namespace:
-            return namespace[name]
-        expr_name = name + '_expr'
-        if expr_name in namespace:
-            return utils.eval_expr_or_func(namespace[expr_name], entities, config)
-    return default
+def _namespace_from_context(context, base=None):
+    namespace = dict(base or {})
+    namespace['self'] = context.entity
+    head = context
+    while head:
+        namespace[head.entity['type']] = head.entity
+        head = head.parent
+    return namespace
+    
+    
+
 
 
 class Structure(object):
     
     @classmethod
-    def from_config(cls, entities, config, default_type=None):
+    def from_context(cls, context, config):
         
-        type_ = config.get('type', default_type)
-        
+        type_ = config.get('type')
         constructor = {
             'directory': Directory,
             'entity': Entity,
             'include': Include,
             'file': File,
         }.get(type_)
-        
         if not constructor:
             raise ValueError('could not determine type')
         
-        if constructor._should_construct(entities, config):
-            return constructor(entities, config)
+        if constructor._should_construct(context, config):
+            return constructor(context, config)
         
     @classmethod
-    def _should_construct(cls, entities, config):
+    def _should_construct(cls, context, config):
         if 'condition' not in config:
             return True
-        return bool(utils.eval_expr_or_func(config['condition'], entities, config))
+        return bool(utils.eval_expr_or_func(
+            config['condition'],
+            _namespace_from_context(context, config),
+        ))
     
-    def __init__(self, entities, config, children=None):
+    def __init__(self, context, config):
         
-        self.children = children or []
+        self.context = context
+        self.config = config
         
-        self.name = str(_get_or_eval(entities, config, 'name', ''))
-        self.file = config.get('__file__')
+        self.name = str(self._get_or_eval('name', ''))
+        self.children = []
     
+    def _get_or_eval(self, name, default=None):
+        if name in self.config:
+            return self.config[name]
+        expr_name = name + '_expr'
+        if expr_name in self.config:
+            return utils.eval_expr_or_func(
+                self.config[expr_name],
+                _namespace_from_context(self.context, self.config),
+            )
+        return default
+        
     def _repr_headline(self):
-        return '%s %r at 0x%x from %r' % (
+        return '%s %r at 0x%x' % (
             self.__class__.__name__,
             self.name,
             id(self),
-            self.file,
         )
     
     def pprint(self, depth=0):
@@ -66,53 +81,53 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, entities, config, *args, **kwargs):
-        super(Directory, self).__init__(entities, config, *args, **kwargs)
+    def __init__(self, context, config):
+        super(Directory, self).__init__(context, config)
         
         template = config.get('template')
         if template:
-            
-            # Build up the ignore list.
-            ignore = ['._*', '.sgfs-ignore']
-            ignore_file = os.path.join(template, '.sgfs-ignore')
-            if os.path.exists(ignore_file):
-                for line in open(ignore_file):
-                    line = line.strip()
-                    if not line or line[0] == '#':
-                        continue
-                    ignore.append(ignore_file)
-            
-            # List the directory and apply the ignore list.
-            names = os.listdir(template)
-            names = [x for x in names if not any(fnmatch.fnmatch(x, pattern) for pattern in ignore)]
-            paths = [os.path.join(template, name) for name in names]
-            
-            # Find anything special, and turn it into children.
-            for special in [x for x in paths if x.endswith('.yml')]:
-                
-                config = yaml.load(open(special).read()) or {}
-                config['__file__'] = special
-                local_template = os.path.splitext(special)[0]
-                
-                if os.path.exists(local_template):
-                    config['template'] = local_template
-                    paths.remove(local_template)
-                
-                child = Structure.from_config(entities, config, default_type='directory')
-                if child is not None:
-                    self.children.append(child)
+            self._scan_template(template)
+    
+    def _scan_template(self, template):
         
-            # Generic files/directories.
-            for path in [x for x in paths if not x.endswith('.yml')]:
-                default_type = 'directory' if os.path.isdir(path) else 'file'
-                self.children.append(Structure.from_config(
-                    entities,
-                    {
-                        'name': os.path.basename(path),
-                        'template': path
-                    },
-                    default_type=default_type,
-                ))
+        # Build up the ignore list.
+        ignore = ['._*', '.sgfs-ignore']
+        ignore_file = os.path.join(template, '.sgfs-ignore')
+        if os.path.exists(ignore_file):
+            for line in open(ignore_file):
+                line = line.strip()
+                if not line or line[0] == '#':
+                    continue
+                ignore.append(ignore_file)
+            
+        # List the directory and apply the ignore list.
+        names = os.listdir(template)
+        names = [x for x in names if not any(fnmatch.fnmatch(x, pattern) for pattern in ignore)]
+        paths = [os.path.join(template, name) for name in names]
+            
+        # Find anything special, and turn it into children.
+        for special in [x for x in paths if x.endswith('.yml')]:
+                
+            config = yaml.load(open(special).read()) or {}
+            config.setdefault('type', 'directory')
+            
+            local_template = os.path.splitext(special)[0]
+            if os.path.exists(local_template):
+                config['template'] = local_template
+                paths.remove(local_template)
+                
+            child = Structure.from_context(self.context, config)
+            if child is not None:
+                self.children.append(child)
+        
+        # Generic files/directories.
+        for path in [x for x in paths if not x.endswith('.yml')]:
+            self.children.append(Structure.from_context(
+                self.context, {
+                    'name': os.path.basename(path),
+                    'type': 'directory' if os.path.isdir(path) else 'file',
+                    'template': path,
+            }))
     
     def _repr_headline(self):
         return (self.name or '.') + '/'
@@ -121,9 +136,9 @@ class Directory(Structure):
 
 class Entity(Directory):
     
-    def __init__(self, entities, config, *args, **kwargs):
-        super(Entity, self).__init__(entities, config, *args, **kwargs)
-        self.entity = entities['self']
+    @property
+    def entity(self):
+        return self.context.entity
     
     def _repr_headline(self):
         return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id']) 
@@ -132,8 +147,9 @@ class Entity(Directory):
 
 class Include(Directory):
     
-    def _repr_headline(self):
-        return '<%s %s>' % (self.__class__.__name__, self.file)
+    def pprint(self, depth):
+        for child in self.children:
+            child.pprint(depth)
 
 
 class File(Structure):

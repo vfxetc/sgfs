@@ -50,28 +50,20 @@ class Schema(object):
         print '\t' * depth + '}'
     
     def structure(self, context):
-        return self._structure(context, entities={})
-    
-    def _structure(self, context, entities):
-        
-        print 'STRUCTURE', context
         
         if self.entity_type != context.entity['type']:
             raise ValueError('context entity type does not match; %r != %r' % (
                 self.entity_type, context.entity['type']
             ))
         
-        entities[self.entity_type] = context.entity
-        entities['self'] = context.entity
-        
-        structure = Structure.from_config(entities, self.config.copy())
+        structure = Structure.from_context(context, self.config.copy())
         if not structure:
             return
 
         for child_context in context.children:
             child_type = child_context.entity['type']
             if child_type in self.children:
-                child_structure = self.children[child_type]._structure(child_context, entities.copy())
+                child_structure = self.children[child_type].structure(child_context)
                 if child_structure:
                     structure.children.append(child_structure)
         
