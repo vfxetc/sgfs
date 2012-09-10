@@ -6,22 +6,22 @@ import yaml
 from . import utils
 
 
-def _get_or_eval(entities, schema_config, name, default=None):
-    for namespace in (schema_config, entities):
+def _get_or_eval(entities, config, name, default=None):
+    for namespace in (config, entities):
         if name in namespace:
             return namespace[name]
         expr_name = name + '_expr'
         if expr_name in namespace:
-            return utils.eval_expr_or_func(namespace[expr_name], entities, schema_config)
+            return utils.eval_expr_or_func(namespace[expr_name], entities, config)
     return default
 
 
 class Structure(object):
     
     @classmethod
-    def from_config(cls, entities, schema_config, default_type=None):
+    def from_config(cls, entities, config, default_type=None):
         
-        type_ = schema_config.get('type', default_type)
+        type_ = config.get('type', default_type)
         
         constructor = {
             'directory': Directory,
@@ -33,10 +33,8 @@ class Structure(object):
         if not constructor:
             raise ValueError('could not determine type')
         
-        if constructor._should_construct(entities, schema_config):
-            return constructor(entities, schema_config)
-        else:
-            print 'NOT CONSTRUCTING', type_
+        if constructor._should_construct(entities, config):
+            return constructor(entities, config)
         
     @classmethod
     def _should_construct(cls, entities, config):
@@ -44,12 +42,12 @@ class Structure(object):
             return True
         return bool(utils.eval_expr_or_func(config['condition'], entities, config))
     
-    def __init__(self, entities, schema_config, children=None):
+    def __init__(self, entities, config, children=None):
         
         self.children = children or []
         
-        self.name = str(_get_or_eval(entities, schema_config, 'name', ''))
-        self.file = schema_config.get('__file__')
+        self.name = str(_get_or_eval(entities, config, 'name', ''))
+        self.file = config.get('__file__')
     
     def _repr_headline(self):
         return '%s %r at 0x%x from %r' % (
@@ -68,10 +66,10 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, entities, schema_config, *args, **kwargs):
-        super(Directory, self).__init__(entities, schema_config, *args, **kwargs)
+    def __init__(self, entities, config, *args, **kwargs):
+        super(Directory, self).__init__(entities, config, *args, **kwargs)
         
-        template = schema_config.get('template')
+        template = config.get('template')
         if template:
             
             # Build up the ignore list.
@@ -125,8 +123,8 @@ class Directory(Structure):
 
 class Entity(Directory):
     
-    def __init__(self, entities, schema_config, *args, **kwargs):
-        super(Entity, self).__init__(entities, schema_config, *args, **kwargs)
+    def __init__(self, entities, config, *args, **kwargs):
+        super(Entity, self).__init__(entities, config, *args, **kwargs)
         self.entity = entities['self']
     
     def _repr_headline(self):
