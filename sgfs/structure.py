@@ -32,9 +32,18 @@ class Structure(object):
         
         if not constructor:
             raise ValueError('could not determine type')
-            
-        return constructor(entities, schema_config)
         
+        if constructor._should_construct(entities, schema_config):
+            return constructor(entities, schema_config)
+        else:
+            print 'NOT CONSTRUCTING', type_
+        
+    @classmethod
+    def _should_construct(cls, entities, config):
+        if 'condition' not in config:
+            return True
+        return bool(utils.eval_expr_or_func(config['condition'], entities, config))
+    
     def __init__(self, entities, schema_config, children=None):
         
         self.children = children or []
@@ -59,8 +68,8 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, entities, schema_config, children=None):
-        super(Directory, self).__init__(entities, schema_config, children)
+    def __init__(self, entities, schema_config, *args, **kwargs):
+        super(Directory, self).__init__(entities, schema_config, *args, **kwargs)
         
         template = schema_config.get('template')
         if template:
@@ -91,7 +100,9 @@ class Directory(Structure):
                     config['template'] = local_template
                     paths.remove(local_template)
                 
-                self.children.append(Structure.from_config(entities, config, default_type='directory'))
+                child = Structure.from_config(entities, config, default_type='directory')
+                if child is not None:
+                    self.children.append(child)
         
             # Generic files/directories.
             for path in [x for x in paths if not x.endswith('.yml')]:

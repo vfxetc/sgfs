@@ -1,2 +1,2 @@
 type: include
-condition: task['step']['id'] in (1, 2, 3)
+condition: self['step']['short_name'] in ('Online', )
