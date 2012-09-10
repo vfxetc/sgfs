@@ -5,6 +5,7 @@ import subprocess
 import yaml
 
 from . import utils
+from . import processor
 
 
 def _namespace_from_context(context, base=None):
@@ -75,14 +76,12 @@ class Structure(object):
         for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
-    def _calls(self, root):
+    def _process(self, root, processor):
         for child in self.children:
-            for x in child._calls(root):
-                yield x
+            child._process(root, processor)
     
     def preview(self, root='.'):
-        for args in self._calls(root):
-            print subprocess.list2cmdline(args)
+        self._process(root, processor.Previewer('$schema', ''))
                 
 
 
@@ -95,12 +94,15 @@ class Directory(Structure):
         if template:
             self._scan_template(template)
     
-    def _calls(self, root):
+    def _process(self, root, processor):
+        
         path = os.path.join(root, self.name).rstrip('/')
+        
         if not os.path.exists(path):
-            yield ['mkdir', '-p', path]
-        for x in super(Directory, self)._calls(path):
-            yield x
+            processor.mkdir(path)
+            
+        for child in self.children:
+            child._process(path, processor)
         
     def _scan_template(self, template):
         
@@ -171,14 +173,13 @@ class File(Structure):
     def _repr_headline(self):
         return self.name
     
-    def _calls(self, root):
+    def _process(self, root, processor):
         path = os.path.join(root, self.name).rstrip('/')
         if not os.path.exists(path):
             template = self.config.get('template')
             if template:
-                yield ['cp', '-p', template, path]
+                processor.copy(template, path)
             else:
-                yield ['touch', path]
-    
+                processor.touch(path)
 
 

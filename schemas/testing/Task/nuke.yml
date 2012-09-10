@@ -1,2 +1,5 @@
 type: include
-condition: self['step']['short_name'] in ('Roto', )
+condition: self['step']['short_name'] in steps_needing_nuke
+steps_needing_nuke:
+    - Online
+    - Roto

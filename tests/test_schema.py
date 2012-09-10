@@ -66,7 +66,7 @@ class TestSchema(TestCase):
         print
         
         print 'CALLS'
-        structure.preview(os.path.join('$PROJ'))
+        structure.preview('./project')
         print
         
         self.assert_(False)

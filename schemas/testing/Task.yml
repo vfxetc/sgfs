@@ -1,1 +1,6 @@
+
+condition: self['step']['short_name'] not in do_not_create
+do_not_create:
+    - Client
+
 name_expr: self['step']['short_name']
