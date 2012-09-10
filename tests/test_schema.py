@@ -47,16 +47,19 @@ class TestSchema(TestCase):
         
     def test_structure(self):
         
-        schema = self.sgfs.schema('testing')
-        schema.pprint()
-        print
-        
+        print 'CONTEXT'
         context = self.sgfs.context_from_entities([
             self.sgfs.session.merge(x) for x in fixtures.tasks[:1]
         ])
         context.pprint()
         print
+
+        print 'SCHEMA'
+        schema = self.sgfs.schema('testing')
+        schema.pprint()
+        print
         
+        print 'STRUCTURE'
         structure = schema.structure(context)
         structure.pprint()
         print

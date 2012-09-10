@@ -39,11 +39,8 @@ class Structure(object):
         
         self.children = children or []
         
-        name = str(_get_or_eval(globals_, locals_, 'name', ''))
-        path = str(_get_or_eval(globals_, locals_, 'path', ''))
-        self.name = os.path.join(path, name)
+        self.name = str(_get_or_eval(globals_, locals_, 'name', ''))
         self.file = locals_.get('__file__')
-        self.file = os.path.basename(self.file) if self.file is not None else None
     
     def _repr_headline(self):
         return '%s %r at 0x%x from %r' % (
@@ -107,7 +104,7 @@ class Directory(Structure):
         self.children.sort(key=lambda x: x.name)
     
     def _repr_headline(self):
-        return self.name + '/'
+        return (self.name or '.') + '/'
                     
 
 
@@ -118,7 +115,7 @@ class Entity(Directory):
         self.entity = globals_['self']
     
     def _repr_headline(self):
-        return '%s/ <- %s %s' % (self.name, self.entity['type'], self.entity['id']) 
+        return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id']) 
     
 
 

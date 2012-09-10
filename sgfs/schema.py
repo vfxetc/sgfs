@@ -90,6 +90,5 @@ class Schema(object):
             return structure.Entity(globals_, locals_, children, template=template)
         else:
             return structure.Entity(globals_, locals_, children)
-        
-    
+
 
