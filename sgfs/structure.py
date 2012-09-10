@@ -59,9 +59,10 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, entities, schema_config, children=None, template=None):
+    def __init__(self, entities, schema_config, children=None):
         super(Directory, self).__init__(entities, schema_config, children)
         
+        template = schema_config.get('template')
         if template:
             
             # Build up the ignore list.
@@ -97,7 +98,10 @@ class Directory(Structure):
                 default_type = 'directory' if os.path.isdir(path) else 'file'
                 self.children.append(Structure.from_config(
                     entities,
-                    {'path': '', 'name': os.path.basename(path)},
+                    {
+                        'name': os.path.basename(path),
+                        'template': path
+                    },
                     default_type=default_type,
                 ))
                     
@@ -119,13 +123,16 @@ class Entity(Directory):
     
 
 
-class Include(Structure):
+class Include(Directory):
     
     def _repr_headline(self):
         return '<%s %s>' % (self.__class__.__name__, self.file)
 
 
 class File(Structure):
-    pass
+    
+    def _repr_headline(self):
+        return self.name
+    
 
 

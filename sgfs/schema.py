@@ -17,6 +17,11 @@ class Schema(object):
         self.config_name = config_name
         self.config = yaml.load(open(self._join_path(config_name)).read())
         
+        # Set some defaults on the config.
+        default_template = self._join_path(os.path.splitext(config_name)[0])
+        if os.path.exists(default_template):
+            self.config.setdefault('template', default_template)
+        
         # Load all the children.
         self.children = {}
         for child_type, child_config_name in self.config.get('children', {}).iteritems():
@@ -43,20 +48,6 @@ class Schema(object):
             child.pprint(depth + 1)
         print '\t' * depth + '}'
     
-    @property
-    def template(self):
-    
-        try:
-            return self.config['template']
-        except KeyError:
-            pass
-            
-        path = os.path.join(self.root, self.entity_type)
-        if os.path.exists(path):
-            return path
-        
-        return None
-    
     def structure(self, context):
         return self._structure(context, entities={})
     
@@ -71,7 +62,6 @@ class Schema(object):
         
         entities[self.entity_type] = context.entity
         entities['self'] = context.entity
-        locals_ = self.config.copy()
         
         children = []
         for child in context.children:
@@ -79,10 +69,6 @@ class Schema(object):
             if child_type in self.children:
                 children.append(self.children[child_type]._structure(child, entities.copy()))
         
-        template = self.template
-        if template:
-            return structure.Entity(entities, locals_, children, template=template)
-        else:
-            return structure.Entity(entities, locals_, children)
+        return structure.Entity(entities, self.config.copy(), children)
 
 
