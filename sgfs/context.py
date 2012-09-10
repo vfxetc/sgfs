@@ -22,12 +22,7 @@ class Context(object):
         ),
         if not self.children:
             print
-            return
-        elif len(self.children) == 1:
-            print '->',
-            self.children[0].pprint(depth)
-            return
-        
+            return        
         print '{'
         for child in self.children:
             child.pprint(depth + 1)

@@ -54,15 +54,9 @@ class Structure(object):
         )
     
     def pprint(self, depth=0):
-        print '\t' * depth + self._repr_headline(),
-        if not self.children:
-            print
-            return
-        
-        print '{'
+        print '\t' * depth + self._repr_headline()
         for child in self.children:
             child.pprint(depth + 1)
-        print '\t' * depth + '}'
     
 
 
@@ -111,6 +105,9 @@ class Directory(Structure):
                 ))
                     
         self.children.sort(key=lambda x: x.name)
+    
+    def _repr_headline(self):
+        return self.name + '/'
                     
 
 
@@ -121,19 +118,14 @@ class Entity(Directory):
         self.entity = globals_['self']
     
     def _repr_headline(self):
-        return '%s %s:%s %r at 0x%x from %r' % (
-            self.__class__.__name__,
-            self.entity['type'],
-            self.entity['id'],
-            self.name,
-            id(self),
-            self.file,
-        )
+        return '%s/ <- %s %s' % (self.name, self.entity['type'], self.entity['id']) 
     
 
 
 class Include(Structure):
-    pass
+    
+    def _repr_headline(self):
+        return '<%s %s>' % (self.__class__.__name__, self.file)
 
 
 class File(Structure):
