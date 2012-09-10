@@ -1,5 +1,3 @@
 children:
-    Asset:
-        config: Asset.yml
-    Sequence:
-        config: Sequence.yml # Slash is relative to config root.
+    Asset: Asset.yml
+    Sequence: Sequence.yml # Slash is relative to config root.

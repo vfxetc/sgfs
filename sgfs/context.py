@@ -14,15 +14,19 @@ class Context(object):
         return '<Context %s:%s at 0x%x>' % (self.entity['type'], self.entity['id'], id(self))
     
     def pprint(self, depth=0):
-        print '%s%s:%s at 0x%x' % (
+        print '%s%s:%s' % (
             '\t' * depth,
             self.entity['type'],
             self.entity['id'],
-            id(self)
         ),
         if not self.children:
             print
-            return        
+            return
+        elif len(self.children) == 1:
+            print '->',
+            self.children[0].pprint(depth)
+            return
+        
         print '{'
         for child in self.children:
             child.pprint(depth + 1)

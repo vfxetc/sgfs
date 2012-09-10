@@ -71,7 +71,7 @@ class SGFS(object):
         # The parent is the root.
         return entity_to_context[projects[0]]
     
-    def schema(self, name='tankish'):
+    def schema(self, name='tankish', entity_type='Project'):
         schema_root = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             'schemas',
@@ -79,5 +79,5 @@ class SGFS(object):
         )
         if not os.path.exists(schema_root):
             raise ValueError('schema %r does not exist' % name)
-        return Schema(schema_root, 'Project')
+        return Schema(schema_root, entity_type, entity_type + '.yml')
     

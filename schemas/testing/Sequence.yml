@@ -1,5 +1,4 @@
 name_expr: '"SEQ/" + self["code"]'
 
 children:
-    Shot:
-        config: Shot.yml
+    Shot: Shot.yml

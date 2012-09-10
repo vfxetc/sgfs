@@ -6,22 +6,22 @@ import yaml
 from . import utils
 
 
-def _get_or_eval(globals_, locals_, name, default=None):
-    for namespace in (locals_, globals_):
+def _get_or_eval(entities, schema_config, name, default=None):
+    for namespace in (schema_config, entities):
         if name in namespace:
             return namespace[name]
         expr_name = name + '_expr'
         if expr_name in namespace:
-            return utils.eval_expr_or_func(namespace[expr_name], globals_, locals_)
+            return utils.eval_expr_or_func(namespace[expr_name], entities, schema_config)
     return default
 
 
 class Structure(object):
     
     @classmethod
-    def from_config(cls, globals_, locals_, default_type=None):
+    def from_config(cls, entities, schema_config, default_type=None):
         
-        type_ = locals_.get('type', default_type)
+        type_ = schema_config.get('type', default_type)
         
         constructor = {
             'directory': Directory,
@@ -33,14 +33,14 @@ class Structure(object):
         if not constructor:
             raise ValueError('could not determine type')
             
-        return constructor(globals_, locals_)
+        return constructor(entities, schema_config)
         
-    def __init__(self, globals_, locals_, children=None):
+    def __init__(self, entities, schema_config, children=None):
         
         self.children = children or []
         
-        self.name = str(_get_or_eval(globals_, locals_, 'name', ''))
-        self.file = locals_.get('__file__')
+        self.name = str(_get_or_eval(entities, schema_config, 'name', ''))
+        self.file = schema_config.get('__file__')
     
     def _repr_headline(self):
         return '%s %r at 0x%x from %r' % (
@@ -59,8 +59,8 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, globals_, locals_, children=None, template=None):
-        super(Directory, self).__init__(globals_, locals_, children)
+    def __init__(self, entities, schema_config, children=None, template=None):
+        super(Directory, self).__init__(entities, schema_config, children)
         
         if template:
             
@@ -90,13 +90,13 @@ class Directory(Structure):
                     config['template'] = local_template
                     paths.remove(local_template)
                 
-                self.children.append(Structure.from_config(globals_, config, default_type='directory'))
+                self.children.append(Structure.from_config(entities, config, default_type='directory'))
         
             # Generic files/directories.
             for path in [x for x in paths if not x.endswith('.yml')]:
                 default_type = 'directory' if os.path.isdir(path) else 'file'
                 self.children.append(Structure.from_config(
-                    globals_,
+                    entities,
                     {'path': '', 'name': os.path.basename(path)},
                     default_type=default_type,
                 ))
@@ -110,9 +110,9 @@ class Directory(Structure):
 
 class Entity(Directory):
     
-    def __init__(self, globals_, locals_, *args, **kwargs):
-        super(Entity, self).__init__(globals_, locals_, *args, **kwargs)
-        self.entity = globals_['self']
+    def __init__(self, entities, schema_config, *args, **kwargs):
+        super(Entity, self).__init__(entities, schema_config, *args, **kwargs)
+        self.entity = entities['self']
     
     def _repr_headline(self):
         return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id']) 
