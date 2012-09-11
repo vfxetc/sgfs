@@ -48,10 +48,15 @@ class TestSchema(TestCase):
         
     def test_structure(self):
         
+        entities = [self.sgfs.session.merge(x) for x in fixtures.tasks[:]]
+        self.sgfs.session.fetch_heirarchy(entities)
+        
+        print 'ENTITIES'
+        entities[0].project().pprint(backrefs=3)
+        print
+        
         print 'CONTEXT'
-        context = self.sgfs.context_from_entities([
-            self.sgfs.session.merge(x) for x in fixtures.tasks[:]
-        ])
+        context = self.sgfs.context_from_entities(entities)
         context.pprint()
         print
 
@@ -69,5 +74,4 @@ class TestSchema(TestCase):
         structure.preview('./project')
         print
         
-        # self.assert_(False)
         
