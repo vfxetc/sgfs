@@ -1,25 +1,36 @@
-from pprint import pprint
-from subprocess import call
-from unittest import TestCase
+from common import *
+
 import itertools
 
-from sgsession import fixtures
-
 from sgfs import SGFS
-
-
-def setUpModule():
-    fixtures.setup_tasks()
 
 
 class TestContext(TestCase):
     
     def setUp(self):
-        self.sgfs = SGFS(root=fixtures.root, shotgun=fixtures.sg)
+        sg = Shotgun()
+        self.sg = self.fix = fix = Fixture(sg)
+        
+        proj = fix.Project(mini_uuid())
+        seqs = [proj.Sequence(code, project=proj) for code in ('AA', 'BB')]
+        shots = [seq.Shot('%s_%03d' % (seq['code'], i), project=proj) for seq in seqs for i in range(1, 3)]
+        steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Model')]
+        tasks = [shot.Task(step['code'] + ' something', step=step, entity=shot, project=proj) for step in steps for shot in shots]
+        
+        self.proj = minimal(proj)
+        self.seqs = [minimal(x) for x in seqs]
+        self.shots = [minimal(x) for x in shots]
+        self.steps = [minimal(x) for x in steps]
+        self.tasks = [minimal(x) for x in tasks]
+
+        self.root = os.path.join('scratch', mini_uuid())
+        self.session = Session(self.sg)
+        self.sgfs = SGFS(root=self.root, session=self.session)
+        self.session = self.sgfs.session
         
     def test_context_from_entities(self):
         
-        shots = [self.sgfs.session.merge(x) for x in fixtures.tasks]
+        shots = [self.session.merge(x) for x in self.tasks]
         shots[0].pprint()
         print
         
@@ -49,7 +60,7 @@ class TestContext(TestCase):
             
     def test_linearize(self):
         
-        shots = [self.sgfs.session.merge(x) for x in fixtures.tasks]
+        shots = [self.session.merge(x) for x in self.tasks]
         ctx = self.sgfs.context_from_entities(shots)
         ctx.pprint()
         print
