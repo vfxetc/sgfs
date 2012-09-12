@@ -5,6 +5,12 @@ import re
 from common import *
 
 
+class _AnyNumber(int):
+    def __eq__(self, other):
+        return True
+ANY = _AnyNumber(1)
+
+
 class PathTester(object):
     
     def __init__(self, test, root):
@@ -173,10 +179,11 @@ class TestIncrementalStructure(Base):
             with paths:
                 paths.assertSequence(1)
         
-        self.create(self.assets)
-        with paths:
-            paths.assertAssetType(2)
-            paths.assertAsset(4)
+        for asset in self.assets:
+            self.create([asset])
+            with paths:
+                paths.assertAssetType(ANY)
+                paths.assertAsset(1)
         
         for shot in self.shots:
             self.create([shot])
