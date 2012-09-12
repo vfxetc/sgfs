@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 import re
 
 from common import *
@@ -8,22 +10,38 @@ class PathTester(object):
     def __init__(self, test, root):
         self.test = test
         self.root = root
-        self.paths = []
         
-        for dir_name, dir_names, file_names in os.walk(root):
+        self.paths = []
+        self.matched = set()
+        self.scan()
+    
+    def scan(self):
+        
+        paths = []
+        
+        for dir_name, dir_names, file_names in os.walk(self.root):
             for name in dir_names:
-                path = '/' + os.path.relpath(os.path.join(dir_name, name), root) + '/'
-                self.paths.append(path)
+                path = os.path.join(dir_name, name)[len(self.root):] + '/'
+                paths.append(path)
             for name in file_names:
-                path = '/' + os.path.relpath(os.path.join(dir_name, name), root)
-                self.paths.append(path)
+                path = os.path.join(dir_name, name)[len(self.root):]
+                paths.append(path)
         
         for pattern in (r'\._', r'.DS_Store', r'.*\.pyc$'):
-            self.ignore(pattern)
+            paths = [path for path in paths if not re.match(pattern, path)]
+        
+        count = len(self.paths)
+        for path in paths:
+            if path not in self.matched:
+                self.paths.append(path)
+        print 'PathTester found', len(self.paths) - count, 'new items'
     
-    def ignore(self, pattern):
-        self.paths = [path for path in self.paths if not re.match(pattern, path)]
+    def __enter__(self):
+        self.scan()
     
+    def __exit__(self, *args):
+        self.assertMatchedAll()
+        
     def assertMatches(self, count, pattern, msg=None):
         
         if not pattern:
@@ -36,7 +54,9 @@ class PathTester(object):
         paths = self.paths
         self.paths = []
         for path in paths:
-            if not re.match(full_pattern, path):
+            if re.match(full_pattern, path):
+                self.matched.add(path)
+            else:
                 self.paths.append(path)
         self.test.assertEqual(
             count,
@@ -121,7 +141,7 @@ class Base(TestCase):
         context = self.sgfs.context_from_entities(merged)
         schema = self.sgfs.schema('v1')
         structure = schema.structure(context)
-        structure.create(self.sandbox)
+        structure.create(self.sandbox, verbose=True)
     
     def pathTester(self):
         return PathTester(self, os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
@@ -136,12 +156,20 @@ class TestFullStructure(Base):
         paths.assertFullStructure()
 
 class TestIncrementalStructure(Base):
-    
           
     def test_incremental_structure(self):
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.create([proj])
+
         paths = self.pathTester()
-        paths.assertProject()
+        paths.assertMatchedAll()
+
+        self.create([proj])
+        with paths:
+            paths.assertProject()
+
+        self.create([self.seqs[0]])
+        with paths:
+            paths.assertSequence(1)
+        
        
