@@ -167,9 +167,29 @@ class TestIncrementalStructure(Base):
         self.create([proj])
         with paths:
             paths.assertProject()
-
-        self.create([self.seqs[0]])
+        
+        for seq in self.seqs:
+            self.create([seq])
+            with paths:
+                paths.assertSequence(1)
+        
+        self.create(self.assets)
         with paths:
-            paths.assertSequence(1)
+            paths.assertAssetType(2)
+            paths.assertAsset(4)
+        
+        for shot in self.shots:
+            self.create([shot])
+            with paths:
+                paths.assertShot(1)
+        
+        self.create(self.tasks)
+        with paths:
+            paths.assertAssetTask(len(self.assets), 'Anm', maya=True, nuke=False)
+            paths.assertAssetTask(len(self.assets), 'Comp', maya=False, nuke=True)
+            paths.assertAssetTask(len(self.assets), 'Model', maya=True, nuke=False)
+            paths.assertShotTask(len(self.shots), 'Anm', maya=True, nuke=False)
+            paths.assertShotTask(len(self.shots), 'Comp', maya=False, nuke=True)
+            paths.assertShotTask(len(self.shots), 'Model', maya=True, nuke=False)
         
        
