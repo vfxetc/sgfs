@@ -50,35 +50,5 @@ class TestSchema(TestCase):
         stask = shot.children['Task']
         self.assertEqual(stask.entity_type, 'Task')
         self.assertEqual(len(stask.children), 0)
-        
-    def test_structure(self):
-        
-        entities = [self.sgfs.session.merge(x) for x in self.tasks[:]]
-        self.sgfs.session.fetch_heirarchy(entities)
-        
-        print 'ENTITIES'
-        entities[0].project().pprint(backrefs=3)
-        print
-        
-        print 'CONTEXT'
-        context = self.sgfs.context_from_entities(entities)
-        context.pprint()
-        print
 
-        print 'SCHEMA'
-        schema = self.sgfs.schema('testing')
-        schema.pprint()
-        print
-        
-        print 'STRUCTURE'
-        structure = schema.structure(context)
-        structure.pprint()
-        print
-        
-        print 'CALLS'
-        structure.preview('./project')
-        print
-        
-        structure.create(self.sandbox)
-        # self.failIfLocal()
         
