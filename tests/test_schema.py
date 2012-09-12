@@ -81,5 +81,5 @@ class TestSchema(TestCase):
         print
         
         structure.create(self.root)
-        self.fail()
+        self.failIfLocal()
         
