@@ -4,9 +4,10 @@ from subprocess import call, list2cmdline
 
 class Processor(object):
     
-    def __init__(self, schema='.', project='.'):
+    def __init__(self, schema='', project='', verbose=False):
         self.schema = schema
         self.project = project
+        self.verbose = True
     
     def join_to_schema(self, path):
         return os.path.join(self.schema, path)
@@ -15,6 +16,8 @@ class Processor(object):
         return os.path.join(self.project, path)
     
     def call(self, args):
+        if self.verbose:
+            print list2cmdline(args)
         call(args)
     
     def mkdir(self, path):
