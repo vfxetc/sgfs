@@ -7,13 +7,12 @@ class TestTags(TestCase):
         sg = Shotgun()
         self.sg = self.fix = fix = Fixture(sg)
         
-        self.root = os.path.join(sandbox, self.__class__.__name__)
         self.session = Session(self.sg)
-        self.sgfs = SGFS(root=self.root, session=self.session)
+        self.sgfs = SGFS(root=self.sandbox, session=self.session)
         
     def test_set_get(self):
         
-        path = self.root
+        path = self.sandbox
         if not os.path.exists(path):
             os.makedirs(path)
         print path
