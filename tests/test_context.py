@@ -19,7 +19,7 @@ class TestContext(TestCase):
         self.steps = map(minimal, steps)
         self.tasks = map(minimal, tasks)
 
-        self.root = os.path.join('scratch', start_time)
+        self.root = sandbox
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.root, session=self.session)
         

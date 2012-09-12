@@ -7,7 +7,7 @@ class TestTags(TestCase):
         sg = Shotgun()
         self.sg = self.fix = fix = Fixture(sg)
         
-        self.root = os.path.join('scratch', start_time, self.__class__.__name__)
+        self.root = os.path.join(sandbox, self.__class__.__name__)
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.root, session=self.session)
         
