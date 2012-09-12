@@ -50,6 +50,3 @@ class TestTags(TestCase):
         
         tags = self.sgfs.get_directory_tags(path)
         pprint(tags)
-        
-        self.assert_(False)
-    

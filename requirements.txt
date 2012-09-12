@@ -1,0 +1,4 @@
+# Manually install testing requirements here since they may not do so.
+-e git://github.com/shotgunsoftware/python-api.git@master#egg=shotgun_api3
+-e git://github.com/westernx/sgmock.git@master#egg=sgmock
+-e git://github.com/westernx/sgsession.git@master#egg=sgsession
