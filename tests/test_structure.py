@@ -82,7 +82,7 @@ class TestFullStructure(Base):
         tasks = [self.session.merge(x) for x in self.tasks]
         assets = [self.session.merge(x) for x in self.assets]
         context = self.sgfs.context_from_entities(tasks + assets)
-        schema = self.sgfs.schema('testing')
+        schema = self.sgfs.schema('v1')
         structure = schema.structure(context)
         structure.create(self.sandbox)
         
