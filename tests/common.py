@@ -1,6 +1,7 @@
 from pprint import pprint, pformat
 import datetime
 import os
+import itertools
 
 from sgmock import Fixture
 from sgmock import TestCase
@@ -14,6 +15,8 @@ else:
     from sgmock import Shotgun, ShotgunError, Fault
 
 from sgsession import Session, Entity
+
+from sgfs import SGFS
 
 
 def mini_uuid():

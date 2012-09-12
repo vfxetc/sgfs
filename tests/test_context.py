@@ -1,9 +1,5 @@
 from common import *
 
-import itertools
-
-from sgfs import SGFS
-
 
 class TestContext(TestCase):
     
@@ -26,7 +22,6 @@ class TestContext(TestCase):
         self.root = os.path.join('scratch', mini_uuid())
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.root, session=self.session)
-        self.session = self.sgfs.session
         
     def test_context_from_entities(self):
         

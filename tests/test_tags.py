@@ -1,30 +1,19 @@
-import os
-from pprint import pprint
-from subprocess import call
-from unittest import TestCase
-import itertools
-
-from sgsession import fixtures
-
-from sgfs import SGFS
-
-
-root = os.path.join(os.path.dirname(__file__), 'root_' + fixtures.timestamp)
-
-
-def setUpModule():
-    fixtures.setup_project()
+from common import *
 
 
 class TestTags(TestCase):
     
     def setUp(self):
-        self.sgfs = SGFS(root=root, shotgun=fixtures.sg)
-        self.session = self.sgfs.session
+        sg = Shotgun()
+        self.sg = self.fix = fix = Fixture(sg)
+
+        self.root = os.path.join('scratch', mini_uuid())
+        self.session = Session(self.sg)
+        self.sgfs = SGFS(root=self.root, session=self.session)
         
     def test_set_get(self):
         
-        path = os.path.join(root, 'tags', 'basics')
+        path = self.root
         os.makedirs(path)
         print path
         
