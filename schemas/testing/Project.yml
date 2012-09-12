@@ -1,4 +1,7 @@
-name_expr: (self.get('code') or self.get('sg_code') or self['name']).replace(' ', '_')
+name_expr: |
+    import re
+    normalize = lambda x: re.sub(r'\W+', '_', x).strip('_')
+    return normalize(self['name'])
 children:
     Asset: Asset.yml
     Sequence: Sequence.yml # Slash is relative to config root.
