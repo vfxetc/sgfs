@@ -1,4 +1,5 @@
 type: include
 condition: self['step']['short_name'] in steps_needing_maya
 steps_needing_maya:
-    - Online
+    - Anm
+    - Model
