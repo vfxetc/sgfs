@@ -4,7 +4,7 @@ from subprocess import call, list2cmdline
 
 class Processor(object):
     
-    def __init__(self, schema, project):
+    def __init__(self, schema='.', project='.'):
         self.schema = schema
         self.project = project
     
