@@ -2,6 +2,7 @@ from pprint import pprint, pformat
 import datetime
 import itertools
 import os
+import sys
 
 from sgmock import Fixture
 from sgmock import TestCase
@@ -20,6 +21,17 @@ from sgsession import Session, Entity
 from sgfs import SGFS
 
 
+if sys.version_info < (2, 6):
+    def next(iter_, *args):
+        try:
+            return iter_.next()
+        except StopIteration:
+            if args:
+                return args[0]
+            else:
+                raise
+
+
 def mini_uuid():
     return os.urandom(4).encode('hex')
 
@@ -29,4 +41,10 @@ def timestamp():
 def minimal(entity):
     return dict(type=entity['type'], id=entity['id'])
 
-start_time = timestamp()
+
+if os.path.abspath(os.path.join(__file__, '..', '..')) == os.path.abspath('.'):
+    sandbox = './sandbox'
+else:
+    sandbox = os.path.abspath(os.path.join(__file__, '..', '..', 'sandbox'))
+sandbox = os.path.join(sandbox, datetime.datetime.now().isoformat('T'))
+os.makedirs(sandbox)
