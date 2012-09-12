@@ -6,15 +6,16 @@ class TestTags(TestCase):
     def setUp(self):
         sg = Shotgun()
         self.sg = self.fix = fix = Fixture(sg)
-
-        self.root = os.path.join('scratch', mini_uuid())
+        
+        self.root = os.path.join('scratch', start_time, self.__class__.__name__)
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.root, session=self.session)
         
     def test_set_get(self):
         
         path = self.root
-        os.makedirs(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
         print path
         
         dummy = self.session.merge({

@@ -4,26 +4,26 @@ from common import *
 class TestSchema(TestCase):
     
     def setUp(self):
+                
         sg = Shotgun()
         self.sg = self.fix = fix = Fixture(sg)
         
-        proj = fix.Project(mini_uuid())
+        proj = fix.Project(self.__class__.__name__ + '_' + mini_uuid())
         seqs = [proj.Sequence(code, project=proj) for code in ('AA', 'BB')]
         shots = [seq.Shot('%s_%03d' % (seq['code'], i), project=proj) for seq in seqs for i in range(1, 3)]
         steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Model')]
         tasks = [shot.Task(step['code'] + ' something', step=step, entity=shot, project=proj) for step in steps for shot in shots]
         
         self.proj = minimal(proj)
-        self.seqs = [minimal(x) for x in seqs]
-        self.shots = [minimal(x) for x in shots]
-        self.steps = [minimal(x) for x in steps]
-        self.tasks = [minimal(x) for x in tasks]
+        self.seqs = map(minimal, seqs)
+        self.shots = map(minimal, shots)
+        self.steps = map(minimal, steps)
+        self.tasks = map(minimal, tasks)
 
-        self.root = os.path.join('scratch', mini_uuid())
+        self.root = os.path.join('scratch', start_time)
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.root, session=self.session)
-        
-        
+    
     def test_loading(self):
         
         schema = self.sgfs.schema('testing')
@@ -80,4 +80,6 @@ class TestSchema(TestCase):
         structure.preview('./project')
         print
         
+        structure.create(self.root)
+        self.fail()
         

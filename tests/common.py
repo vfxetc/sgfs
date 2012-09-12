@@ -28,3 +28,5 @@ def timestamp():
 
 def minimal(entity):
     return dict(type=entity['type'], id=entity['id'])
+
+start_time = timestamp()
