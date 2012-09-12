@@ -16,7 +16,7 @@ TAG_NAME = '.sgfs.yml'
 
 class SGFS(object):
     
-    def __init__(self, root=None, shotgun=None):
+    def __init__(self, root=None, session=None, shotgun=None):
         
         if root is None:
             root = os.environ.get('SGFS_ROOT')
@@ -24,8 +24,16 @@ class SGFS(object):
             raise ValueError('root or $SGFS_ROOT must not be None')
         self.root = root
         
-        self.shotgun = shotgun
-        self.session = Session(self.shotgun)
+        if not (shotgun or session):
+            raise ValueError('one of session or shotgun must not be None')
+        if shotgun and session:
+            raise ValueError('session or shotgun, but not both')
+        if shotgun:
+            self.shotgun = shotgun
+            self.session = Session(self.shotgun)
+        else:
+            self.session = session
+            self.shotgun = session.shotgun
     
     def tag_directory_with_entity(self, path, entity):
         tag = {
