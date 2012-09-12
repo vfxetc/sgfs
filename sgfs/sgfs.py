@@ -73,7 +73,7 @@ class SGFS(object):
         entities = [self.session.merge(x) for x in entities]
         self.session.fetch_heirarchy(entities)
         
-        projects = filter(None, (x.project() for x in entities))
+        projects = filter(None, (x if x['type'] == 'Project' else x.project() for x in entities))
         if len(projects) != len(entities):
             raise ValueError('given entities do not all have projects')
         if len(set(projects)) != 1:
