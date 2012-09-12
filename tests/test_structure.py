@@ -46,6 +46,50 @@ class PathTester(object):
     
     def assertMatchedAll(self, msg=None):
         self.test.assertFalse(self.paths, msg or ('%d paths remain:\n\t' % len(self.paths)) + '\n\t'.join(sorted(self.paths)))
+        
+    def assertProject(self):
+        self.assertMatches(1,  r'/Assets/')
+        self.assertMatches(1, r'/SEQ/')
+    
+    def assertAssetType(self, count):
+        self.assertMatches(count,  r'/Assets/(Model|Texture)/')
+    
+    def assertAsset(self, count):
+        self.assertMatches(count,  r'/Assets/(Model|Texture)/(\1_\d+)/')
+    
+    def assertAssetTask(self, count, type_, maya=False, nuke=False):
+        self._assertTask(count, r'/Assets/(Model|Texture)/(\1_\d+)', type_, maya=maya, nuke=nuke)
+    
+    def _assertTask(self, count, base, type_, maya, nuke):
+        self.assertMatches(count, base + r'/%s/' % type_)
+        self.assertMatches(count if maya else 0, base + r'/%s/scenes/' % type_)
+        self.assertMatches(count if maya else 0, base + r'/%s/workspace.mel' % type_)
+        self.assertMatches(count if nuke else 0, base + r'/%s/scripts/' % type_)
+    
+    def assertSequence(self, count):
+        self.assertMatches(count, r'/SEQ/(\w{2})/')
+    
+    def assertShot(self, count):
+        self.assertMatches(count, r'/SEQ/(\w{2})/\1_\d{3}/')
+        self.assertMatches(count * 3, r'/SEQ/(\w{2})/\1_\d{3}/(Audio|Plates|Ref)/')
+    
+    def assertShotTask(self, count, type_, maya=False, nuke=False):
+        self._assertTask(count, r'/SEQ/(\w{2})/\1_\d{3}', type_, maya=maya, nuke=nuke)
+    
+    def assertFullStructure(self):
+        self.assertProject()
+        self.assertAssetType(2)
+        self.assertAsset(4)
+        self.assertAssetTask(4, 'Anm', maya=True, nuke=False)
+        self.assertAssetTask(4, 'Comp', maya=False, nuke=True)
+        self.assertAssetTask(4, 'Model', maya=True, nuke=False)
+        self.assertSequence(2)
+        self.assertShot(4)
+        self.assertShotTask(4, 'Anm', maya=True, nuke=False)
+        self.assertShotTask(4, 'Comp', maya=False, nuke=True)
+        self.assertShotTask(4, 'Model', maya=True, nuke=False)
+        self.assertMatchedAll()
+        
     
 class Base(TestCase):
     
@@ -70,40 +114,34 @@ class Base(TestCase):
 
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.sandbox, session=self.session)
+        self = None
     
-    def pathTester(self, path):
-        return PathTester(self, path)
-
+    def create(self, entities):
+        merged = [self.session.merge(x) for x in entities]
+        context = self.sgfs.context_from_entities(merged)
+        schema = self.sgfs.schema('v1')
+        structure = schema.structure(context)
+        structure.create(self.sandbox)
+    
+    def pathTester(self):
+        return PathTester(self, os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
+        
+        
 
 class TestFullStructure(Base):
     
     def test_full_structure(self):
-        
-        tasks = [self.session.merge(x) for x in self.tasks]
-        assets = [self.session.merge(x) for x in self.assets]
-        context = self.sgfs.context_from_entities(tasks + assets)
-        schema = self.sgfs.schema('v1')
-        structure = schema.structure(context)
-        structure.create(self.sandbox)
-        
-        paths = self.pathTester(os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
-        
-        paths.assertMatches(1,  r'/Assets/')
-        paths.assertMatches(2,  r'/Assets/(Model|Texture)/')
-        paths.assertMatches(4,  r'/Assets/(Model|Texture)/(\1_\d+)/')
-        paths.assertMatches(12, r'/Assets/(Model|Texture)/(\1_\d+)/(Anm|Comp|Model)/')
-        paths.assertMatches(8,  r'/Assets/(Model|Texture)/(\1_\d+)/(Anm|Model)/scenes/')
-        paths.assertMatches(8,  r'/Assets/(Model|Texture)/(\1_\d+)/(Anm|Model)/workspace.mel')
-        paths.assertMatches(4,  r'/Assets/(Model|Texture)/(\1_\d+)/(Comp)/scripts/')
-        
-        paths.assertMatches(1, r'/SEQ/')
-        paths.assertMatches(2, r'/SEQ/(\w{2})/')
-        paths.assertMatches(4, r'/SEQ/(\w{2})/\1_\d{3}/')
-        paths.assertMatches(12, r'/SEQ/(\w{2})/\1_\d{3}/(Audio|Plates|Ref)/')
-        paths.assertMatches(12, r'/SEQ/(\w{2})/\1_\d{3}/(Anm|Comp|Model)/')
-        paths.assertMatches(8,  r'/SEQ/(\w{2})/\1_\d{3}/(Anm|Model)/scenes/')
-        paths.assertMatches(8,  r'/SEQ/(\w{2})/\1_\d{3}/(Anm|Model)/workspace.mel')
-        paths.assertMatches(4,  r'/SEQ/(\w{2})/\1_\d{3}/(Comp)/scripts/')
-        
-        paths.assertMatchedAll()
-        
+        self.create(self.tasks + self.assets)
+        paths = self.pathTester()
+        paths.assertFullStructure()
+
+class TestIncrementalStructure(Base):
+    
+          
+    def test_incremental_structure(self):
+        proj = self.session.merge(self.proj)
+        proj.fetch('name')
+        self.create([proj])
+        paths = self.pathTester()
+        paths.assertProject()
+       
