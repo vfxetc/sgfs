@@ -37,6 +37,24 @@ class SGFS(object):
             self.session = session
             self.shotgun = session.shotgun
     
+    @property
+    def project_roots(self):
+        try:
+            return self._project_roots
+        except AttributeError:
+            pass
+        
+        self._project_roots = roots = {}
+        
+        # Scan the root looking for Project tags in all directories therein.
+        for name in os.listdir(self.root):
+            path = os.path.join(self.root, name)
+            for tag in self.get_directory_tags(path):
+                if tag['entity']['type'] == 'Project':
+                    roots[tag['entity']] = path
+        
+        return roots
+        
     def tag_directory_with_entity(self, path, entity):
         tag = {
             'created_at': datetime.datetime.now(),
@@ -49,6 +67,10 @@ class SGFS(object):
         )
         with open(os.path.join(path, TAG_NAME), 'a') as fh:
             fh.write(serialized)
+        
+        # Add it to the local project roots.
+        if entity['type'] == 'Project':
+            self.project_roots[entity] = path
         
         # TODO: Add to reverse cache for project.
         # - get context from path
@@ -76,6 +98,9 @@ class SGFS(object):
     
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
+        
+        if isinstance(entities, dict):
+            entities = [entities]
         
         # TODO: If we are given a project then use it for the cache, otherwise
         # query the 'project.Project.code' for all provided original entities.
@@ -124,7 +149,7 @@ class SGFS(object):
         # The parent is the root.
         return entity_to_context[projects[0]]
     
-    def schema(self, name='tankish', entity_type='Project'):
+    def schema(self, name='v1', entity_type='Project'):
         schema_root = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             'schemas',
@@ -133,4 +158,17 @@ class SGFS(object):
         if not os.path.exists(schema_root):
             raise ValueError('schema %r does not exist' % name)
         return Schema(schema_root, entity_type, entity_type + '.yml')
+    
+    def create_structure(self, entities, verbose=False, preview=False):
+        if isinstance(entities, dict):
+            entities = [entities]
+        merged = [self.session.merge(x) for x in entities]
+        context = self.context_from_entities(merged)
+        schema = self.schema('v1')
+        structure = schema.structure(context)
+        if preview:
+            return structure.preview(self.root, verbose=verbose)
+        else:
+            return structure.create(self.root, verbose=verbose)
+    
     
