@@ -90,7 +90,7 @@ class SGFS(object):
             try:
                 context = entity_to_context[entity]
             except KeyError:
-                context = Context(entity)
+                context = Context(self, entity)
                 entity_to_context[entity] = context
             
             if entity['type'] == 'Project':

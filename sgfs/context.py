@@ -2,7 +2,8 @@ import copy
 
 class Context(object):
     
-    def __init__(self, entity):
+    def __init__(self, sgfs, entity):
+        self.sgfs = sgfs
         self.entity = entity
         self.children = []
         self.parent = None
