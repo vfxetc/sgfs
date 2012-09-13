@@ -47,6 +47,10 @@ class TestContextFromPath(TestCase):
             self.assertTrue(context.is_linear)
             self.assertEqual(1, len(context.linear_base))
             self.assertSameEntity(context.entity, self.proj)
+            
+            entities = sgfs.entities_from_path(os.path.join(root, path))
+            self.assertEqual(1, len(entities))
+            self.assertSameEntity(entities[0], self.proj)
         
         sgfs = SGFS(root=self.sandbox, session=self.session)
         context = sgfs.context_from_path(root + '/SEQ/AA')
@@ -57,6 +61,10 @@ class TestContextFromPath(TestCase):
         self.assertSameEntity(context.entity, self.proj)
         self.assertSameEntity(context.children[0].entity, self.seqs[0])
         
+        entities = sgfs.entities_from_path(root + '/SEQ/AA')
+        self.assertEqual(1, len(entities))
+        self.assertSameEntity(entities[0], self.seqs[0])
+        
         sgfs = SGFS(root=self.sandbox, session=self.session)
         context = sgfs.context_from_path(root + '/SEQ/AA/AA_001')
         self.assertIsNotNone(context)
@@ -66,6 +74,10 @@ class TestContextFromPath(TestCase):
         self.assertSameEntity(context.entity, self.proj)
         self.assertSameEntity(context.children[0].entity, self.seqs[0])
         self.assertSameEntity(context.children[0].children[0].entity, self.shots[0])
+        
+        entities = sgfs.entities_from_path(root + '/SEQ/AA/AA_001')
+        self.assertEqual(1, len(entities))
+        self.assertSameEntity(entities[0], self.shots[0])
         
         sgfs = SGFS(root=self.sandbox, session=self.session)
         context = sgfs.context_from_path(root + '/SEQ/AA/AA_001/Anm')
@@ -78,6 +90,10 @@ class TestContextFromPath(TestCase):
         self.assertSameEntity(context.children[0].children[0].entity, self.shots[0])
         self.assertSameEntity(context.children[0].children[0].children[0].entity, self.tasks[0])
         
+        entities = sgfs.entities_from_path(root + '/SEQ/AA/AA_001/Anm')
+        self.assertEqual(1, len(entities))
+        self.assertSameEntity(entities[0], self.tasks[0])
+        
         sgfs = SGFS(root=self.sandbox, session=self.session)
         context = sgfs.context_from_path(root + '/SEQ/AA/AA_001/Model')
         self.assertIsNotNone(context)
@@ -89,6 +105,11 @@ class TestContextFromPath(TestCase):
         self.assertSameEntity(context.children[0].children[0].entity, self.shots[0])
         self.assertSameEntity(context.children[0].children[0].children[0].entity, self.tasks[3])
         self.assertSameEntity(context.children[0].children[0].children[1].entity, self.tasks[4])
+        
+        entities = sgfs.entities_from_path(root + '/SEQ/AA/AA_001/Model')
+        self.assertEqual(2, len(entities))
+        self.assertSameEntity(entities[0], self.tasks[3])
+        self.assertSameEntity(entities[0], self.tasks[4])
         
         
         

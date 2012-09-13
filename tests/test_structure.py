@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+from subprocess import call
 import re
 
 from common import *
@@ -209,5 +210,49 @@ class TestIncrementalStructure(Base):
         self.assertEqual(1, len(self.sgfs.get_directory_tags(root)))
         self.assertEqual(1, len(self.sgfs.get_directory_tags(root + '/SEQ/AA/AA_001/Anm')))
         self.assertEqual(2, len(self.sgfs.get_directory_tags(root + '/SEQ/AA/AA_001/Model')))
+
+
+
+class TestMutatedStructure(Base):
+          
+    def test_mutated_structure(self):
         
+        root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
+        
+        paths = self.pathTester()
+
+        proj = self.session.merge(self.proj)
+        proj.fetch('name')
+        self.create([proj])
+        with paths:
+            paths.assertProject()
+        
+        for seq in self.seqs:
+            self.create([seq])
+            with paths:
+                paths.assertSequence(1)
+        
+        # Mutate the sequences, and rebuild the cache.
+        call(['mv', root + '/SEQ/AA', root + '/SEQ/XX'])
+        call(['mv', root + '/SEQ/BB', root + '/SEQ_BB'])
+        print '==== MUTATION ===='
+        self.sgfs.rebuild_cache(root)
+        
+        self.create(self.shots)
+        paths.scan()
+        paths.assertMatches(2, r'SEQ/XX/AA_\d+/')
+        paths.assertMatches(2, r'SEQ/XX/AA_\d+/\.sgfs\.yml')
+        paths.assertMatches(2, r'SEQ_BB/BB_\d+/')
+        paths.assertMatches(2, r'SEQ_BB/BB_\d+/\.sgfs\.yml')
+
+        tags = self.sgfs.get_directory_tags(root + '/SEQ/XX/AA_001')
+        self.assertEqual(1, len(tags))
+        self.assertSameEntity(tags[0]['entity'], self.shots[0])
+
+        tags = self.sgfs.get_directory_tags(root + '/SEQ_BB/BB_001')
+        self.assertEqual(1, len(tags))
+        self.assertSameEntity(tags[0]['entity'], self.shots[3])
+
+
+
        

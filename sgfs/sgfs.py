@@ -106,6 +106,25 @@ class SGFS(object):
             path = os.path.dirname(path)
         return
     
+    def entities_from_path(self, path):
+        while path and path != '/':
+            tags = self.get_directory_tags(path)
+            if tags:
+                return self.session.merge([x['entity'] for x in tags])
+            path = os.path.dirname(path)
+        return []
+    
+    def rebuild_cache(self, path):
+        context = self.context_from_path(path)
+        if not context:
+            raise ValueError('could not find any existing entities in %r' % path)
+        if context.entity['type'] != 'Project':
+            raise ValueError('could not find project for %r; found %r' % (path, context.entity))
+        cache = self.path_cache(context.entity)
+        for dir_path, dir_names, file_names in os.walk(path):
+            for tag in self.get_directory_tags(dir_path):
+                cache[tag['entity']] = dir_path
+    
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
         
