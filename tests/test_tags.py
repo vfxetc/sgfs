@@ -37,6 +37,11 @@ class TestTags(TestCase):
         self.assertSameEntity(proj, tags[0]['entity'].get('project'))
         self.assertSameEntity(proj, tags[0]['entity']['sg_sequence'].get('project'))
         
+        self.assertIsNotNone(tags[0]['entity'].get('updated_at'))
+        self.assertIsNotNone(tags[0]['entity']['project'].get('updated_at'))
+        self.assertIsNotNone(tags[0]['entity']['sg_sequence'].get('updated_at'))
+        self.assertIsNotNone(tags[0]['entity']['sg_sequence']['project'].get('updated_at'))
+        
         entity2 = self.session.merge(seq.Shot('AA_002'))
         self.session.fetch_core(entity2.fetch_heirarchy())
         entity2.pprint()
@@ -56,9 +61,19 @@ class TestTags(TestCase):
         self.assertSameEntity(proj, tags[0]['entity'].get('project'))
         self.assertSameEntity(proj, tags[0]['entity']['sg_sequence'].get('project'))
         
+        self.assertIsNotNone(tags[0]['entity'].get('updated_at'))
+        self.assertIsNotNone(tags[0]['entity']['project'].get('updated_at'))
+        self.assertIsNotNone(tags[0]['entity']['sg_sequence'].get('updated_at'))
+        self.assertIsNotNone(tags[0]['entity']['sg_sequence']['project'].get('updated_at'))
+        
         self.assertSameEntity(entity2, tags[1].get('entity'))
         self.assertSameEntity(seq, tags[1]['entity'].get('sg_sequence'))
         self.assertSameEntity(proj, tags[1]['entity'].get('project'))
         self.assertSameEntity(proj, tags[1]['entity']['sg_sequence'].get('project'))
+        
+        self.assertIsNotNone(tags[1]['entity'].get('updated_at'))
+        self.assertIsNotNone(tags[1]['entity']['project'].get('updated_at'))
+        self.assertIsNotNone(tags[1]['entity']['sg_sequence'].get('updated_at'))
+        self.assertIsNotNone(tags[1]['entity']['sg_sequence']['project'].get('updated_at'))
         
         
