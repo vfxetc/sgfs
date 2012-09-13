@@ -78,13 +78,13 @@ class PathTester(object):
         self.assertMatches(1, r'/SEQ/')
     
     def assertAssetType(self, count):
-        self.assertMatches(count,  r'/Assets/(Model|Texture)/')
+        self.assertMatches(count,  r'/Assets/(Character|Vehicle)/')
     
     def assertAsset(self, count):
-        self.assertMatches(count,  r'/Assets/(Model|Texture)/(\1_\d+)/')
+        self.assertMatches(count,  r'/Assets/(Character|Vehicle)/(\1_\d+)/')
     
     def assertAssetTask(self, count, type_, maya=False, nuke=False):
-        self._assertTask(count, r'/Assets/(Model|Texture)/(\1_\d+)', type_, maya=maya, nuke=nuke)
+        self._assertTask(count, r'/Assets/(Character|Vehicle)/(\1_\d+)', type_, maya=maya, nuke=nuke)
     
     def _assertTask(self, count, base, type_, maya, nuke):
         self.assertMatches(count, base + r'/%s/' % type_)
@@ -128,7 +128,7 @@ class Base(TestCase):
         seqs = [proj.Sequence(code, project=proj) for code in ('AA', 'BB')]
         shots = [seq.Shot('%s_%03d' % (seq['code'], i), project=proj) for seq in seqs for i in range(1, 3)]
         steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Model')]
-        assets = [proj.Asset(sg_asset_type=type_, code="%s %d" % (type_, i)) for type_ in ('Model', 'Texture') for i in range(1, 3)]
+        assets = [proj.Asset(sg_asset_type=type_, code="%s %d" % (type_, i)) for type_ in ('Character', 'Vehicle') for i in range(1, 3)]
         tasks = [entity.Task(step['code'] + ' something', step=step, entity=entity, project=proj) for step in steps for entity in (shots + assets)]
         
         self.proj = minimal(proj)
@@ -168,7 +168,6 @@ class TestIncrementalStructure(Base):
         proj.fetch('name')
 
         paths = self.pathTester()
-        paths.assertMatchedAll()
 
         self.create([proj])
         with paths:
