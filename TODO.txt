@@ -1,0 +1,3 @@
+- tag entities as they are created
+- reverse cache
+- test making part of a structure, moving some pieces, rebuilding the cache, and then adding the rest of the structure
