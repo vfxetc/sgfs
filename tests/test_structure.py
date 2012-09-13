@@ -33,14 +33,15 @@ class PathTester(object):
                 path = os.path.join(dir_name, name)[len(self.root):]
                 paths.append(path)
         
-        for pattern in (r'\._', r'.DS_Store', r'.*\.pyc$'):
+        for pattern in (r'\._', r'\.DS_Store$', r'.*\.pyc$'):
             paths = [path for path in paths if not re.match(pattern, path)]
         
-        count = len(self.paths)
-        for path in paths:
-            if path not in self.matched:
-                self.paths.append(path)
-        print 'PathTester found', len(self.paths) - count, 'new items'
+        paths = [x for x in paths if x not in self.matched]
+        self.paths.extend(paths)
+        
+        print 'PathTester found', len(paths), 'new items'
+        # if paths:
+        #    print '\n'.join('\t' + x for x in sorted(paths))
     
     def __enter__(self):
         self.scan()
@@ -74,29 +75,34 @@ class PathTester(object):
         self.test.assertFalse(self.paths, msg or ('%d paths remain:\n\t' % len(self.paths)) + '\n\t'.join(sorted(self.paths)))
         
     def assertProject(self):
-        self.assertMatches(1,  r'/Assets/')
+        self.assertMatches(1, r'/Assets/')
         self.assertMatches(1, r'/SEQ/')
+        self.assertMatches(1, r'/\.sgfs\.yml')
     
     def assertAssetType(self, count):
         self.assertMatches(count,  r'/Assets/(Character|Vehicle)/')
     
     def assertAsset(self, count):
         self.assertMatches(count,  r'/Assets/(Character|Vehicle)/(\1_\d+)/')
+        self.assertMatches(count,  r'/Assets/(Character|Vehicle)/(\1_\d+)/\.sgfs\.yml')
     
     def assertAssetTask(self, count, type_, maya=False, nuke=False):
         self._assertTask(count, r'/Assets/(Character|Vehicle)/(\1_\d+)', type_, maya=maya, nuke=nuke)
     
     def _assertTask(self, count, base, type_, maya, nuke):
         self.assertMatches(count, base + r'/%s/' % type_)
+        self.assertMatches(ANY, base + r'/%s/\.sgfs\.yml' % type_)
         self.assertMatches(count if maya else 0, base + r'/%s/scenes/' % type_)
         self.assertMatches(count if maya else 0, base + r'/%s/workspace.mel' % type_)
         self.assertMatches(count if nuke else 0, base + r'/%s/scripts/' % type_)
     
     def assertSequence(self, count):
         self.assertMatches(count, r'/SEQ/(\w{2})/')
+        self.assertMatches(count, r'/SEQ/(\w{2})/\.sgfs\.yml')
     
     def assertShot(self, count):
         self.assertMatches(count, r'/SEQ/(\w{2})/\1_\d{3}/')
+        self.assertMatches(count, r'/SEQ/(\w{2})/\1_\d{3}/\.sgfs\.yml')
         self.assertMatches(count * 3, r'/SEQ/(\w{2})/\1_\d{3}/(Audio|Plates|Ref)/')
     
     def assertShotTask(self, count, type_, maya=False, nuke=False):

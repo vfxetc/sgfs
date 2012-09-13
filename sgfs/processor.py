@@ -9,6 +9,10 @@ class Processor(object):
         self.project = project
         self.verbose = True
     
+    def comment(self, msg):
+        if self.verbose:
+            print '\n'.join('# ' + x.rstrip() for x in msg.splitlines())
+        
     def join_to_schema(self, path):
         return os.path.join(self.schema, path)
     

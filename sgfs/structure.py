@@ -161,7 +161,15 @@ class Entity(Directory):
         return self.context.entity
     
     def _repr_headline(self):
-        return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id']) 
+        return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id'])
+        
+    def _process(self, root, processor):
+        super(Entity, self)._process(root, processor)
+        
+        # Tag it.
+        path = os.path.join(root, self.name).rstrip('/')
+        processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
+        self.context.sgfs.tag_directory_with_entity(path, self.entity)
     
 
 
