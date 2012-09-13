@@ -80,7 +80,7 @@ class Structure(object):
         for child in self.children:
             child._process(root, processor)
     
-    def preview(self, root='.'):
+    def preview(self, root):
         self._process(root, processor.Previewer('$schema', ''))
     
     def create(self, root, verbose=False):

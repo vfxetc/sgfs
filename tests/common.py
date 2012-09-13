@@ -53,10 +53,10 @@ os.makedirs(sandbox)
 class TestCase(BaseTestCase):
     
     @property
-    def sandbox(self):
+    def full_name(self):
         
         try:
-            return self._sandbox
+            return self._full_name
         except AttributeError:
             pass
         
@@ -66,9 +66,16 @@ class TestCase(BaseTestCase):
         else:
             file_name = 'unknown'
         
-        self._sandbox = os.path.join(sandbox, file_name + '.' + self.__class__.__name__)
-        if not os.path.exists(self._sandbox):
-            os.makedirs(self._sandbox)
-        
-        return self._sandbox
+        self._full_name = file_name + '.' + self.__class__.__name__
+        return self._full_name
+    
+    def project_name(self):
+        return 'Test Project - %s - %s' % (self.full_name, mini_uuid())
+    
+    @property
+    def sandbox(self):
+        path = os.path.join(sandbox, self.full_name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return path
 

@@ -164,11 +164,11 @@ class TestFullStructure(Base):
 class TestIncrementalStructure(Base):
           
     def test_incremental_structure(self):
-        proj = self.session.merge(self.proj)
-        proj.fetch('name')
 
         paths = self.pathTester()
 
+        proj = self.session.merge(self.proj)
+        proj.fetch('name')
         self.create([proj])
         with paths:
             paths.assertProject()
