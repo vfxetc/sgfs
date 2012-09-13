@@ -135,7 +135,7 @@ class Base(TestCase):
         shots = [seq.Shot('%s_%03d' % (seq['code'], i), project=proj) for seq in seqs for i in range(1, 3)]
         steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Model')]
         assets = [proj.Asset(sg_asset_type=type_, code="%s %d" % (type_, i)) for type_ in ('Character', 'Vehicle') for i in range(1, 3)]
-        tasks = [entity.Task(step['code'] + ' something', step=step, entity=entity, project=proj) for step in steps for entity in (shots + assets)]
+        tasks = [entity.Task(step['code'] + ' something', step=step, entity=entity, project=proj) for step in (steps + steps[-1:]) for entity in (shots + assets)]
         
         self.proj = minimal(proj)
         self.seqs = map(minimal, seqs)
@@ -206,5 +206,7 @@ class TestIncrementalStructure(Base):
             
         root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
         self.assertEqual(1, len(self.sgfs.get_directory_tags(root)))
+        self.assertEqual(1, len(self.sgfs.get_directory_tags(root + '/SEQ/AA/AA_001/Anm')))
+        self.assertEqual(2, len(self.sgfs.get_directory_tags(root + '/SEQ/AA/AA_001/Model')))
         
        
