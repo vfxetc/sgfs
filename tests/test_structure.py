@@ -203,5 +203,8 @@ class TestIncrementalStructure(Base):
             paths.assertShotTask(len(self.shots), 'Anm', maya=True, nuke=False)
             paths.assertShotTask(len(self.shots), 'Comp', maya=False, nuke=True)
             paths.assertShotTask(len(self.shots), 'Model', maya=True, nuke=False)
+            
+        root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
+        self.assertEqual(1, len(self.sgfs.get_directory_tags(root)))
         
        

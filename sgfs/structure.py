@@ -166,10 +166,13 @@ class Entity(Directory):
     def _process(self, root, processor):
         super(Entity, self)._process(root, processor)
         
-        # Tag it.
+        # Tag it, but only if that directory has not already been tagged with
+        # this entity. This should not be nessesary once incremental
+        # construction is done.
         path = os.path.join(root, self.name).rstrip('/')
-        processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
-        self.context.sgfs.tag_directory_with_entity(path, self.entity)
+        if not any(x['entity'] is self.entity for x in self.context.sgfs.get_directory_tags(path)):
+            processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
+            self.context.sgfs.tag_directory_with_entity(path, self.entity)
     
 
 
