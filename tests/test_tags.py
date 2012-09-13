@@ -29,11 +29,36 @@ class TestTags(TestCase):
         new_sgfs = SGFS(root=self.sandbox, session=Session(self.sg))
         tags = new_sgfs.get_directory_tags(path)
         tags[0]['entity'].pprint()
+        self.assertEqual(1, len(tags))
         print
         
-        self.assertEqual(1, len(tags))
         self.assertSameEntity(shot, tags[0].get('entity'))
         self.assertSameEntity(seq, tags[0]['entity'].get('sg_sequence'))
         self.assertSameEntity(proj, tags[0]['entity'].get('project'))
         self.assertSameEntity(proj, tags[0]['entity']['sg_sequence'].get('project'))
+        
+        entity2 = self.session.merge(seq.Shot('AA_002'))
+        self.session.fetch_core(entity2.fetch_heirarchy())
+        entity2.pprint()
+        print
+        
+        self.sgfs.tag_directory_with_entity(path, entity2)
+        
+        new_sgfs = SGFS(root=self.sandbox, session=Session(self.sg))
+        tags = new_sgfs.get_directory_tags(path)
+        self.assertEqual(2, len(tags))
+        tags[0]['entity'].pprint()
+        tags[1]['entity'].pprint()
+        print
+        
+        self.assertSameEntity(shot, tags[0].get('entity'))
+        self.assertSameEntity(seq, tags[0]['entity'].get('sg_sequence'))
+        self.assertSameEntity(proj, tags[0]['entity'].get('project'))
+        self.assertSameEntity(proj, tags[0]['entity']['sg_sequence'].get('project'))
+        
+        self.assertSameEntity(entity2, tags[1].get('entity'))
+        self.assertSameEntity(seq, tags[1]['entity'].get('sg_sequence'))
+        self.assertSameEntity(proj, tags[1]['entity'].get('project'))
+        self.assertSameEntity(proj, tags[1]['entity']['sg_sequence'].get('project'))
+        
         
