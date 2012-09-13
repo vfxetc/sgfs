@@ -63,7 +63,17 @@ class SGFS(object):
             for tag in tags:
                 tag['entity'] = self.session.merge(tag['entity'])
             return tags
-        
+    
+    def context_from_path(self, path):
+        entities = []
+        while path and path != '/':
+            for tag in self.get_directory_tags(path):
+                entities.append(tag['entity'])
+                if tag['entity']['type'] == 'Project':
+                    return self.context_from_entities(entities)
+            path = os.path.dirname(path)
+        return
+    
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
         
