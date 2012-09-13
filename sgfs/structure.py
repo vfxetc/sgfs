@@ -151,7 +151,6 @@ class Directory(Structure):
     
     def _repr_headline(self):
         return (self.name or '.') + '/'
-                    
 
 
 class Entity(Directory):
@@ -164,16 +163,41 @@ class Entity(Directory):
         return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id'])
         
     def _process(self, root, processor):
-        super(Entity, self)._process(root, processor)
         
-        # Tag it, but only if that directory has not already been tagged with
-        # this entity. This should not be nessesary once incremental
-        # construction is done.
-        path = os.path.join(root, self.name).rstrip('/')
-        if not any(x['entity'] is self.entity for x in self.context.sgfs.get_directory_tags(path)):
-            processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
-            self.context.sgfs.tag_directory_with_entity(path, self.entity)
-    
+        # Try to get the path cache. This should only fail for Projects which
+        # have not been created yet.
+        project = self.context.project()
+        if project is None:
+            raise ValueError('could not get project context')
+        path_cache = self.context.sgfs.path_cache(project.entity)
+        if path_cache is None:
+            if self.entity is project.entity:
+                path = None
+            else:
+                raise ValueError('could not get path_cache for %r' % project)
+        else:
+            path = path_cache.get(self.entity)
+            
+        if path is not None:
+            from_cache = True
+        else:            
+            path = os.path.join(root, self.name).rstrip('/')
+            from_cache = False
+        
+        if not os.path.exists(path):
+            processor.mkdir(path)
+        
+        if not from_cache:
+            # Tag it, but only if that directory has not already been tagged
+            # with this entity. This should not be nessesary once incremental
+            # construction is done.
+            if not any(x['entity'] is self.entity for x in self.context.sgfs.get_directory_tags(path)):
+                processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
+                self.context.sgfs.tag_directory_with_entity(path, self.entity)
+        
+        for child in self.children:
+            child._process(path, processor)
+        
 
 
 class Include(Directory):

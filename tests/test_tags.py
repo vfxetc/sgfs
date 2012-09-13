@@ -24,7 +24,7 @@ class TestTags(TestCase):
         entity.pprint()
         print
         
-        self.sgfs.tag_directory_with_entity(path, entity)
+        self.sgfs.tag_directory_with_entity(path, entity, cache=False)
         
         new_sgfs = SGFS(root=self.sandbox, session=Session(self.sg))
         tags = new_sgfs.get_directory_tags(path)
@@ -47,7 +47,7 @@ class TestTags(TestCase):
         entity2.pprint()
         print
         
-        self.sgfs.tag_directory_with_entity(path, entity2)
+        self.sgfs.tag_directory_with_entity(path, entity2, cache=False)
         
         new_sgfs = SGFS(root=self.sandbox, session=Session(self.sg))
         tags = new_sgfs.get_directory_tags(path)

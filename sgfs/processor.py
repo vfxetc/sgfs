@@ -31,7 +31,7 @@ class Processor(object):
         self.call(['touch', self.join_to_project(path)])
     
     def copy(self, source, dest):
-        self.call(['cp', '-p', self.join_to_schema(source), self.join_to_project(dest)])
+        self.call(['cp', '-np', self.join_to_schema(source), self.join_to_project(dest)])
 
 
 class Previewer(Processor):

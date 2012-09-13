@@ -14,6 +14,13 @@ class Context(object):
     def __repr__(self):
         return '<Context %s:%s at 0x%x>' % (self.entity['type'], self.entity['id'], id(self))
     
+    def project(self):
+        ctx = self
+        while ctx.parent:
+            ctx = ctx.parent
+        if ctx.entity['type'] == 'Project':
+            return ctx
+    
     def pprint(self, depth=0):
         print '%s%s:%s' % (
             '\t' * depth,

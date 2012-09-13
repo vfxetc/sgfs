@@ -11,7 +11,7 @@ from sgsession import Session
 
 from .context import Context
 from .schema import Schema
-
+from .cache import PathCache
 
 TAG_NAME = '.sgfs.yml'
 
@@ -54,8 +54,15 @@ class SGFS(object):
                     roots[tag['entity']] = path
         
         return roots
-        
-    def tag_directory_with_entity(self, path, entity):
+    
+    def path_cache(self, project):
+        project_root = self.project_roots.get(project)
+        if project_root is None:
+            return
+        else:
+            return PathCache(self.session, project_root)
+    
+    def tag_directory_with_entity(self, path, entity, cache=True):
         tag = {
             'created_at': datetime.datetime.now(),
             'entity': entity.as_dict(),
@@ -72,9 +79,12 @@ class SGFS(object):
         if entity['type'] == 'Project':
             self.project_roots[entity] = path
         
-        # TODO: Add to reverse cache for project.
-        # - get context from path
-        # - get project from start of context
+        # Add to path cache.
+        if cache:
+            path_cache = self.path_cache(entity.project())
+            if path_cache is None:
+                raise ValueError('could not get path cache for %r from %r' % (entity.project(), entity))
+            path_cache[entity] = path
     
     def get_directory_tags(self, path):
         path = os.path.join(path, TAG_NAME)
