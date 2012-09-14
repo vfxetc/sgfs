@@ -62,6 +62,15 @@ class SGFS(object):
         else:
             return PathCache(self.session, project_root)
     
+    def path_for_entity(self, entity):
+        if entity['type'] == 'Project':
+            return self.project_roots.get(entity)
+        else:
+            project = entity.project()
+            path_cache = self.path_cache(project)
+            if path_cache is not None:
+                return path_cache.get(entity)
+            
     def tag_directory_with_entity(self, path, entity, cache=True):
         tag = {
             'created_at': datetime.datetime.now(),
@@ -188,16 +197,25 @@ class SGFS(object):
             raise ValueError('schema %r does not exist' % name)
         return Schema(schema_root, entity_type, entity_type + '.yml')
     
-    def create_structure(self, entities, verbose=False, preview=False):
+    def create_structure(self, entities, schema_name='v1', verbose=False, preview=False):
         if isinstance(entities, dict):
             entities = [entities]
         merged = [self.session.merge(x) for x in entities]
         context = self.context_from_entities(merged)
-        schema = self.schema('v1')
+        schema = self.schema(schema_name)
         structure = schema.structure(context)
         if preview:
             return structure.preview(self.root, verbose=verbose)
         else:
             return structure.create(self.root, verbose=verbose)
+    
+    def tag_existing(self, entities, schema_name='v1', verbose=False):
+        if isinstance(entities, dict):
+            entities = [entities]
+        merged = [self.session.merge(x) for x in entities]
+        context = self.context_from_entities(merged)
+        schema = self.schema(schema_name)
+        structure = schema.structure(context)
+        structure.tag_existing(self.root, verbose=verbose)
     
     

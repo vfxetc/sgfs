@@ -85,8 +85,10 @@ class Structure(object):
     
     def create(self, root, verbose=False):
         self._process(root, processor.Processor(verbose=verbose))
-        
-                
+    
+    def tag_existing(self, root, verbose=False):
+        for child in self.children:
+            self.tag_existing(root, verbose=verbose)
 
 
 class Directory(Structure):
@@ -161,23 +163,27 @@ class Entity(Directory):
     
     def _repr_headline(self):
         return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id'])
+    
+    def tag_existing(self, root, verbose=False):
         
+        path = os.path.join(root, self.name).rstrip('/')
+        if not os.path.exists(path):
+            return
+        
+        # Tag it, but only if that directory has not already been tagged
+        # with this entity. This should not be nessesary once incremental
+        # construction is done.
+        if not any(x['entity'] is self.entity for x in self.context.sgfs.get_directory_tags(path)):
+            processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
+            self.context.sgfs.tag_directory_with_entity(path, self.entity)
+        
+        for child in self.children:
+            child.tag_existing(path)
+        
+    
     def _process(self, root, processor):
         
-        # Try to get the path cache. This should only fail for Projects which
-        # have not been created yet.
-        project = self.context.project()
-        if project is None:
-            raise ValueError('could not get project context')
-        path_cache = self.context.sgfs.path_cache(project.entity)
-        if path_cache is None:
-            if self.entity is project.entity:
-                path = None
-            else:
-                raise ValueError('could not get path_cache for %r' % project)
-        else:
-            path = path_cache.get(self.entity)
-            
+        path = self.context.sgfs.path_for_entity(self.entity)
         if path is not None:
             from_cache = True
         else:            
