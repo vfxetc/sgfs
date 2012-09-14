@@ -170,12 +170,7 @@ class Entity(Directory):
         if not os.path.exists(path):
             return
         
-        # Tag it, but only if that directory has not already been tagged
-        # with this entity. This should not be nessesary once incremental
-        # construction is done.
-        if not any(x['entity'] is self.entity for x in self.context.sgfs.get_directory_tags(path)):
-            processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
-            self.context.sgfs.tag_directory_with_entity(path, self.entity)
+        self.context.sgfs.tag_directory_with_entity(path, self.entity)
         
         for child in self.children:
             child.tag_existing(path)
@@ -194,12 +189,7 @@ class Entity(Directory):
             processor.mkdir(path)
         
         if not from_cache:
-            # Tag it, but only if that directory has not already been tagged
-            # with this entity. This should not be nessesary once incremental
-            # construction is done.
-            if not any(x['entity'] is self.entity for x in self.context.sgfs.get_directory_tags(path)):
-                processor.comment('.sgfs: %s <- %s %s' % (path, self.entity['type'], self.entity['id']))
-                self.context.sgfs.tag_directory_with_entity(path, self.entity)
+            self.context.sgfs.tag_directory_with_entity(path, self.entity)
         
         for child in self.children:
             child._process(path, processor)
