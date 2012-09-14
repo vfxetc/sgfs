@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 from pprint import pprint
 import copy
 import datetime
