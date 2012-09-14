@@ -125,8 +125,6 @@ class SGFS(object):
         context = self.context_from_path(path)
         if not context:
             raise ValueError('could not find any existing entities in %r' % path)
-        if context.entity['type'] != 'Project':
-            raise ValueError('could not find project for %r; found %r' % (path, context.entity))
         cache = self.path_cache(context.entity)
         for dir_path, dir_names, file_names in os.walk(path):
             for tag in self.get_directory_tags(dir_path):
@@ -185,7 +183,7 @@ class SGFS(object):
         # The parent is the root.
         return entity_to_context[projects[0]]
     
-    def schema(self, name='v1', entity_type='Project'):
+    def _get_schema(self, name='v1', entity_type='Project'):
         schema_root = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             'schemas',
@@ -195,25 +193,23 @@ class SGFS(object):
             raise ValueError('schema %r does not exist' % name)
         return Schema(schema_root, entity_type, entity_type + '.yml')
     
-    def create_structure(self, entities, schema_name='v1', verbose=False, preview=False):
+    def _structure_from_entities(self, entities, schema_name):
         if isinstance(entities, dict):
             entities = [entities]
         merged = [self.session.merge(x) for x in entities]
         context = self.context_from_entities(merged)
-        schema = self.schema(schema_name)
-        structure = schema.structure(context)
+        schema = self._get_schema(schema_name)
+        return schema.structure(context)
+    
+    def create_structure(self, entities, schema_name='v1', verbose=False, preview=False):
+        structure = self._structure_from_entities(entities, schema_name)
         if preview:
             return structure.preview(self.root, verbose=verbose)
         else:
             return structure.create(self.root, verbose=verbose)
     
     def tag_existing(self, entities, schema_name='v1', verbose=False):
-        if isinstance(entities, dict):
-            entities = [entities]
-        merged = [self.session.merge(x) for x in entities]
-        context = self.context_from_entities(merged)
-        schema = self.schema(schema_name)
-        structure = schema.structure(context)
+        structure = self._structure_from_entities(entities, schema_name)
         structure.tag_existing(self.root, verbose=verbose)
     
     

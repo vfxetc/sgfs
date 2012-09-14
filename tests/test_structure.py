@@ -151,7 +151,7 @@ class Base(TestCase):
     def create(self, entities):
         merged = [self.session.merge(x) for x in entities]
         context = self.sgfs.context_from_entities(merged)
-        schema = self.sgfs.schema('v1')
+        schema = self.sgfs._get_schema('v1')
         structure = schema.structure(context)
         structure.create(self.sandbox, verbose=True)
     

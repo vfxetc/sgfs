@@ -25,7 +25,7 @@ class TestSchema(TestCase):
     
     def test_graph_shape(self):
         
-        schema = self.sgfs.schema('v1')
+        schema = self.sgfs._get_schema('v1')
         schema.pprint()
         
         self.assertEqual(schema.entity_type, 'Project')
