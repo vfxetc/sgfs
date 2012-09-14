@@ -88,7 +88,7 @@ class Structure(object):
     
     def tag_existing(self, root, verbose=False):
         for child in self.children:
-            self.tag_existing(root, verbose=verbose)
+            child.tag_existing(root, verbose=verbose)
 
 
 class Directory(Structure):
@@ -170,20 +170,18 @@ class Entity(Directory):
         if not os.path.exists(path):
             return
         
-        self.context.sgfs.tag_directory_with_entity(path, self.entity)
+        # Tag it if it wasn't already.
+        if not any(tag['entity'] is self.entity for tag in self.context.sgfs.get_directory_tags(path)):
+            self.context.sgfs.tag_directory_with_entity(path, self.entity)
         
         for child in self.children:
             child.tag_existing(path)
-        
     
     def _process(self, root, processor):
         
         path = self.context.sgfs.path_for_entity(self.entity)
-        if path is not None:
-            from_cache = True
-        else:            
-            path = os.path.join(root, self.name).rstrip('/')
-            from_cache = False
+        from_cache = path is not None
+        path = path if from_cache else os.path.join(root, self.name).rstrip('/')
         
         if not os.path.exists(path):
             processor.mkdir(path)
