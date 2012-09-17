@@ -1,5 +1,11 @@
 type: include
-condition: self['step']['short_name'] in steps_needing_nuke
-steps_needing_nuke:
+
+condition: any(self['step'][x] in steps_to_include for x in ('code', 'short_name'))
+
+steps_to_include:
+    - CBB Comp
     - Comp
+    - Compositing
+    - Prep Comp
     - Roto
+    

@@ -1,6 +1,9 @@
 
-condition: self['step']['short_name'] not in do_not_create
+condition: all(self['step'][x] not in do_not_create for x in ('code', 'short_name'))
+
 do_not_create:
     - Client
+    - Online
+    - Spotting
 
 name_expr: self['step']['short_name']

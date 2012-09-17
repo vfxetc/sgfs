@@ -1,5 +1,11 @@
 type: include
-condition: self['step']['short_name'] in steps_needing_maya
-steps_needing_maya:
+
+condition: any(self['step'][x] in steps_to_include for x in ('code', 'short_name'))
+
+steps_to_include:
+    - Animation
     - Anm
+    - Light
+    - Match Move Rotomation
     - Model
+    
