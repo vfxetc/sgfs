@@ -1,5 +1,5 @@
-import os
 from subprocess import call, list2cmdline
+import os
 
 
 class Processor(object):

@@ -27,7 +27,7 @@ class TestTags(TestCase):
         self.sgfs.tag_directory_with_entity(path, entity, cache=False)
         
         new_sgfs = SGFS(root=self.sandbox, session=Session(self.sg))
-        tags = new_sgfs.get_directory_tags(path)
+        tags = new_sgfs.get_directory_entity_tags(path)
         tags[0]['entity'].pprint()
         self.assertEqual(1, len(tags))
         print
@@ -50,7 +50,7 @@ class TestTags(TestCase):
         self.sgfs.tag_directory_with_entity(path, entity2, cache=False)
         
         new_sgfs = SGFS(root=self.sandbox, session=Session(self.sg))
-        tags = new_sgfs.get_directory_tags(path)
+        tags = new_sgfs.get_directory_entity_tags(path)
         self.assertEqual(2, len(tags))
         tags[0]['entity'].pprint()
         tags[1]['entity'].pprint()

@@ -1,11 +1,11 @@
-import os
 import fnmatch
+import os
 import subprocess
 
 import yaml
 
-from . import utils
 from . import processor
+from . import utils
 
 
 def _namespace_from_context(context, base=None):
@@ -171,7 +171,7 @@ class Entity(Directory):
             return
         
         # Tag it if it wasn't already.
-        if not any(tag['entity'] is self.entity for tag in self.context.sgfs.get_directory_tags(path)):
+        if not any(tag['entity'] is self.entity for tag in self.context.sgfs.get_directory_entity_tags(path)):
             self.context.sgfs.tag_directory_with_entity(path, self.entity)
         
         for child in self.children:

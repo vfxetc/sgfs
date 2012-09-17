@@ -205,9 +205,9 @@ class TestIncrementalStructure(Base):
             paths.assertShotTask(len(self.shots), 'Model', maya=True, nuke=False)
             
         root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
-        self.assertEqual(1, len(self.sgfs.get_directory_tags(root)))
-        self.assertEqual(1, len(self.sgfs.get_directory_tags(root + '/SEQ/AA/AA_001/Anm')))
-        self.assertEqual(2, len(self.sgfs.get_directory_tags(root + '/SEQ/AA/AA_001/Model')))
+        self.assertEqual(1, len(self.sgfs.get_directory_entity_tags(root)))
+        self.assertEqual(1, len(self.sgfs.get_directory_entity_tags(root + '/SEQ/AA/AA_001/Anm')))
+        self.assertEqual(2, len(self.sgfs.get_directory_entity_tags(root + '/SEQ/AA/AA_001/Model')))
 
 
 
@@ -243,11 +243,11 @@ class TestMutatedStructure(Base):
         paths.assertMatches(2, r'SEQ_BB/BB_\d+/')
         paths.assertMatches(2, r'SEQ_BB/BB_\d+/\.sgfs\.yml')
 
-        tags = self.sgfs.get_directory_tags(root + '/SEQ/XX/AA_001')
+        tags = self.sgfs.get_directory_entity_tags(root + '/SEQ/XX/AA_001')
         self.assertEqual(1, len(tags))
         self.assertSameEntity(tags[0]['entity'], self.shots[0])
 
-        tags = self.sgfs.get_directory_tags(root + '/SEQ_BB/BB_001')
+        tags = self.sgfs.get_directory_entity_tags(root + '/SEQ_BB/BB_001')
         self.assertEqual(1, len(tags))
         self.assertSameEntity(tags[0]['entity'], self.shots[3])
 

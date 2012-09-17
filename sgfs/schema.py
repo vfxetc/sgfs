@@ -2,8 +2,8 @@ import os
 
 import yaml
 
-from .structure import Structure
 from . import utils
+from .structure import Structure
 
 
 
