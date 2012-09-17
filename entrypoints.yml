@@ -1,0 +1,3 @@
+sgfs: sgfs.commands.sgfs:main
+sgfs-tag: sgfs.commands.tag:main
+
