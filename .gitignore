@@ -7,4 +7,4 @@
 
 # Entrypoints
 /bin
-.make-sentinel
+*.make-sentinel
