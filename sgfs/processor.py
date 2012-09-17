@@ -4,11 +4,16 @@ import os
 
 class Processor(object):
     
-    def __init__(self, schema='', project='', verbose=False):
+    def __init__(self, schema='', project='', verbose=False, dry_run=False):
         self.schema = schema
         self.project = project
-        self.verbose = True
-    
+        self.verbose = verbose
+        self.dry_run = dry_run
+        
+        self.made_directories = set()
+        self.touched_files = set()
+        self.copied_files = set()
+        
     def comment(self, msg):
         if self.verbose:
             print '\n'.join('# ' + x.rstrip() for x in msg.splitlines())
@@ -22,30 +27,22 @@ class Processor(object):
     def call(self, args):
         if self.verbose:
             print list2cmdline(args)
-        call(args)
+        if not self.dry_run:
+            call(args)
     
     def mkdir(self, path):
-        self.call(['mkdir', '-p', self.join_to_project(path)])
+        if path not in self.made_directories:
+            self.made_directories.add(path)
+            self.call(['mkdir', '-p', self.join_to_project(path)])
     
     def touch(self, path):
-        self.call(['touch', self.join_to_project(path)])
+        if path not in self.touched_files:
+            self.touched_files.add(path)
+            self.call(['touch', self.join_to_project(path)])
     
     def copy(self, source, dest):
-        self.call(['cp', '-np', self.join_to_schema(source), self.join_to_project(dest)])
+        if dest not in self.copied_files:
+            self.copied_files.add(dest)
+            self.call(['cp', '-np', self.join_to_schema(source), self.join_to_project(dest)])
 
-
-class Previewer(Processor):
-    
-    def __init__(self, *args, **kwargs):
-        super(Previewer, self).__init__(*args, **kwargs)
-        self.made_dirs = set()
-    
-    def mkdir(self, path):
-        if path in self.made_dirs:
-            return
-        self.made_dirs.add(path)
-        return super(Previewer, self).mkdir(path)
-    
-    def call(self, args):
-        print list2cmdline(args)
 

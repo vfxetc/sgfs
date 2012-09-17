@@ -39,6 +39,13 @@ class SGFS(object):
             return PathCache(self.session, project_root)
     
     def path_for_entity(self, entity):
+        """Get the path on disk for the given entity.
+        
+        This only works if the entity has been previously tagged, either by a
+        manual process, of if the structure was automatically tagged or created
+        by SGFS.
+        
+        """
         if entity['type'] == 'Project':
             return self.project_roots.get(entity)
         else:
@@ -180,14 +187,11 @@ class SGFS(object):
         context = self.context_from_entities(entities)
         return Schema(schema_name).structure(context)
     
-    def create_structure(self, entities, schema_name='v1', verbose=False, preview=False):
+    def create_structure(self, entities, schema_name=None, verbose=False, dry_run=False):
         structure = self._structure_from_entities(entities, schema_name)
-        if preview:
-            return structure.preview(self.root, verbose=verbose)
-        else:
-            return structure.create(self.root, verbose=verbose)
+        return structure.create(self.root, verbose=verbose, dry_run=dry_run)
     
-    def tag_existing(self, entities, schema_name='v1', verbose=False):
+    def tag_existing_structure(self, entities, schema_name=None, verbose=False, dry_run=False):
         structure = self._structure_from_entities(entities, schema_name)
         structure.tag_existing(self.root, verbose=verbose)
     

@@ -76,19 +76,16 @@ class Structure(object):
         for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
-    def _process(self, root, processor):
+    def create(self, root, verbose=False, dry_run=False):
+        self._create(root, processor.Processor(verbose=verbose, dry_run=dry_run))
+    
+    def _create(self, root, processor):
         for child in self.children:
-            child._process(root, processor)
+            child._create(root, processor)
     
-    def preview(self, root):
-        self._process(root, processor.Previewer('$schema', ''))
-    
-    def create(self, root, verbose=False):
-        self._process(root, processor.Processor(verbose=verbose))
-    
-    def tag_existing(self, root, verbose=False):
+    def tag_existing(self, root, verbose=False, dry_run=False):
         for child in self.children:
-            child.tag_existing(root, verbose=verbose)
+            child.tag_existing(root, verbose=verbose, dry_run=dry_run)
 
 
 class Directory(Structure):
@@ -100,7 +97,7 @@ class Directory(Structure):
         if template:
             self._scan_template(template)
     
-    def _process(self, root, processor):
+    def _create(self, root, processor):
         
         path = os.path.join(root, self.name).rstrip('/')
         
@@ -108,7 +105,7 @@ class Directory(Structure):
             processor.mkdir(path)
             
         for child in self.children:
-            child._process(path, processor)
+            child._create(path, processor)
         
     def _scan_template(self, template):
         
@@ -177,7 +174,7 @@ class Entity(Directory):
         for child in self.children:
             child.tag_existing(path)
     
-    def _process(self, root, processor):
+    def _create(self, root, processor):
         
         path = self.context.sgfs.path_for_entity(self.entity)
         from_cache = path is not None
@@ -186,11 +183,11 @@ class Entity(Directory):
         if not os.path.exists(path):
             processor.mkdir(path)
         
-        if not from_cache:
+        if not from_cache and not processor.dry_run:
             self.context.sgfs.tag_directory_with_entity(path, self.entity)
         
         for child in self.children:
-            child._process(path, processor)
+            child._create(path, processor)
         
 
 
@@ -206,7 +203,7 @@ class File(Structure):
     def _repr_headline(self):
         return self.name
     
-    def _process(self, root, processor):
+    def _create(self, root, processor):
         path = os.path.join(root, self.name).rstrip('/')
         if not os.path.exists(path):
             template = self.config.get('template')

@@ -245,5 +245,11 @@ class TestMutatedStructure(Base):
         self.assertSameEntity(tags[0]['entity'], self.shots[3])
 
 
+class TestDryRun(Base):
+    
+    def test_dry_run(self):
+        self.sgfs.create_structure(self.tasks + self.assets, dry_run=True)
+        paths = self.pathTester()
+        paths.assertMatchedAll()
 
        

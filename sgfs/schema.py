@@ -10,8 +10,9 @@ from .structure import Structure
 
 class Schema(object):
     
-    def __init__(self, name, entity_type='Project', config_name=None):
+    def __init__(self, name=None, entity_type='Project', config_name=None):
         
+        name = name or 'v1'
         root = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             'schemas',

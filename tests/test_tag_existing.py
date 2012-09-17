@@ -47,7 +47,7 @@ class TestTagExistingV1(Base):
         
         self.assertIsNone(self.sgfs.path_cache(proj))
         
-        self.sgfs.tag_existing(tasks, schema_name='v1', verbose=True)
+        self.sgfs.tag_existing_structure(tasks, schema_name='v1', verbose=True)
         
         cache = self.sgfs.path_cache(proj)
         
