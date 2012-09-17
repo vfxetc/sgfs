@@ -4,7 +4,7 @@ import subprocess
 
 import yaml
 
-from . import processor
+from .processor import Processor
 from . import utils
 
 
@@ -77,15 +77,18 @@ class Structure(object):
             child.pprint(depth + 1)
     
     def create(self, root, verbose=False, dry_run=False):
-        self._create(root, processor.Processor(verbose=verbose, dry_run=dry_run))
-    
+        processor = Processor(verbose=verbose, dry_run=dry_run)
+        self._create(root, processor)
+        return processor.log_events
+        
     def _create(self, root, processor):
         for child in self.children:
             child._create(root, processor)
     
     def tag_existing(self, root, verbose=False, dry_run=False):
         for child in self.children:
-            child.tag_existing(root, verbose=verbose, dry_run=dry_run)
+            for x in child.tag_existing(root, verbose=verbose, dry_run=dry_run):
+                yield x
 
 
 class Directory(Structure):
@@ -161,7 +164,7 @@ class Entity(Directory):
     def _repr_headline(self):
         return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id'])
     
-    def tag_existing(self, root, verbose=False):
+    def tag_existing(self, root, verbose=False, dry_run=False):
         
         path = os.path.join(root, self.name).rstrip('/')
         if not os.path.exists(path):
@@ -169,10 +172,15 @@ class Entity(Directory):
         
         # Tag it if it wasn't already.
         if not any(tag['entity'] is self.entity for tag in self.context.sgfs.get_directory_entity_tags(path)):
-            self.context.sgfs.tag_directory_with_entity(path, self.entity)
-        
+            yield self.entity, path
+            if verbose:
+                print '# tag %r with %s %d' % (path, self.entity['type'], self.entity['id'])
+            if not dry_run:
+                self.context.sgfs.tag_directory_with_entity(path, self.entity)
+            
         for child in self.children:
-            child.tag_existing(path)
+            for x in child.tag_existing(path, verbose=verbose, dry_run=dry_run):
+                yield x
     
     def _create(self, root, processor):
         

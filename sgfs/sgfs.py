@@ -193,6 +193,6 @@ class SGFS(object):
     
     def tag_existing_structure(self, entities, schema_name=None, verbose=False, dry_run=False):
         structure = self._structure_from_entities(entities, schema_name)
-        structure.tag_existing(self.root, verbose=verbose)
+        return dict(structure.tag_existing(self.root, verbose=verbose, dry_run=dry_run))
     
     
