@@ -11,29 +11,17 @@ from .context import Context
 from .schema import Schema
 from .cache import PathCache
 
-TAG_NAME = '.sgfs.yml'
-
 
 class SGFS(object):
     
-    def __init__(self, root=None, session=None, shotgun=None):
+    def __init__(self, root, session=None, shotgun=None):
         
-        if root is None:
-            root = os.environ.get('SGFS_ROOT')
-        if root is None:
-            raise ValueError('root or $SGFS_ROOT must not be None')
         self.root = root
         
-        if not (shotgun or session):
-            raise ValueError('one of session or shotgun must not be None')
-        if shotgun and session:
-            raise ValueError('session or shotgun, but not both')
-        if shotgun:
-            self.shotgun = shotgun
-            self.session = Session(self.shotgun)
-        else:
-            self.session = session
-            self.shotgun = session.shotgun
+        if not shotgun and not session:
+            raise ValueError('one of session or shotgun must not be provided')
+        self.session = session or Session(shotgun)
+        self.shotgun = shotgun or session.shotgun
     
     @property
     def project_roots(self):
@@ -79,7 +67,7 @@ class SGFS(object):
             indent=4,
             default_flow_style=False
         )
-        with open(os.path.join(path, TAG_NAME), 'a') as fh:
+        with open(os.path.join(path, '.sgfs.yml'), 'a') as fh:
             fh.write(serialized)
         
         # Add it to the local project roots.
@@ -94,7 +82,7 @@ class SGFS(object):
             path_cache[entity] = path
     
     def get_directory_tags(self, path):
-        path = os.path.join(path, TAG_NAME)
+        path = os.path.join(path, '.sgfs.yml')
         if not os.path.exists(path):
             return []
         with open(path) as fh:
