@@ -1,3 +1,6 @@
+# Master entrypoint whcih delegates to children, much like git does.
 sgfs: sgfs.commands.sgfs:main
-sgfs-tag: sgfs.commands.tag:main
 
+# Individual commands.
+sgfs-create-structure: sgfs.commands.create_structure:main
+sgfs-tag: sgfs.commands.tag:main
