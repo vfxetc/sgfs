@@ -48,12 +48,20 @@ class SGFS(object):
         """
         if entity['type'] == 'Project':
             return self.project_roots.get(entity)
-        else:
-            project = entity.project()
-            path_cache = self.path_cache(project)
-            if path_cache is not None:
-                return path_cache.get(entity)
             
+        project = entity.project(fetch=False)
+        if project is not None:
+            path_cache = self.path_cache(project)
+            return path_cache.get(entity) if path_cache is not None else None
+            
+        # It should be cheaper to hit the disk to poll all caches than to query
+        # the Shotgun server.
+        for project in self.project_roots:
+            path_cache = self.path_cache(project)
+            path = path_cache.get(entity) if path_cache is not None else None
+            if path is not None:
+                return
+    
     def tag_directory_with_entity(self, path, entity, cache=True):
         tag = {
             'created_at': datetime.datetime.now(),
@@ -136,10 +144,17 @@ class SGFS(object):
         if isinstance(entities, dict):
             entities = [entities]
         
-        # TODO: If we are given a project then use it for the cache, otherwise
-        # query the 'project.Project.code' for all provided original entities.
-        # TODO: load these from the cache once we have a project
         entities = self.session.merge(entities)
+        
+        # If we don't already have the parent of the entity then populate as
+        # much as we can from the cache.
+        for entity in entities:
+            if entity.parent(fetch=False) and entity.project(fetch=False):
+                continue
+            path = self.path_for_entity(entity)
+            if path:
+                self.get_directory_entity_tags(path)
+        
         self.session.fetch_heirarchy(entities)
         
         projects = filter(None, (x.project(fetch=False) for x in entities))
