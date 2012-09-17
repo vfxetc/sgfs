@@ -125,14 +125,14 @@ class SGFS(object):
     
     def context_from_entities(self, entities):
         """Construct a Context graph which includes all of the given entities."""
-        
+
         if isinstance(entities, dict):
             entities = [entities]
         
         # TODO: If we are given a project then use it for the cache, otherwise
         # query the 'project.Project.code' for all provided original entities.
         # TODO: load these from the cache once we have a project
-        entities = [self.session.merge(x) for x in entities]
+        entities = self.session.merge(entities)
         self.session.fetch_heirarchy(entities)
         
         projects = filter(None, (x.project(fetch=False) for x in entities))
@@ -177,12 +177,8 @@ class SGFS(object):
         return entity_to_context[projects[0]]
     
     def _structure_from_entities(self, entities, schema_name):
-        if isinstance(entities, dict):
-            entities = [entities]
-        merged = [self.session.merge(x) for x in entities]
-        context = self.context_from_entities(merged)
-        schema = Schema(schema_name)
-        return schema.structure(context)
+        context = self.context_from_entities(entities)
+        return Schema(schema_name).structure(context)
     
     def create_structure(self, entities, schema_name='v1', verbose=False, preview=False):
         structure = self._structure_from_entities(entities, schema_name)
