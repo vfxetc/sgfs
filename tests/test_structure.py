@@ -148,13 +148,6 @@ class Base(TestCase):
         self.sgfs = SGFS(root=self.sandbox, session=self.session)
         self = None
     
-    def create(self, entities):
-        merged = [self.session.merge(x) for x in entities]
-        context = self.sgfs.context_from_entities(merged)
-        schema = self.sgfs._get_schema('v1')
-        structure = schema.structure(context)
-        structure.create(self.sandbox, verbose=True)
-    
     def pathTester(self):
         return PathTester(self, os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
         
@@ -163,7 +156,7 @@ class Base(TestCase):
 class TestFullStructure(Base):
     
     def test_full_structure(self):
-        self.create(self.tasks + self.assets)
+        self.sgfs.create_structure(self.tasks + self.assets)
         paths = self.pathTester()
         paths.assertFullStructure()
 
@@ -175,27 +168,27 @@ class TestIncrementalStructure(Base):
 
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.create([proj])
+        self.sgfs.create_structure([proj])
         with paths:
             paths.assertProject()
         
         for seq in self.seqs:
-            self.create([seq])
+            self.sgfs.create_structure([seq])
             with paths:
                 paths.assertSequence(1)
         
         for asset in self.assets:
-            self.create([asset])
+            self.sgfs.create_structure([asset])
             with paths:
                 paths.assertAssetType(ANY)
                 paths.assertAsset(1)
         
         for shot in self.shots:
-            self.create([shot])
+            self.sgfs.create_structure([shot])
             with paths:
                 paths.assertShot(1)
         
-        self.create(self.tasks)
+        self.sgfs.create_structure(self.tasks)
         with paths:
             paths.assertAssetTask(len(self.assets), 'Anm', maya=True, nuke=False)
             paths.assertAssetTask(len(self.assets), 'Comp', maya=False, nuke=True)
@@ -221,12 +214,12 @@ class TestMutatedStructure(Base):
 
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.create([proj])
+        self.sgfs.create_structure([proj])
         with paths:
             paths.assertProject()
         
         for seq in self.seqs:
-            self.create([seq])
+            self.sgfs.create_structure([seq])
             with paths:
                 paths.assertSequence(1)
         
@@ -236,7 +229,7 @@ class TestMutatedStructure(Base):
         print '==== MUTATION ===='
         self.sgfs.rebuild_cache(root)
         
-        self.create(self.shots)
+        self.sgfs.create_structure(self.shots)
         paths.scan()
         paths.assertMatches(2, r'SEQ/XX/AA_\d+/')
         paths.assertMatches(2, r'SEQ/XX/AA_\d+/\.sgfs\.yml')

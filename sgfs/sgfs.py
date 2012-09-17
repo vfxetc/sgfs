@@ -18,28 +18,18 @@ class SGFS(object):
         
         self.root = root
         
+        # Set the session.
         if not shotgun and not session:
             raise ValueError('one of session or shotgun must not be provided')
         self.session = session or Session(shotgun)
-        self.shotgun = shotgun or session.shotgun
-    
-    @property
-    def project_roots(self):
-        try:
-            return self._project_roots
-        except AttributeError:
-            pass
         
-        self._project_roots = roots = {}
-        
-        # Scan the root looking for Project tags in all directories therein.
+        # Scan the root looking for Project tags in its top level.
+        self.project_roots = {}
         for name in os.listdir(self.root):
             path = os.path.join(self.root, name)
             for tag in self.get_directory_entity_tags(path):
                 if tag['entity']['type'] == 'Project':
-                    roots[tag['entity']] = path
-        
-        return roots
+                    self.project_roots[tag['entity']] = path
     
     def path_cache(self, project):
         project_root = self.project_roots.get(project)
@@ -145,7 +135,7 @@ class SGFS(object):
         entities = [self.session.merge(x) for x in entities]
         self.session.fetch_heirarchy(entities)
         
-        projects = filter(None, (x if x['type'] == 'Project' else x.project() for x in entities))
+        projects = filter(None, (x.project(fetch=False) for x in entities))
         if len(projects) != len(entities):
             raise ValueError('given entities do not all have projects')
         if len(set(projects)) != 1:
@@ -186,22 +176,12 @@ class SGFS(object):
         # The parent is the root.
         return entity_to_context[projects[0]]
     
-    def _get_schema(self, name='v1', entity_type='Project'):
-        schema_root = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            'schemas',
-            name,
-        )
-        if not os.path.exists(schema_root):
-            raise ValueError('schema %r does not exist' % name)
-        return Schema(schema_root, entity_type, entity_type + '.yml')
-    
     def _structure_from_entities(self, entities, schema_name):
         if isinstance(entities, dict):
             entities = [entities]
         merged = [self.session.merge(x) for x in entities]
         context = self.context_from_entities(merged)
-        schema = self._get_schema(schema_name)
+        schema = Schema(schema_name)
         return schema.structure(context)
     
     def create_structure(self, entities, schema_name='v1', verbose=False, preview=False):

@@ -24,18 +24,10 @@ class TestContextFromPath(TestCase):
 
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.sandbox, session=self.session)
-        self = None
-    
-    def create(self, entities):
-        merged = [self.session.merge(x) for x in entities]
-        context = self.sgfs.context_from_entities(merged)
-        schema = self.sgfs._get_schema('v1')
-        structure = schema.structure(context)
-        structure.create(self.sandbox, verbose=True)
     
     def test_context_from_path(self):
         
-        self.create(self.tasks)
+        self.sgfs.create_structure(self.tasks)
         
         root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
         

@@ -10,16 +10,24 @@ from .structure import Structure
 
 class Schema(object):
     
-    def __init__(self, root, entity_type, config_name):
+    def __init__(self, name, entity_type='Project', config_name=None):
+        
+        root = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'schemas',
+            name,
+        )
+        if not os.path.exists(root):
+            raise ValueError('schema %r does not exist' % name)
         
         self.root = root
         self.entity_type = entity_type
-        self.config_name = config_name
-        self.config = yaml.load(open(self._join_path(config_name)).read())
+        self.config_name = config_name or entity_type + '.yml'
+        self.config = yaml.load(open(self._join_path(self.config_name)).read())
         
         # Set some defaults on the config.
         self.config.setdefault('type', 'entity')
-        default_template = self._join_path(os.path.splitext(config_name)[0])
+        default_template = self._join_path(os.path.splitext(self.config_name)[0])
         if os.path.exists(default_template):
             self.config.setdefault('template', default_template)
         
