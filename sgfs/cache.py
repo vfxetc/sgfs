@@ -30,6 +30,9 @@ class PathCache(collections.MutableMapping):
             self.conn.execute('CREATE TABLE IF NOT EXISTS entity_paths (entity_type TEXT, entity_id INTEGER, path TEXT)')
             self.conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS entity_paths_entity ON entity_paths(entity_type, entity_id)')
     
+    def __repr__(self):
+        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.project_root, id(self))
+    
     def __setitem__(self, entity, path):
         
         if not isinstance(entity, Entity):

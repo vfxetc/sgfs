@@ -7,7 +7,7 @@ from shotgun_api3_registry import connect
 from sgfs import SGFS
 
 
-def sgaction(entity_type, selected_ids, **kwargs):
+def sgaction(entity_type, selected_ids, project_id, **kwargs):
     
     root = os.environ.get('KS_PROJECTS')
     if not root:
@@ -20,6 +20,7 @@ def sgaction(entity_type, selected_ids, **kwargs):
         entity = sgfs.session.merge(dict(type=entity_type, id=id_))
         path = sgfs.path_for_entity(entity)
         if path:
+            print entity, '->', repr(path)
             paths.append(path)
     
     if not paths:

@@ -48,19 +48,19 @@ class SGFS(object):
         """
         if entity['type'] == 'Project':
             return self.project_roots.get(entity)
-            
+        
         project = entity.project(fetch=False)
         if project is not None:
             path_cache = self.path_cache(project)
             return path_cache.get(entity) if path_cache is not None else None
-            
+        
         # It should be cheaper to hit the disk to poll all caches than to query
         # the Shotgun server.
         for project in self.project_roots:
             path_cache = self.path_cache(project)
             path = path_cache.get(entity) if path_cache is not None else None
             if path is not None:
-                return
+                return path
     
     def tag_directory_with_entity(self, path, entity, cache=True):
         tag = {
