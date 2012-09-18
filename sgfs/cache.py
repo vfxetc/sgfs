@@ -1,6 +1,7 @@
 import collections
 import os
 import sqlite3
+from subprocess import call
 
 from sgsession import Entity
 
@@ -14,8 +15,15 @@ class PathCache(collections.MutableMapping):
         self.project_root = os.path.abspath(project_root)
         if not os.path.exists(project_root):
             os.makedirs(project_root)
-            
-        self.conn = sqlite3.connect(os.path.join(project_root, '.sgfs-cache.sqlite'))
+        
+        # If it doesn't exist then touch it with read/write permissions for all.
+        db_path = os.path.join(project_root, '.sgfs-cache.sqlite')
+        if not os.path.exists(db_path):
+            umask = os.umask(0111)
+            call(['touch', db_path])
+            os.umask(umask)
+        
+        self.conn = sqlite3.connect(db_path)
         self.conn.text_factory = str
         
         with self.conn:

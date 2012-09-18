@@ -1,3 +1,5 @@
+import os
+
 from common import *
 
 
@@ -14,6 +16,12 @@ class TestCache(TestCase):
         sgfs.create_structure(proj)
         cache = sgfs.path_cache(proj)
         
+        root = os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_')))
+        
         self.assertEqual(1, len(cache))
-        self.assertEqual(cache.get(proj), os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_'))))
+        self.assertEqual(cache.get(proj), root)
+        
+        stat = os.stat(os.path.join(root, '.sgfs-cache.sqlite'))
+        print oct(stat.st_mode)
+        self.assertEqual(stat.st_mode & 0777, 0666)
         

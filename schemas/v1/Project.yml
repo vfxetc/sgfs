@@ -4,4 +4,4 @@ name_expr: |
     return normalize(self['name'])
 children:
     Asset: Asset.yml
-    Sequence: Sequence.yml # Slash is relative to config root.
+    Sequence: Sequence.yml
