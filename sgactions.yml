@@ -7,3 +7,8 @@
     title: "[dev] Preview Folders"
     entity_types: [Sequence, Asset, Shot, Task]
 
+-
+    entrypoint: sgfs.commands.open:sgaction
+    title: "[dev] Jump to Folder"
+    entity_types: [Sequence, Asset, Shot, Task]
+
