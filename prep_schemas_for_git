@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+schemas="$(dirname "$0")/schemas"
+find $schemas -name .sgfs-ignore -delete
+find $schemas -type d -empty -exec touch {}/.sgfs-ignore \;
