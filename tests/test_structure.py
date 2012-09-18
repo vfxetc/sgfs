@@ -86,15 +86,23 @@ class PathTester(object):
         self.assertMatches(count,  r'/Assets/(Character|Vehicle)/(\1_\d+)/')
         self.assertMatches(count,  r'/Assets/(Character|Vehicle)/(\1_\d+)/\.sgfs\.yml')
     
-    def assertAssetTask(self, count, type_, maya=False, nuke=False):
-        self._assertTask(count, r'/Assets/(Character|Vehicle)/(\1_\d+)', type_, maya=maya, nuke=nuke)
+    def assertAssetTask(self, count, type_, **kwargs):
+        self._assertTask(count, r'/Assets/(Character|Vehicle)/(\1_\d+)', type_, **kwargs)
     
-    def _assertTask(self, count, base, type_, maya, nuke):
+    def _assertTask(self, count, base, type_, maya=False, nuke=False, mudbox=False):
         self.assertMatches(count, base + r'/%s/' % type_)
         self.assertMatches(ANY, base + r'/%s/\.sgfs\.yml' % type_)
-        self.assertMatches(count if maya else 0, base + r'/%s/scenes/' % type_)
-        self.assertMatches(count if maya else 0, base + r'/%s/workspace.mel' % type_)
-        self.assertMatches(count if nuke else 0, base + r'/%s/scripts/' % type_)
+        self.assertMatches(ANY, base + r'/%s/dailies/' % type_)
+        self.assertMatches(count if maya else 0, base + r'/%s/maya/' % type_)
+        self.assertMatches(count if maya else 0, base + r'/%s/maya/published/' % type_)
+        self.assertMatches(count if maya else 0, base + r'/%s/maya/scenes/' % type_)
+        self.assertMatches(count if maya else 0, base + r'/%s/maya/workspace.mel' % type_)
+        self.assertMatches(count if mudbox else 0, base + r'/%s/mudbox/' % type_)
+        self.assertMatches(count if mudbox else 0, base + r'/%s/mudbox/published/' % type_)
+        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/' % type_)
+        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/published/' % type_)
+        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/renders/' % type_)
+        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/scripts/' % type_)
     
     def assertSequence(self, count):
         self.assertMatches(count, r'/SEQ/(\w{2})/')
@@ -105,21 +113,21 @@ class PathTester(object):
         self.assertMatches(count, r'/SEQ/(\w{2})/\1_\d{3}/\.sgfs\.yml')
         self.assertMatches(count * 3, r'/SEQ/(\w{2})/\1_\d{3}/(Audio|Plates|Ref)/')
     
-    def assertShotTask(self, count, type_, maya=False, nuke=False):
-        self._assertTask(count, r'/SEQ/(\w{2})/\1_\d{3}', type_, maya=maya, nuke=nuke)
+    def assertShotTask(self, count, type_, **kwargs):
+        self._assertTask(count, r'/SEQ/(\w{2})/\1_\d{3}', type_, **kwargs)
     
     def assertFullStructure(self):
         self.assertProject()
         self.assertAssetType(2)
         self.assertAsset(4)
-        self.assertAssetTask(4, 'Anm', maya=True, nuke=False)
-        self.assertAssetTask(4, 'Comp', maya=False, nuke=True)
-        self.assertAssetTask(4, 'Model', maya=True, nuke=False)
+        self.assertAssetTask(4, 'Anm', maya=True)
+        self.assertAssetTask(4, 'Comp', nuke=True)
+        self.assertAssetTask(4, 'Model', maya=True, mudbox=True)
         self.assertSequence(2)
         self.assertShot(4)
-        self.assertShotTask(4, 'Anm', maya=True, nuke=False)
-        self.assertShotTask(4, 'Comp', maya=False, nuke=True)
-        self.assertShotTask(4, 'Model', maya=True, nuke=False)
+        self.assertShotTask(4, 'Anm', maya=True)
+        self.assertShotTask(4, 'Comp', nuke=True)
+        self.assertShotTask(4, 'Model', maya=True, mudbox=True)
         self.assertMatchedAll()
         
     
@@ -190,12 +198,12 @@ class TestIncrementalStructure(Base):
         
         self.sgfs.create_structure(self.tasks)
         with paths:
-            paths.assertAssetTask(len(self.assets), 'Anm', maya=True, nuke=False)
-            paths.assertAssetTask(len(self.assets), 'Comp', maya=False, nuke=True)
-            paths.assertAssetTask(len(self.assets), 'Model', maya=True, nuke=False)
-            paths.assertShotTask(len(self.shots), 'Anm', maya=True, nuke=False)
-            paths.assertShotTask(len(self.shots), 'Comp', maya=False, nuke=True)
-            paths.assertShotTask(len(self.shots), 'Model', maya=True, nuke=False)
+            paths.assertAssetTask(len(self.assets), 'Anm', maya=True)
+            paths.assertAssetTask(len(self.assets), 'Comp', nuke=True)
+            paths.assertAssetTask(len(self.assets), 'Model', maya=True, mudbox=True)
+            paths.assertShotTask(len(self.shots), 'Anm', maya=True)
+            paths.assertShotTask(len(self.shots), 'Comp', nuke=True)
+            paths.assertShotTask(len(self.shots), 'Model', maya=True, mudbox=True)
             
         root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
         self.assertEqual(1, len(self.sgfs.get_directory_entity_tags(root)))
