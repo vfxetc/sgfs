@@ -9,4 +9,5 @@ steps_to_include:
     - Model
     - Sculpt
     - FX
+    - Texture
     
