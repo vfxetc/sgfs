@@ -3,4 +3,5 @@ sgfs: sgfs.commands.sgfs:main
 
 # Individual commands.
 sgfs-create-structure: sgfs.commands.create_structure:main
+sgfs-rebuild-cache: sgfs.commands.rebuild_cache:main
 sgfs-tag: sgfs.commands.tag:main
