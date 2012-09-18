@@ -2,6 +2,7 @@
     entrypoint: sgfs.commands.create_structure:create_sgaction
     title: "[dev] Create Folders"
     entity_types: [Sequence, Asset, Shot, Task]
+
 -
     entrypoint: sgfs.commands.create_structure:preview_sgaction
     title: "[dev] Preview Folders"

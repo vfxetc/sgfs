@@ -1,11 +1,9 @@
 condition: any(self['step'][x] in steps_to_include for x in ('code', 'short_name'))
 
 steps_to_include:
-    - Animation
-    - Anm
-    - Groom
-    - Light
+    - Match Move
+    - Match Move Animation
+    - Match Move Camera
+    - Match Move Character
     - Match Move Rotomation
-    - Model
-    - Sculpt
     
