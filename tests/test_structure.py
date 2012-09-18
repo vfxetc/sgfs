@@ -48,7 +48,7 @@ class PathTester(object):
     def __exit__(self, *args):
         self.assertMatchedAll()
         
-    def assertMatches(self, count, pattern, msg=None):
+    def assertMatches(self, count, pattern, mode=None, msg=None):
         
         if not pattern:
             self.fail('no pattern specified')
@@ -61,6 +61,12 @@ class PathTester(object):
         self.paths = []
         for path in paths:
             if re.match(full_pattern, path):
+                if mode is None:
+                    test_mode = 0777 if path.endswith('/') else 0666
+                else:
+                    test_mode = mode
+                stat = os.stat(os.path.join(self.root, path.strip('/')))
+                self.test.assertEqual(stat.st_mode & 0777, test_mode, 'permissions differ on %r; %o != %o' % (path, stat.st_mode & 0777, test_mode))
                 self.matched.add(path)
             else:
                 self.paths.append(path)

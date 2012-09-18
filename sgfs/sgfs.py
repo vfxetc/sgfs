@@ -73,6 +73,7 @@ class SGFS(object):
             default_flow_style=False
         )
         with open(os.path.join(path, '.sgfs.yml'), 'a') as fh:
+            os.chmod(os.path.join(path, '.sgfs.yml'), 0666) # Race condition?
             fh.write(serialized)
         
         # Add it to the local project roots.
