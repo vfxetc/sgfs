@@ -36,7 +36,7 @@ class SGFS(object):
         if project_root is None:
             return
         else:
-            return PathCache(self.session, project_root)
+            return PathCache(self, project_root)
     
     def path_for_entity(self, entity):
         """Get the path on disk for the given entity.

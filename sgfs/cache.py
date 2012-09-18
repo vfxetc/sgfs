@@ -8,9 +8,9 @@ from sgsession import Entity
 
 class PathCache(collections.MutableMapping):
     
-    def __init__(self, session, project_root):
+    def __init__(self, sgfs, project_root):
         
-        self.session = session
+        self.sgfs = sgfs
         
         self.project_root = os.path.abspath(project_root)
         if not os.path.exists(project_root):
@@ -51,7 +51,11 @@ class PathCache(collections.MutableMapping):
             row = c.fetchone()
             if row is None:
                 raise KeyError(entity)
-            return os.path.abspath(os.path.join(self.project_root, row[0]))
+            path = os.path.abspath(os.path.join(self.project_root, row[0]))
+            if any(tag['entity'] is entity for tag in self.sgfs.get_directory_entity_tags(path)):
+                return path
+            else:
+                raise KeyError(entity)
     
     def __delitem__(self, entity):
         if not isinstance(entity, Entity):
@@ -68,6 +72,6 @@ class PathCache(collections.MutableMapping):
         with self.conn:
             c = self.conn.cursor()
             for row in c.execute('SELECT entity_type, entity_id FROM entity_paths'):
-                yield self.session.merge(dict(type=row[0], id=row[1]))
+                yield self.sgfs.session.merge(dict(type=row[0], id=row[1]))
     
         
