@@ -11,7 +11,7 @@ class TestSingleproject(TestCase):
         
         sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
         proj = sgfs.session.merge(self.fix.Project('Test Project ' + mini_uuid()))
-        sgfs.create_structure(proj)
+        sgfs.create_structure(proj, allow_project=True)
         
         self.assertEqual(1, len(sgfs.project_roots))
         self.assertEqual(sgfs.project_roots[proj], os.path.join(self.sandbox, proj['name'].replace(' ', '_')))
@@ -40,7 +40,7 @@ class TestMultipleProjects(TestCase):
         sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
         for i in range(1, 5):
             proj = sgfs.session.merge(self.fix.Project(('Test Project %d ' % i) + mini_uuid()))
-            sgfs.create_structure(proj)
+            sgfs.create_structure(proj, allow_project=True)
         
         self.assertEqual(4, len(sgfs.project_roots))
         

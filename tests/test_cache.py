@@ -13,7 +13,7 @@ class TestCache(TestCase):
         
         sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
         proj = sgfs.session.merge(self.fix.Project('Test Project ' + mini_uuid()))        
-        sgfs.create_structure(proj)
+        sgfs.create_structure(proj, allow_project=True)
         cache = sgfs.path_cache(proj)
         
         root = os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_')))
@@ -29,7 +29,7 @@ class TestCache(TestCase):
         
         sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
         proj = sgfs.session.merge(self.fix.Project('Test Project ' + mini_uuid()))        
-        sgfs.create_structure(proj)
+        sgfs.create_structure(proj, allow_project=True)
         cache = sgfs.path_cache(proj)
         
         root = os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_')))

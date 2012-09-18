@@ -203,12 +203,12 @@ class SGFS(object):
         context = self.context_from_entities(entities)
         return Schema(schema_name).structure(context)
     
-    def create_structure(self, entities, schema_name=None, verbose=False, dry_run=False):
+    def create_structure(self, entities, schema_name=None, **kwargs):
         structure = self._structure_from_entities(entities, schema_name)
-        return structure.create(self.root, verbose=verbose, dry_run=dry_run)
+        return structure.create(self.root, **kwargs)
     
-    def tag_existing_structure(self, entities, schema_name=None, verbose=False, dry_run=False):
+    def tag_existing_structure(self, entities, schema_name=None, **kwargs):
         structure = self._structure_from_entities(entities, schema_name)
-        return dict(structure.tag_existing(self.root, verbose=verbose, dry_run=dry_run))
+        return dict(structure.tag_existing(self.root, **kwargs))
     
     

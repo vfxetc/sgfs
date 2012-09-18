@@ -27,7 +27,7 @@ class TestContextFromPath(TestCase):
     
     def test_context_from_path(self):
         
-        self.sgfs.create_structure(self.tasks)
+        self.sgfs.create_structure(self.tasks, allow_project=True)
         
         root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
         

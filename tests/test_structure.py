@@ -170,7 +170,7 @@ class Base(TestCase):
 class TestFullStructure(Base):
     
     def test_full_structure(self):
-        self.sgfs.create_structure(self.tasks + self.assets)
+        self.sgfs.create_structure(self.tasks + self.assets, allow_project=True)
         paths = self.pathTester()
         paths.assertFullStructure()
 
@@ -182,7 +182,7 @@ class TestIncrementalStructure(Base):
 
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.sgfs.create_structure([proj])
+        self.sgfs.create_structure([proj], allow_project=True)
         with paths:
             paths.assertProject()
         
@@ -228,7 +228,7 @@ class TestMutatedStructure(Base):
 
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.sgfs.create_structure([proj])
+        self.sgfs.create_structure([proj], allow_project=True)
         with paths:
             paths.assertProject()
         
@@ -266,4 +266,20 @@ class TestDryRun(Base):
         paths = self.pathTester()
         paths.assertMatchedAll()
 
-       
+
+class TestDisallowProject(TestCase):
+    
+    def setUp(self):
+        sg = Shotgun()
+        self.sg = self.fix = fix = Fixture(sg)
+        self.proj_name = 'Test Project ' + mini_uuid()
+        self.proj = fix.Project(self.proj_name)
+        self.sgfs = SGFS(root=self.sandbox, shotgun=fix)
+        
+    def tearDown(self):
+        self.fix.delete_all()
+    
+    def test_disallow_project(self):
+        os.makedirs(os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
+        self.assertRaises(ValueError, self.sgfs.create_structure, [self.proj])
+        

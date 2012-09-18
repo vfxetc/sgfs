@@ -76,8 +76,8 @@ class Structure(object):
         for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
-    def create(self, root, verbose=False, dry_run=False):
-        processor = Processor(verbose=verbose, dry_run=dry_run)
+    def create(self, root, **kwargs):
+        processor = Processor(**kwargs)
         self._create(root, processor)
         return processor.log_events
         
@@ -188,6 +188,10 @@ class Entity(Directory):
         path = self.context.sgfs.path_for_entity(self.entity)
         from_cache = path is not None
         path = path if from_cache else os.path.join(root, self.name).rstrip('/')
+        
+        # Don't let people create Projects.
+        if not from_cache and not processor.dry_run:
+            processor.assert_allow_entity(self.entity)
         
         if not os.path.exists(path):
             processor.mkdir(path)
