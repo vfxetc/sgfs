@@ -131,6 +131,7 @@ class Directory(Structure):
         for special in [x for x in paths if x.endswith('.yml')]:
                 
             config = yaml.load(open(special).read()) or {}
+            config.setdefault('name', os.path.basename(os.path.splitext(special)[0]))
             config.setdefault('type', 'directory')
             
             local_template = os.path.splitext(special)[0]
