@@ -1,15 +1,30 @@
 -
-    entrypoint: sgfs.commands.create_structure:create_sgaction
-    title: "[dev] Create Folders"
+    entrypoint: sgfs.commands.create_structure:preview_sgaction
+    title: "File System: Preview Folders"
+    rich:
+        heading: File System
+        title: Preview Folders
+        icon: folder-explore
+    list_order: 11
     entity_types: [Sequence, Asset, Shot, Task]
 
 -
-    entrypoint: sgfs.commands.create_structure:preview_sgaction
-    title: "[dev] Preview Folders"
+    entrypoint: sgfs.commands.create_structure:create_sgaction
+    title: "File System: Create Folders"
+    rich:
+        heading: File System
+        title: Create Folders
+        icon: folder-add
+    list_order: 12
     entity_types: [Sequence, Asset, Shot, Task]
 
 -
     entrypoint: sgfs.commands.open:sgaction
-    title: "[dev] Jump to Folder"
+    title: "File System: Jump to Folder"
+    rich:
+        heading: File System
+        title: Jump to Folder
+        icon: folder-go
+    list_order: 13
     entity_types: [Sequence, Asset, Shot, Task]
 
