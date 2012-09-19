@@ -206,6 +206,10 @@ class Entity(Directory):
 
 class Include(Directory):
     
+    def __init__(self, *args, **kwargs):
+        super(Include, self).__init__(*args, **kwargs)
+        self.name = ''
+    
     def pprint(self, depth):
         for child in self.children:
             child.pprint(depth)
