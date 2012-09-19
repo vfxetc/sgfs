@@ -9,4 +9,4 @@ This Python package is a translation layer between Shotgun entities and a file s
 - create new structures on disk;
 - indentify existing structures on disk for use in above translation.
 
-Stay tuned for documentation!
+[Read the docs](http://sgfs.readthedocs.org/), and good luck!
