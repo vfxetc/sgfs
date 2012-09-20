@@ -5,7 +5,9 @@ steps_to_include:
     - Anm
     - Groom
     - Lighting
-    - Match Move Rotomation
+    - Matchmove
+    - Matchmove Rotomation
+    - Matchmove Character
     - Model
     - Sculpt
     - FX
