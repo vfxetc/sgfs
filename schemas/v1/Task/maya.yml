@@ -11,4 +11,5 @@ steps_to_include:
     - FX
     - Texture
     - Previs
+    - Rigging
     

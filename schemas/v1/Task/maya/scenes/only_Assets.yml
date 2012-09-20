@@ -1,0 +1,5 @@
+type: include
+
+condition: |
+    if self['entity']['type'] == 'Asset':
+        return True
