@@ -10,21 +10,24 @@ This Python package is a translation layer between `Shotgun <http://www.shotguns
 - create new structures on disk;
 - indentify existing structures on disk for use in above translation.
 
+
+Contents
+--------
+
+.. toctree::
+    :maxdepth: 2
+    
+    sgfs
+    context
+    cache
+
+
 .. todo:: Write documentation.
 
 
-..
-    Contents
-    ========
-
-
-.. toctree::
-   :maxdepth: 2
-
-..
-    Indices and tables
-    ==================
-    * :ref:`genindex`
-    * :ref:`modindex`
-    * :ref:`search`
+Indices and tables
+==================
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
