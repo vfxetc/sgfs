@@ -1,9 +1,4 @@
-- tag entities as they are created
-- reverse cache
-- test making part of a structure, moving some pieces, rebuilding the cache, and then adding the rest of the structure
-- legacy schema
-    - test creation
-    - test tagging
-- Processor(dry_run=True)
-- PreviewProcessor collects a list of directories and copied files
-- Do not tag or cache when previewing
+- Legacy schema.
+- Arbitrary data in tags.
+- Cache lookups by code/name as well as by ID.
+- Get setup.py including the schema (via a MANIFEST?).

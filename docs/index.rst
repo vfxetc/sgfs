@@ -24,16 +24,15 @@ Contents
 
 .. todo:: Document thoroughly:
 
-    - Context graphs;
-    - Schema configuration;
-    - Schema graphs;
-    - Structure graphs;
-    - ``.sgfs.yml`` tags;
-    - reverse cache;
-    - ``SGFS`` API;
-    - ``Context`` API;
+    - Context graphs
+    - Schema configuration
+    - Schema graphs
+    - Structure graphs
+    - ``.sgfs.yml`` tags
+    - reverse cache
+    - ``SGFS`` API
+    - ``Context`` API
     - ``PathCache`` API
-    
 
 
 Indices and tables
