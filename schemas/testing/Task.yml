@@ -1,0 +1,12 @@
+
+condition: all(self['step'][x] not in do_not_create for x in ('code', 'short_name'))
+
+do_not_create:
+    - Approval
+    - Client
+    - Client Approval
+    - Client Spotting
+    - Online
+    - Spotting
+
+name_expr: self['step']['short_name']

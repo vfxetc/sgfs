@@ -95,20 +95,35 @@ class PathTester(object):
     def assertAssetTask(self, count, type_, **kwargs):
         self._assertTask(count, r'/Assets/(Character|Vehicle)/(\1_\d+)', type_, **kwargs)
     
-    def _assertTask(self, count, base, type_, maya=False, nuke=False, mudbox=False):
+    def _assertTask(self, count, base, type_):
+        
         self.assertMatches(count, base + r'/%s/' % type_)
         self.assertMatches(ANY, base + r'/%s/\.sgfs\.yml' % type_)
         self.assertMatches(ANY, base + r'/%s/dailies/' % type_)
-        self.assertMatches(count if maya else 0, base + r'/%s/maya/' % type_)
-        self.assertMatches(count if maya else 0, base + r'/%s/maya/published/' % type_)
-        self.assertMatches(count if maya else 0, base + r'/%s/maya/scenes/' % type_)
-        self.assertMatches(count if maya else 0, base + r'/%s/maya/workspace.mel' % type_)
-        self.assertMatches(count if mudbox else 0, base + r'/%s/mudbox/' % type_)
-        self.assertMatches(count if mudbox else 0, base + r'/%s/mudbox/published/' % type_)
-        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/' % type_)
-        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/published/' % type_)
-        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/renders/' % type_)
-        self.assertMatches(count if nuke else 0, base + r'/%s/nuke/scripts/' % type_)
+        
+        if type_ in ('Anm', 'Model', 'Light'):
+            self.assertMatches(count, base + r'/%s/maya/' % type_)
+            self.assertMatches(count, base + r'/%s/maya/images/' % type_)
+            self.assertMatches(count, base + r'/%s/maya/published/' % type_)
+            self.assertMatches(count, base + r'/%s/maya/scenes/' % type_)
+            self.assertMatches(count, base + r'/%s/maya/sourceimages/' % type_)
+            self.assertMatches(count, base + r'/%s/maya/workspace.mel' % type_)
+        
+        if type_ in ('Comp', 'Light'):
+            self.assertMatches(count, base + r'/%s/nuke/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/published/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/renders/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/scripts/' % type_)
+        
+        if type_ in ('Comp', ):
+            self.assertMatches(count, base + r'/%s/nuke/renders/cleanplates/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/renders/elements/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/renders/mattes/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/scripts/comp/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/scripts/precomp/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/scripts/precomp/cleanplate/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/scripts/precomp/elements/' % type_)
+            self.assertMatches(count, base + r'/%s/nuke/scripts/precomp/roto/' % type_)
     
     def assertSequence(self, count):
         self.assertMatches(count, r'/SEQ/(\w{2})/')
@@ -126,14 +141,16 @@ class PathTester(object):
         self.assertProject()
         self.assertAssetType(2)
         self.assertAsset(4)
-        self.assertAssetTask(4, 'Anm', maya=True)
-        self.assertAssetTask(4, 'Comp', nuke=True)
-        self.assertAssetTask(4, 'Model', maya=True, mudbox=True)
+        self.assertAssetTask(4, 'Anm')
+        self.assertAssetTask(4, 'Comp')
+        self.assertAssetTask(4, 'Light')
+        self.assertAssetTask(4, 'Model')
         self.assertSequence(2)
         self.assertShot(4)
-        self.assertShotTask(4, 'Anm', maya=True)
-        self.assertShotTask(4, 'Comp', nuke=True)
-        self.assertShotTask(4, 'Model', maya=True, mudbox=True)
+        self.assertShotTask(4, 'Anm')
+        self.assertShotTask(4, 'Comp')
+        self.assertShotTask(4, 'Light')
+        self.assertShotTask(4, 'Model')
         self.assertMatchedAll()
         
     
@@ -147,7 +164,7 @@ class Base(TestCase):
         proj = fix.Project(self.proj_name)
         seqs = [proj.Sequence(code, project=proj) for code in ('AA', 'BB')]
         shots = [seq.Shot('%s_%03d' % (seq['code'], i), project=proj) for seq in seqs for i in range(1, 3)]
-        steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Model')]
+        steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Light', 'Model')]
         assets = [proj.Asset(sg_asset_type=type_, code="%s %d" % (type_, i)) for type_ in ('Character', 'Vehicle') for i in range(1, 3)]
         tasks = [entity.Task(step['code'] + ' something', step=step, entity=entity, project=proj) for step in (steps + steps[-1:]) for entity in (shots + assets)]
         
@@ -165,12 +182,14 @@ class Base(TestCase):
     def pathTester(self):
         return PathTester(self, os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
         
+    def create(self, entities, *args, **kwargs):
+        self.sgfs.create_structure(entities, *args, schema_name='testing', **kwargs)
         
 
 class TestFullStructure(Base):
     
     def test_full_structure(self):
-        self.sgfs.create_structure(self.tasks + self.assets, allow_project=True)
+        self.create(self.tasks + self.assets, allow_project=True)
         paths = self.pathTester()
         paths.assertFullStructure()
 
@@ -182,34 +201,36 @@ class TestIncrementalStructure(Base):
 
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.sgfs.create_structure([proj], allow_project=True)
+        self.create([proj], allow_project=True)
         with paths:
             paths.assertProject()
         
         for seq in self.seqs:
-            self.sgfs.create_structure([seq])
+            self.create([seq])
             with paths:
                 paths.assertSequence(1)
         
         for asset in self.assets:
-            self.sgfs.create_structure([asset])
+            self.create([asset])
             with paths:
                 paths.assertAssetType(ANY)
                 paths.assertAsset(1)
         
         for shot in self.shots:
-            self.sgfs.create_structure([shot])
+            self.create([shot])
             with paths:
                 paths.assertShot(1)
         
-        self.sgfs.create_structure(self.tasks)
+        self.create(self.tasks)
         with paths:
-            paths.assertAssetTask(len(self.assets), 'Anm', maya=True)
-            paths.assertAssetTask(len(self.assets), 'Comp', nuke=True)
-            paths.assertAssetTask(len(self.assets), 'Model', maya=True, mudbox=True)
-            paths.assertShotTask(len(self.shots), 'Anm', maya=True)
-            paths.assertShotTask(len(self.shots), 'Comp', nuke=True)
-            paths.assertShotTask(len(self.shots), 'Model', maya=True, mudbox=True)
+            paths.assertAssetTask(len(self.assets), 'Anm')
+            paths.assertAssetTask(len(self.assets), 'Comp')
+            paths.assertAssetTask(len(self.assets), 'Light')
+            paths.assertAssetTask(len(self.assets), 'Model')
+            paths.assertShotTask(len(self.shots), 'Anm')
+            paths.assertShotTask(len(self.shots), 'Comp')
+            paths.assertShotTask(len(self.shots), 'Light')
+            paths.assertShotTask(len(self.shots), 'Model')
             
         root = os.path.join(self.sandbox, self.proj_name.replace(' ', '_'))
         self.assertEqual(1, len(self.sgfs.get_directory_entity_tags(root)))
@@ -228,12 +249,12 @@ class TestMutatedStructure(Base):
 
         proj = self.session.merge(self.proj)
         proj.fetch('name')
-        self.sgfs.create_structure([proj], allow_project=True)
+        self.create([proj], allow_project=True)
         with paths:
             paths.assertProject()
         
         for seq in self.seqs:
-            self.sgfs.create_structure([seq])
+            self.create([seq])
             with paths:
                 paths.assertSequence(1)
         
@@ -243,7 +264,7 @@ class TestMutatedStructure(Base):
         print '==== MUTATION ===='
         self.sgfs.rebuild_cache(root)
         
-        self.sgfs.create_structure(self.shots)
+        self.create(self.shots)
         paths.scan()
         paths.assertMatches(2, r'SEQ/XX/AA_\d+/')
         paths.assertMatches(2, r'SEQ/XX/AA_\d+/\.sgfs\.yml')
@@ -262,7 +283,7 @@ class TestMutatedStructure(Base):
 class TestDryRun(Base):
     
     def test_dry_run(self):
-        self.sgfs.create_structure(self.tasks + self.assets, dry_run=True)
+        self.create(self.tasks + self.assets, dry_run=True)
         paths = self.pathTester()
         paths.assertMatchedAll()
 
