@@ -5,15 +5,18 @@ import os
 class Processor(object):
     
     def __init__(self, verbose=False, dry_run=False, allow_project=False):
+        
         self.verbose = verbose
         self.dry_run = dry_run
+
+        self.disallowed_entities = set()
+        if not allow_project:
+            self.disallowed_entities.add('Project')
+        
         self.made_directories = set()
         self.touched_files = set()
         self.copied_files = set()
         self.log_events = []
-        self.disallowed_entities = set()
-        if not allow_project:
-            self.disallowed_entities.add('Project')
     
     def assert_allow_entity(self, entity):
         if entity['type'] in self.disallowed_entities:

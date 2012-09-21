@@ -1,7 +1,7 @@
+from subprocess import call
 import collections
 import os
 import sqlite3
-from subprocess import call
 
 from sgsession import Entity
 
