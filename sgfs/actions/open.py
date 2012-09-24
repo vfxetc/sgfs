@@ -6,14 +6,12 @@ import platform
 from shotgun_api3_registry import connect
 from sgfs import SGFS
 
+from . import notify
 
-def sgaction(entity_type, selected_ids, project_id, **kwargs):
+
+def run(entity_type, selected_ids, project_id, **kwargs):
     
-    root = os.environ.get('KS_PROJECTS')
-    if not root:
-        optparser.error('$KS_PROJECTS must be set')
-    sgfs = SGFS(root, shotgun=connect())
-    
+    sgfs = SGFS()
     paths = []
     
     for id_ in selected_ids:
@@ -24,8 +22,10 @@ def sgaction(entity_type, selected_ids, project_id, **kwargs):
             paths.append(path)
     
     if not paths:
-        print 'No paths for %s %s' % (entity_type, selected_ids)
+        notify('No paths for %s %s' % (entity_type, selected_ids))
         return
+    
+    notify('Opening:\n' + '\n'.join(sorted(paths)))
     
     for path in set(paths):
         if platform.system() == 'Darwin':

@@ -25,13 +25,13 @@ def main():
     except ValueError:
         optparser.error('entity_id must be an integer')
     
-    root = os.environ.get('KS_PROJECTS')
-    if not root:
-        optparser.error('$KS_PROJECTS must be set')
-    sgfs = SGFS(root, shotgun=connect())
+    sgfs = SGFS()
     
     entity = sgfs.session.merge(dict(type=entity_type, id=entity_id))
+    
+    # Cache a rich and full heirarchy.
     entities = entity.fetch_heirarchy()
     sgfs.session.fetch_core(entities)
+    
     sgfs.tag_directory_with_entity(path, entity, cache=opts.cache)
     

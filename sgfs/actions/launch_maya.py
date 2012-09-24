@@ -6,20 +6,12 @@ import platform
 from shotgun_api3_registry import connect
 from sgfs import SGFS
 
-
-def notify(msg):
-    print msg
-    if platform.system() == 'Darwin':
-        call(['growlnotify', '-t', 'SGFS', '-m', msg])
-    else:
-        call(['notify-send', msg])
+from . import notify
 
 
-def sgaction(entity_type, selected_ids, project_id, **kwargs):
+def run(entity_type, selected_ids, project_id, **kwargs):
     
-    root = os.environ.get('KS_PROJECTS')
-    sgfs = SGFS(root, shotgun=connect())
-    
+    sgfs = SGFS()
     paths = []
     
     if not selected_ids:

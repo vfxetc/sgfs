@@ -1,42 +1,42 @@
 -
-    entrypoint: sgfs.commands.create_structure:preview_sgaction
-    title: "File System: Preview Folders"
+    entrypoint: sgfs.actions.create_structure:run_preview
+    title: "File System: Preview Folders [dev]"
     rich:
         heading: File System
-        title: Preview Folders
+        title: Preview Folders [dev]
         icon: folder-explore
     list_order: 21
     entity_types: [Sequence, Asset, Shot, Task]
     selection_required: true
 
 -
-    entrypoint: sgfs.commands.create_structure:create_sgaction
-    title: "File System: Create Folders"
+    entrypoint: sgfs.actions.create_structure:run_create
+    title: "File System: Create Folders [dev]"
     rich:
         heading: File System
-        title: Create Folders
+        title: Create Folders [dev]
         icon: folder-add
     list_order: 22
     entity_types: [Sequence, Asset, Shot, Task]
     selection_required: true
 
 -
-    entrypoint: sgfs.commands.open:sgaction
-    title: "File System: Jump to Folder"
+    entrypoint: sgfs.actions.open:run
+    title: "File System: Jump to Folder [dev]"
     rich:
         heading: File System
-        title: Jump to Folder
+        title: Jump to Folder [dev]
         icon: folder-go
     list_order: 23
     entity_types: [Sequence, Asset, Shot, Task]
     selection_required: true
 
 -
-    entrypoint: sgfs.commands.launch_maya:sgaction
-    title: "Toolbox: Launch Maya"
+    entrypoint: sgfs.actions.launch_maya:run
+    title: "Toolbox: Launch Maya [dev]"
     rich:
         heading: Toolbox
-        title: Launch Maya
+        title: Launch Maya [dev]
         icon: application-osx-terminal
     list_order: 11
     entity_types: [Task]

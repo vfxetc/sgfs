@@ -16,11 +16,6 @@ def main():
         optparser.print_usage()
         exit(1)
     
-    root = os.environ.get('KS_PROJECTS')
-    if not root:
-        optparser.error('$KS_PROJECTS must be set')
-    sgfs = SGFS(root, shotgun=connect())
-    
+    sgfs = SGFS()
     sgfs.rebuild_cache(os.path.abspath(args[0]))
-    
     
