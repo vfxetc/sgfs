@@ -8,7 +8,13 @@ def eval_expr_or_func(src, globals_, locals_=None):
         locals_ = locals_ if locals_ is not None else {}
         code = compile(src, '<str>', 'exec')
         eval(code, globals_, locals_)
-        return locals_['_']()
+        try:
+            return locals_['_']()
+        except Exception, e:
+            raise ValueError('Error while running %r -> %r' % (src, e))
     else:
-        return eval(lines[0], globals_)
+        try:
+            return eval(lines[0], globals_)
+        except Exception, e:
+            raise ValueError('Error while running %r -> %r' % (lines[0], e))
  
