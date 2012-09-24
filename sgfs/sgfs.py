@@ -14,13 +14,20 @@ from .schema import Schema
 
 class SGFS(object):
     
-    def __init__(self, root, session=None, shotgun=None):
+    def __init__(self, root=None, session=None, shotgun=None):
         
+        # Take the given root, or look it up in the environment.
+        if root is None:
+            root = os.environ.get('SGFS_ROOT')
+            if root is None:
+                raise ValueError('one of root or $SGFS_ROOT must not be None')
         self.root = root
         
-        # Set the session.
+        # Set the session, building it from a generic Shotgun if nothing was
+        # given. This requires a `shotgun_api3_registry.connect()` function.
         if not shotgun and not session:
-            raise ValueError('one of session or shotgun must not be provided')
+            import shotgun_api3_registry
+            shotgun = shotgun_api3_registry.connect(auto_name_stack_depth=1)
         self.session = session or Session(shotgun)
         
         # Scan the root looking for Project tags in its top level.
