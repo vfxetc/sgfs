@@ -9,9 +9,11 @@ steps_to_include:
     - Matchmove Rotomation
     - Matchmove Character
     - Model
+    - Modeling
     - Sculpt
     - FX
     - Texture
+    - Texturing
     - Previs
     - Rigging
     

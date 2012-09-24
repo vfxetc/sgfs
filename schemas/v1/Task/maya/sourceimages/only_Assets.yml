@@ -8,3 +8,4 @@ condition: |
 steps_to_include:
     - Lighting
     - Texture
+    - Texturing
