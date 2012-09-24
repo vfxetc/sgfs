@@ -1,9 +1,6 @@
 condition: any(self['step'][x] in steps_to_include for x in ('code', 'short_name'))
 
 steps_to_include:
-    - Model
-    - Modeling
     - Sculpt
     - Texture
     - Texturing
-    
