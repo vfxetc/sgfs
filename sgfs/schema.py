@@ -13,11 +13,13 @@ class Schema(object):
     def __init__(self, name=None, entity_type='Project', config_name=None):
         
         name = name or 'v1'
-        root = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
+        root = os.path.abspath(os.path.join(
+            __file__, 
+            os.pardir,
+            os.pardir,
             'schemas',
             name,
-        )
+        ))
         if not os.path.exists(root):
             raise ValueError('schema %r does not exist' % name)
         
