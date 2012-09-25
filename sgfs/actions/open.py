@@ -9,7 +9,7 @@ from sgfs import SGFS
 from . import notify
 
 
-def run(entity_type, selected_ids, project_id, **kwargs):
+def run(entity_type, selected_ids, **kwargs):
     
     sgfs = SGFS()
     paths = []
