@@ -8,6 +8,7 @@ steps_to_include:
     - Matchmove
     - Matchmove Rotomation
     - Matchmove Character
+    - Rotomation
     - Model
     - Modeling
     - Sculpt
