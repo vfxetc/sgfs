@@ -4,6 +4,7 @@ steps_to_include:
     - Animation
     - Anm
     - Groom
+    - Light
     - Lighting
     - Matchmove
     - Matchmove Rotomation
