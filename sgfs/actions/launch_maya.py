@@ -6,7 +6,7 @@ import platform
 from shotgun_api3_registry import connect
 from sgfs import SGFS
 
-from . import notify
+from sgactions.utils import notify
 
 
 def run(entity_type, selected_ids, **kwargs):
@@ -27,6 +27,11 @@ def run(entity_type, selected_ids, **kwargs):
     
     print entity, '->', repr(path)
     
-    call(['maya_launcher'], cwd=path)
+    # Signal to maya what entity this is.
+    env = dict(os.environ)
+    env['SGFS_ENTITY_TYPE'] = entity['type']
+    env['SGFS_ENTITY_ID'] = str(entity['id'])
+    
+    call(['maya_launcher'], cwd=path, env=env)
 
     

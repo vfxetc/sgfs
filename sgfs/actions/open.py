@@ -6,7 +6,7 @@ import platform
 from shotgun_api3_registry import connect
 from sgfs import SGFS
 
-from . import notify
+from sgactions.utils import notify
 
 
 def run(entity_type, selected_ids, **kwargs):

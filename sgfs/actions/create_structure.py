@@ -4,7 +4,7 @@ import os
 from shotgun_api3_registry import connect
 from sgfs import SGFS
 
-from . import notify
+from sgactions.utils import notify
 
 
 def run_create(**kwargs):
@@ -23,4 +23,7 @@ def _run(dry_run, entity_type, selected_ids, **kwargs):
     
     commands = sgfs.create_structure(entities, dry_run=dry_run)
     
-    notify('Structure:\n' + '\n'.join(commands))
+    notify(
+        title='Preview Folders' if dry_run else 'Creating Folders',
+        message='\n'.join(commands) or 'Everything is up to date.',
+    )
