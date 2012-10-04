@@ -75,6 +75,7 @@ class SGFS(object):
                 return path
     
     def tag_directory_with_entity(self, path, entity, cache=True):
+        
         tag = {
             'created_at': datetime.datetime.now(),
             'entity': entity.as_dict(),
@@ -84,10 +85,14 @@ class SGFS(object):
             indent=4,
             default_flow_style=False
         )
-        with open(os.path.join(path, '.sgfs.yml'), 'a') as fh:
-            os.chmod(os.path.join(path, '.sgfs.yml'), 0666) # Race condition?
-            fh.write(serialized)
         
+        # Write the tag, and set the permissions on it.
+        tag_path = os.path.join(path, '.sgfs.yml')
+        umask = os.umask(0111) # Race condition when threaded?
+        with open(tag_path, 'a') as fh:
+            fh.write(serialized)
+        os.umask(umask)
+            
         # Add it to the local project roots.
         if entity['type'] == 'Project':
             self.project_roots[entity] = path
