@@ -39,10 +39,15 @@ class SGFS(object):
                     self.project_roots[tag['entity']] = path
     
     def path_cache(self, project):
-        project_root = self.project_roots.get(project)
-        if project_root is None:
+        
+        if isinstance(project, basestring):
+            for project_root in self.project_roots.itervalues():
+                if project.startswith(project_root):
+                    return PathCache(self, project_root)
             return
-        else:
+        
+        project_root = self.project_roots.get(project)
+        if project_root is not None:
             return PathCache(self, project_root)
     
     def path_for_entity(self, entity):
