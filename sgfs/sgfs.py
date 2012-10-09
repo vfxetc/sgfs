@@ -119,31 +119,6 @@ class SGFS(object):
                 tag['entity'] = self.session.merge(tag['entity'])
             return tags
     
-    def context_from_path(self, path):
-        """Get a :class:`Context` with all tagged :class:`Entity`s in the given path.
-        
-        :param str path: The path to return a context for.
-        
-        This walks upwards on the path specified until it finds a directory that
-        has been tagged as a Project, and then returns it. While :class:`Context` graphs
-        may be rooted at any entity type, the graph returned here will always
-        be rooted at a Project.
-        
-        The returned graph may also be non-linear as a directory may be tagged
-        more than once. More often than not this will be multiple tasks attached
-        to the same entity, and so the fork will exist only in the last step.
-        
-        """
-        
-        entities = []
-        while path and path != '/':
-            for tag in self.get_directory_entity_tags(path):
-                entities.append(tag['entity'])
-                if tag['entity']['type'] == 'Project':
-                    return self.context_from_entities(entities)
-            path = os.path.dirname(path)
-        return
-    
     def entities_from_path(self, path):
         while path and path != '/':
             tags = self.get_directory_entity_tags(path)
@@ -221,6 +196,30 @@ class SGFS(object):
         # The parent is the root.
         return entity_to_context[projects[0]]
     
+    def context_from_path(self, path):
+        """Get a :class:`Context` with all tagged :class:`Entity`s in the given path.
+        
+        :param str path: The path to return a context for.
+        
+        This walks upwards on the path specified until it finds a directory that
+        has been tagged as a Project, and then returns it. While :class:`Context` graphs
+        may be rooted at any entity type, the graph returned here will always
+        be rooted at a Project.
+        
+        The returned graph may also be non-linear as a directory may be tagged
+        more than once. More often than not this will be multiple tasks attached
+        to the same entity, and so the fork will exist only in the last step.
+        
+        """
+        entities = []
+        while path and path != '/':
+            for tag in self.get_directory_entity_tags(path):
+                entities.append(tag['entity'])
+                if tag['entity']['type'] == 'Project':
+                    return self.context_from_entities(entities)
+            path = os.path.dirname(path)
+        return
+            
     def _structure_from_entities(self, entities, schema_name):
         context = self.context_from_entities(entities)
         return Schema(schema_name).structure(context)
