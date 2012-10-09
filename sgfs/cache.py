@@ -77,4 +77,18 @@ class PathCache(collections.MutableMapping):
             for row in c.execute('SELECT entity_type, entity_id FROM entity_paths'):
                 yield self.sgfs.session.merge(dict(type=row[0], id=row[1]))
     
+    def walk_directory(self, path, entity_type=None):
+        relative = os.path.relpath(path, self.project_root)
+        if relative.startswith('.'):
+            raise ValueError('path not in project')
+        with self.conn:
+            c = self.conn.cursor()
+            if entity_type is not None:
+                c.execute('SELECT entity_type, entity_id, path FROM entity_paths WHERE entity_type = ? AND path LIKE ?', (entity_type, relative + '%'))
+            else:
+                c.execute('SELECT entity_type, entity_id, path FROM entity_paths WHERE path LIKE ?', (relative + '%', ))
+            for row in c:
+                entity = self.sgfs.session.merge(dict(type=row[0], id=row[1]))
+                yield os.path.join(self.project_root, row[2]), entity
+            
         

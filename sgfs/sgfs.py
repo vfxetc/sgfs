@@ -127,6 +127,23 @@ class SGFS(object):
             path = os.path.dirname(path)
         return []
     
+    def entities_in_directory(self, path, entity_type=None, load_tags=False):
+        """Iterate across entities within the given directory.
+        
+        This uses the path cache to avoid actually walking the directory.
+        
+        :param str path: The path to walk for entities.
+        :param str entity_type: Restrict to this type; None returns all.
+        :param bool load_tags: Load data cached in tags? None implies automatic.
+        :return: Iterator of ``(path, entity)`` pairs.
+        
+        """
+        cache = self.path_cache(path)
+        for path, entity in cache.walk_directory(path, entity_type):
+            if load_tags or (load_tags is None and len(entity) == 2):
+                self.get_directory_entity_tags(path)
+            yield path, entity
+    
     def rebuild_cache(self, path):
         context = self.context_from_path(path)
         if not context:
