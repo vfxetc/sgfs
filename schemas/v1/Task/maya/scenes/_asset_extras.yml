@@ -1,5 +1,10 @@
 type: include
 
 condition: |
-    if self['entity']['type'] == 'Asset':
+    if self['entity']['type'] == 'Asset' and not any(self['step'][x] in steps_to_exclude for x in ('code', 'short_name')):
         return True
+
+
+steps_to_exclude:
+    - Rigging
+    - Rig
