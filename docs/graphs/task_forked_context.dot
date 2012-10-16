@@ -1,0 +1,15 @@
+digraph task_forked_context {
+graph [rankdir="LR"]
+node [fontsize=10]
+project_ctx_1017bc690 [label=<Project 1<BR/>"<B>Test Project 5a92c0ac</B>">]
+project_ctx_1017bc690 -> sequence_ctx_1017bc890
+sequence_ctx_1017bc890 [label=<Sequence 1<BR/>"<B>AA</B>">]
+sequence_ctx_1017bc890 -> shot_ctx_1017bc810
+shot_ctx_1017bc810 [label=<Shot 1<BR/>"<B>AA_001</B>">]
+shot_ctx_1017bc810 -> task_ctx_1017bc750
+task_ctx_1017bc750 [label=<Task 1>]
+sequence_ctx_1017bc890 -> shot_ctx_1017bc7d0
+shot_ctx_1017bc7d0 [label=<Shot 2<BR/>"<B>AA_002</B>">]
+shot_ctx_1017bc7d0 -> task_ctx_1017bc790
+task_ctx_1017bc790 [label=<Task 2>]
+}

@@ -2,6 +2,15 @@ import copy
 
 class Context(object):
     
+    """A selection of Shotgun entities and their relationship.
+    
+    A Context is a directed acyclic graph of Shotgun entities. It is usually
+    rooted at a ``Project``, but technically there is no such restriction. This
+    class exists solely to encapsulate a selection of entities and to be able
+    to navigate and query their graph.
+    
+    """
+    
     def __init__(self, sgfs, entity):
         self.sgfs = sgfs
         self.entity = entity
@@ -15,6 +24,7 @@ class Context(object):
         return '<Context %s:%s at 0x%x>' % (self.entity['type'], self.entity['id'], id(self))
     
     def project(self):
+        """Retrieve the root ``Project`` node which owns this node."""
         ctx = self
         while ctx.parent:
             ctx = ctx.parent
@@ -22,6 +32,7 @@ class Context(object):
             return ctx
     
     def pprint(self, depth=0):
+        """Pretty-print the graph."""
         print '%s%s:%s' % (
             '\t' * depth,
             self.entity['type'],
@@ -39,6 +50,30 @@ class Context(object):
         for child in self.children:
             child.pprint(depth + 1)
         print '\t' * depth + '}'
+    
+    @property
+    def _dotname(self):
+        return '%s_ctx_%x' % (self.entity['type'].lower(), id(self))
+    
+    def dot(self):
+        return ''.join(self._dot())
+    
+    def _dot(self):
+        """Construct a GraphViz dot graph of this node and its children."""
+        name_field = {
+            'Project': 'name',
+            'Sequence': 'code',
+            'Shot': 'code',
+            'Task': 'content',
+        }.get(self.entity['type'])
+        name = name_field and self.entity.get(name_field)
+        label_parts = ['%s %s' % (self.entity['type'], self.entity['id'])]
+        if name:
+            label_parts.append('"<B>%s</B>"' % name)
+        yield '%s [label=<%s>]\n' % (self._dotname, '<BR/>'.join(label_parts))
+        for child in self.children:
+            yield '%s -> %s\n' % (self._dotname, child._dotname)
+            yield child.dot()
     
     @property
     def is_linear(self):

@@ -17,6 +17,8 @@ Contents
 .. toctree::
     :maxdepth: 2
     
+    overview
+    
     sgfs
     context
     cache
@@ -24,15 +26,15 @@ Contents
 
 .. todo:: Document thoroughly:
 
-    - Context graphs
-    - Schema configuration
-    - Schema graphs
-    - Structure graphs
+   
     - ``.sgfs.yml`` tags
     - reverse cache
     - ``SGFS`` API
     - ``Context`` API
     - ``PathCache`` API
+
+.. graphviz:: /graphs/linear_context.dot
+.. graphviz:: /graphs/task_forked_context.dot
 
 
 Indices and tables
