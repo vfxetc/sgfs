@@ -29,8 +29,6 @@ Contents
    
     - ``.sgfs.yml`` tags
     - reverse cache
-    - ``SGFS`` API
-    - ``Context`` API
     - ``PathCache`` API
 
 .. graphviz:: /_graphs/task_forked_context/main.0.dot

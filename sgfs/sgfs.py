@@ -14,6 +14,16 @@ from .schema import Schema
 
 class SGFS(object):
     
+    """The mapping from Shotgun to the file system.
+    
+    :param str root: The location of projects on disk. Defaults to ``$SGFS_ROOT``.
+    :param session: The :class:`~sgsession.session.Session` to use. Defaults to
+        a clean wrapper around the given ``shotgun``.
+    :param shotgun: The ``Shotgun`` API to use. Defaults to an automatically
+        constructed instance via ``shotgun_api3_registry``.
+    
+    """
+    
     def __init__(self, root=None, session=None, shotgun=None):
         
         # Take the given root, or look it up in the environment.
@@ -39,7 +49,13 @@ class SGFS(object):
                     self.project_roots[tag['entity']] = path
     
     def path_cache(self, project):
+        """Get a :class:`~sgfs.cache.PathCache` for a given path or entity..
         
+        :param project: Either a ``str`` path within a project, or an
+            :class:`~sgsession.entity.Entity`.
+        :return: A :class:`~sgfs.cache.PathCache` or ``None``.
+        
+        """
         if isinstance(project, basestring):
             for project_root in self.project_roots.itervalues():
                 if project.startswith(project_root):
@@ -54,9 +70,16 @@ class SGFS(object):
     def path_for_entity(self, entity):
         """Get the path on disk for the given entity.
         
+        :param entity: An :class:`~sgsession.entity.Entity`
+        :return: ``str`` if the entity has a tagged directory, or ``None``.
+        
         This only works if the entity has been previously tagged, either by a
         manual process, of if the structure was automatically tagged or created
         by SGFS.
+        
+        This will also only return a still valid path, since the path cache
+        will verify that the returned directory is still tagged with the given
+        entity.
         
         """
         
@@ -81,7 +104,15 @@ class SGFS(object):
                 return path
     
     def tag_directory_with_entity(self, path, entity, cache=True):
+        """Tag a directory with the given entity, and add it to the cache.
         
+        This allows us to associate entities with directories, and the reverse.
+        
+        :param str path: The directory to tag.
+        :param entity: The :class:`~sgsession.entity.Entity` to tag it with.
+        :param bool cache: Add this to the path cache?
+        
+        """
         tag = {
             'created_at': datetime.datetime.now(),
             'entity': entity.as_dict(),
@@ -111,6 +142,12 @@ class SGFS(object):
             path_cache[entity] = path
     
     def get_directory_entity_tags(self, path):
+        """Get the tags for the given directory.
+        
+        :param str path: The directory to get tags for.
+        :return: ``list`` of ``dict``.
+        
+        """
         path = os.path.join(path, '.sgfs.yml')
         if not os.path.exists(path):
             return []
@@ -121,6 +158,13 @@ class SGFS(object):
             return tags
     
     def entities_from_path(self, path):
+        """Get the most specific entities that have been tagged in a parent
+        directory of the given path.
+        
+        :param str path: The path to find entities for.
+        :return: ``list`` of :class:`~sgsession.entity.Entity`.
+        
+        """
         while path and path != '/':
             tags = self.get_directory_entity_tags(path)
             if tags:
@@ -129,14 +173,15 @@ class SGFS(object):
         return []
     
     def entities_in_directory(self, path, entity_type=None, load_tags=False):
-        """Iterate across entities within the given directory.
+        """Iterate across every :class:`~sgsession.entity.Entity` within the
+        given directory.
         
         This uses the path cache to avoid actually walking the directory.
         
         :param str path: The path to walk for entities.
         :param str entity_type: Restrict to this type; None returns all.
         :param bool load_tags: Load data cached in tags? None implies automatic.
-        :return: Iterator of ``(path, entity)`` pairs.
+        :return: Iterator of ``(path, entity)`` tuples.
         
         """
         cache = self.path_cache(path)
@@ -146,6 +191,13 @@ class SGFS(object):
             yield path, entity
     
     def rebuild_cache(self, path):
+        """Walk a directory looking for tags, and rebuild the cache for them.
+        
+        This is useful when a tagged directory has been moved, breaking the
+        reverse path cache. Rebuilding the cache of that directory using this
+        method will reconnect the tags to the path cache.
+        
+        """
         context = self.context_from_path(path)
         if not context:
             raise ValueError('could not find any existing entities in %r' % path)
@@ -155,7 +207,16 @@ class SGFS(object):
                 cache[tag['entity']] = dir_path
     
     def context_from_entities(self, entities):
-        """Construct a Context graph which includes all of the given entities."""
+        """Construct a :class:`~sgfs.context.Context` graph which includes all
+        of the given entities.
+        
+        A ``Project`` must be reachable from every provided entity, and they
+        must all reach the same ``Project``.
+        
+        :returns: A :class:`~sgfs.context.Context` rooted at the ``Project``.
+        :raises ValueError: when the project conditions are not satisfied.
+        
+        """
 
         if isinstance(entities, dict):
             entities = [entities]
@@ -215,14 +276,15 @@ class SGFS(object):
         return entity_to_context[projects[0]]
     
     def context_from_path(self, path):
-        """Get a :class:`Context` with all tagged :class:`Entity`s in the given path.
+        """Get a :class:`~sgfs.context.Context` with every tagged
+        :class:`~sgsession.entity.Entity` in the given path.
         
         :param str path: The path to return a context for.
         
-        This walks upwards on the path specified until it finds a directory that
-        has been tagged as a Project, and then returns it. While :class:`Context` graphs
-        may be rooted at any entity type, the graph returned here will always
-        be rooted at a Project.
+        This walks upwards on the path specified until it finds a directory
+        that has been tagged as a ``Project``, and then returns a context
+        rooted at that project and containing every entity discovered up to that
+        point.
         
         The returned graph may also be non-linear as a directory may be tagged
         more than once. More often than not this will be multiple tasks attached
@@ -243,10 +305,31 @@ class SGFS(object):
         return Schema(schema_name).structure(context)
     
     def create_structure(self, entities, schema_name=None, **kwargs):
+        """Create the structure on disk for the given entities.
+        
+        :param list entities: The set of :class:`~sgsession.entity.Entity` to
+            create structure for.
+        :param str schema_name: Which schema to use. Defaults to ``'v1'``
+        :param bool dry_run: Don't actually create structure. Defaults to ``False``.
+        :param bool verbose: Print out what is going on. Defaults to ``False``.
+        :param bool allow_project: Allow creation of projects? Defaults to ``False``.
+        :return: A ``list`` of steps taken.
+        
+        """
         structure = self._structure_from_entities(entities, schema_name)
         return structure.create(self.root, **kwargs)
     
     def tag_existing_structure(self, entities, schema_name=None, **kwargs):
+        """Tag existing structures without creating new ones.
+        
+        :param list entities: The set of :class:`~sgsession.entity.Entity` to
+            create structure for.
+        :param str schema_name: Which schema to use. Defaults to ``'v1'``
+        :param bool dry_run: Don't actually create structure. Defaults to ``False``.
+        :param bool verbose: Print out what is going on. Defaults to ``False``.
+        :return: ``dict`` mapping entities to paths.
+        
+        """
         structure = self._structure_from_entities(entities, schema_name)
         return dict(structure.tag_existing(self.root, **kwargs))
     

@@ -259,3 +259,8 @@ todo_include_todos = True
 intersphinx_mapping = {
     'python': ('http://docs.python.org/release/2.6.8/', None),
 }
+for name in os.listdir('../..'):
+    html_path = os.path.abspath(os.path.join('..', '..', name, 'docs', '_build', 'html'))
+    if os.path.exists(html_path):
+        intersphinx_mapping[name.replace('_', '')] = (html_path, None)
+
