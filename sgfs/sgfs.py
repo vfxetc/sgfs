@@ -210,7 +210,7 @@ class SGFS(object):
         E.g.::
         
             >>> # Get everything under this shot, including the Shot and Tasks.
-            >>> for x in sgfs.entities_from_path('SEQ/GC/GC_001_001'):
+            >>> for x in sgfs.entities_in_directory('SEQ/GC/GC_001_001'):
             ...     print x
             ('<snip>/SEQ/GC/GC_001_001', <Entity Shot:5801 at 0x1011bb720>)
             ('<snip>/SEQ/GC/GC_001_001/Anim', <Entity Task:43897 at 0x1011bc0c0>)
