@@ -31,8 +31,6 @@ Contents
     - reverse cache
     - ``PathCache`` API
 
-.. graphviz:: /_graphs/task_forked_context/main.0.dot
-
 
 Indices and tables
 ==================

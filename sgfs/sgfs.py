@@ -82,6 +82,16 @@ class SGFS(object):
         will verify that the returned directory is still tagged with the given
         entity.
         
+        E.g.::
+        
+            >>> # We want a path for this task...
+            >>> sgfs.path_for_entity({"type": "Task", "id": 43898})
+            '<snip>/SEQ/GC/GC_001_001/Light'
+            
+            >>> # This one doesn't exist...
+            >>> sgfs.path_for_entity({"type": "Task", "id": 123456})
+            None
+            
         """
         
         entity = self.session.merge(entity)
@@ -165,7 +175,17 @@ class SGFS(object):
         directory of the given path.
         
         :param str path: The path to find entities for.
-        :return: ``list`` of :class:`~sgsession.entity.Entity`.
+        :return: ``tuple`` of :class:`~sgsession.entity.Entity`.
+        
+        E.g.::
+            
+            >>> # Get a few lighting tasks.
+            >>> sgfs.entities_from_path('SEQ/GC/GC_001_001/Light')
+            (<Entity Task:43897 at 0x1011b9c0>, <Entity Task:43990 at 0x10112da7>)
+            
+            >>> # Get the shot.
+            >>> sgfs.entities_from_path('SEQ/GC/GC_001_001')
+            (<Entity Shot:5801 at 0x1011c03d0>,)
         
         """
         path = os.path.abspath(path)
@@ -187,6 +207,15 @@ class SGFS(object):
         :param bool load_tags: Load data cached in tags? None implies automatic.
         :return: Iterator of ``(path, entity)`` tuples.
         
+        E.g.::
+        
+            >>> # Get everything under this shot, including the Shot and Tasks.
+            >>> for x in sgfs.entities_from_path('SEQ/GC/GC_001_001'):
+            ...     print x
+            ('<snip>/SEQ/GC/GC_001_001', <Entity Shot:5801 at 0x1011bb720>)
+            ('<snip>/SEQ/GC/GC_001_001/Anim', <Entity Task:43897 at 0x1011bc0c0>)
+            ('<snip>/SEQ/GC/GC_001_001/Light', <Entity Task:43898 at 0x1011bee80>)
+            
         """
         path = os.path.abspath(path)
         cache = self.path_cache(path)
@@ -201,6 +230,9 @@ class SGFS(object):
         This is useful when a tagged directory has been moved, breaking the
         reverse path cache. Rebuilding the cache of that directory using this
         method will reconnect the tags to the path cache.
+        
+        :param str path: The path to walk and rebuild the cache for.
+        :raises ValueError: when ``path`` is not within a project.
         
         """
         cache = self.path_cache(path)
@@ -217,14 +249,24 @@ class SGFS(object):
         A ``Project`` must be reachable from every provided entity, and they
         must all reach the same ``Project``.
         
-        :returns: A :class:`~sgfs.context.Context` rooted at the ``Project``.
+        :param list entities: A ``list`` of :class:`~sgsession.entity.Entity`
+            (or bare ``dict``) to get the context of.
+        :returns: A :class:`~sgfs.context.Context` rooted at the ``Project``,
+            including the given ``entities`` as leafs.
         :raises ValueError: when the project conditions are not satisfied.
         
+        E.g.::
+            
+            >>> sgfs.context_from_entities([{"type": "Task", "id": 43990}]).pprint()
+            Project:66 -> Sequence:101 -> Shot:5801 -> Task:43990
+        
         """
-
+        
+        # Accept a single instance as well.
         if isinstance(entities, dict):
             entities = [entities]
         
+        # Assert that they are entities.
         entities = self.session.merge(entities)
         
         # If we don't already have the parent of the entity then populate as
@@ -238,6 +280,7 @@ class SGFS(object):
         
         self.session.fetch_heirarchy(entities)
         
+        # Assert project conditions.
         projects = filter(None, (x.project(fetch=False) for x in entities))
         if len(projects) != len(entities):
             raise ValueError('given entities do not all have projects')
@@ -276,7 +319,7 @@ class SGFS(object):
                 parent_context.children.append(context)
                 context.parent = parent_context
         
-        # The parent is the root.
+        # The project is the root.
         return entity_to_context[projects[0]]
     
     def context_from_path(self, path):
@@ -293,6 +336,26 @@ class SGFS(object):
         The returned graph may also be non-linear as a directory may be tagged
         more than once. More often than not this will be multiple tasks attached
         to the same entity, and so the fork will exist only in the last step.
+        
+        E.g.::
+        
+            >>> ctx = sgfs.context_from_path("SEQ/GC/GC_001_001/Anim")
+            >>> ctx
+            <Context Project:66 at 0x10183b510>
+            >>> ctx.pprint()
+            Project:66 -> Sequence:101 -> Shot:5801 {
+            	Task:43897
+            	Task:43990
+            }
+        
+        An unambiguous (e.g. linear) context may look like:
+        
+        .. graphviz:: /_graphs/sgfs/context_from_path.0.dot
+        
+        If there is more than one task in the same path, the context
+        may be ambiguous (e.g. non-linear), and may look like:
+        
+        .. graphviz:: /_graphs/sgfs/context_from_path.1.dot
         
         """
         entities = []

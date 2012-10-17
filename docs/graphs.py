@@ -19,7 +19,7 @@ def minimal(entity):
 
 sandbox = os.path.abspath(os.path.join(__file__, '..', 'sandbox', timestamp()))
 os.makedirs(sandbox)
-    
+
 
 def make_graph_decorator(dir_name):
     def graph(func):
@@ -40,7 +40,7 @@ def make_graph_decorator(dir_name):
             print '\t' + path
             with open(path, 'w') as fh:
                 fh.write('digraph %s {\n' % func.__name__)
-                fh.write('graph [rankdir="LR", dpi=60]\n')
+                fh.write('graph [rankdir="LR", dpi=50]\n')
                 fh.write('node [fontsize=14]\n')
                 fh.write(output)
                 fh.write('}\n')
@@ -69,16 +69,24 @@ class LargeFixture():
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=sandbox, session=self.session)
 
+
 if __name__ == '__main__':
-    base_namespace = dict(globals())
+    
     dir_name = os.path.abspath(os.path.join(__file__, '..', '_graphs'))
+    
+    base_namespace = dict(globals())
+    base_namespace['__path__'] = [dir_name]
+    
     for file_name in os.listdir(dir_name):
         if not file_name.endswith('.py'):
             continue
+        
         path = os.path.join(dir_name, file_name)
-        namespace = dict(base_namespace)
         base_name = os.path.basename(os.path.splitext(file_name)[0])
+        
+        namespace = dict(base_namespace)
         namespace['graph'] = make_graph_decorator(base_name)
+        
         execfile(path, namespace)
 
 
