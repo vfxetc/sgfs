@@ -31,7 +31,7 @@ class SGFS(object):
             root = os.environ.get('SGFS_ROOT')
             if root is None:
                 raise ValueError('one of root or $SGFS_ROOT must not be None')
-        self.root = root
+        self.root = os.path.abspath(root)
         
         # Set the session, building it from a generic Shotgun if nothing was
         # given. This requires a `shotgun_api3_registry.connect()` function.
@@ -57,8 +57,9 @@ class SGFS(object):
         
         """
         if isinstance(project, basestring):
+            path = os.path.abspath(project)
             for project_root in self.project_roots.itervalues():
-                if project.startswith(project_root):
+                if path.startswith(project_root):
                     return PathCache(self, project_root)
             return
         
@@ -82,6 +83,8 @@ class SGFS(object):
         entity.
         
         """
+        
+        entity = self.session.merge(entity)
         
         # Projects are special cased; we should always know the paths to all
         # projects.
@@ -165,12 +168,13 @@ class SGFS(object):
         :return: ``list`` of :class:`~sgsession.entity.Entity`.
         
         """
+        path = os.path.abspath(path)
         while path and path != '/':
             tags = self.get_directory_entity_tags(path)
             if tags:
                 return self.session.merge([x['entity'] for x in tags])
             path = os.path.dirname(path)
-        return []
+        return ()
     
     def entities_in_directory(self, path, entity_type=None, load_tags=False):
         """Iterate across every :class:`~sgsession.entity.Entity` within the
@@ -184,6 +188,7 @@ class SGFS(object):
         :return: Iterator of ``(path, entity)`` tuples.
         
         """
+        path = os.path.abspath(path)
         cache = self.path_cache(path)
         for path, entity in cache.walk_directory(path, entity_type):
             if load_tags or (load_tags is None and len(entity) == 2):
@@ -198,10 +203,9 @@ class SGFS(object):
         method will reconnect the tags to the path cache.
         
         """
-        context = self.context_from_path(path)
-        if not context:
-            raise ValueError('could not find any existing entities in %r' % path)
-        cache = self.path_cache(context.entity)
+        cache = self.path_cache(path)
+        if cache is None:
+            raise ValueError('Could not get path cache from %r' % path)
         for dir_path, dir_names, file_names in os.walk(path):
             for tag in self.get_directory_entity_tags(dir_path):
                 cache[tag['entity']] = dir_path
@@ -292,6 +296,7 @@ class SGFS(object):
         
         """
         entities = []
+        path = os.path.abspath(path)
         while path and path != '/':
             for tag in self.get_directory_entity_tags(path):
                 entities.append(tag['entity'])

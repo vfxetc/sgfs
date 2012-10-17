@@ -14,14 +14,14 @@ class TestSingleproject(TestCase):
         sgfs.create_structure(proj, allow_project=True)
         
         self.assertEqual(1, len(sgfs.project_roots))
-        self.assertEqual(sgfs.project_roots[proj], os.path.join(self.sandbox, proj['name'].replace(' ', '_')))
+        self.assertEqual(sgfs.project_roots[proj], os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_'))))
         
         # New SGFS, but old Entity; there be dragons in this block!
         sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
         self.assertEqual(1, len(sgfs.project_roots))
         self.assertSameEntity(sgfs.project_roots.keys()[0], proj)
         self.assertIsNot(sgfs.project_roots.keys()[0], proj)
-        self.assertEqual(sgfs.project_roots.values()[0], os.path.join(self.sandbox, proj['name'].replace(' ', '_')))
+        self.assertEqual(sgfs.project_roots.values()[0], os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_'))))
         
         proj = sgfs.session.find_one('Project', [])
         self.assertEqual(1, len(sgfs.project_roots))
