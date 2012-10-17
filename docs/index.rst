@@ -17,19 +17,19 @@ Contents
 .. toctree::
     :maxdepth: 2
     
-    overview
-    
     sgfs
     context
-    cache
+    ..
+        cache
 
 
 .. todo:: Document thoroughly:
 
-   
-    - ``.sgfs.yml`` tags
-    - reverse cache
-    - ``PathCache`` API
+    - :class:`~sgfs.context.Context` overview
+    - :class:`~sgfs.schema.Schema` overview, configuration, and API
+    - :class:`~sgfs.structure.Structure` overview and API
+    - ``.sgfs.yml`` Tag overview
+    - :class:`~sgfs.cache.PathCache` overview and API
 
 
 Indices and tables
