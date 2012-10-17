@@ -71,8 +71,8 @@ class Context(object):
         if name:
             label_parts.append('"<B>%s</B>"' % name)
         yield '%s [label=<%s>]\n' % (self._dotname, '<BR/>'.join(label_parts))
-        for child in self.children:
-            yield '%s -> %s\n' % (self._dotname, child._dotname)
+        for i, child in enumerate(self.children):
+            yield '%s -> %s [label="%d"]\n' % (self._dotname, child._dotname, i)
             yield child.dot()
     
     @property
