@@ -33,7 +33,6 @@ Contents
     - ``Context`` API
     - ``PathCache`` API
 
-.. graphviz:: /_graphs/linear_context/main.0.dot
 .. graphviz:: /_graphs/task_forked_context/main.0.dot
 
 

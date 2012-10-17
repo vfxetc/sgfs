@@ -4,20 +4,33 @@ class Context(object):
     
     """A selection of Shotgun entities and their relationship.
     
-    A Context is a directed acyclic graph of Shotgun entities. It is usually
+    A ``Context`` is a directed acyclic graph of Shotgun entities. It is usually
     rooted at a ``Project``, but technically there is no such restriction. This
     class exists solely to encapsulate a selection of entities and to be able
     to navigate and query their graph.
     
+    Each node in a context graph is an instance of this class, and its children
+    are stored in the ``children`` list. ``Context`` graphs are constructed by a
+    :class:`~sgfs.sgfs.SGFS` object.
+    
     """
     
     def __init__(self, sgfs, entity):
+        
+        #: The :class:`~sgfs.sgfs.SGFS` object this context was created by.
         self.sgfs = sgfs
+        
+        #: The entity this node represents.
         self.entity = entity
+        
+        #: A list of ``Context`` nodes.
         self.children = []
+        
+        #: This node's parent; sometimes ``None``.
         self.parent = None
         
     def copy(self):
+        """Shallow copy the ``Context``; children and entities remain references."""
         return copy.copy(self)
     
     def __repr__(self):
@@ -31,8 +44,11 @@ class Context(object):
         if ctx.entity['type'] == 'Project':
             return ctx
     
-    def pprint(self, depth=0):
+    def pprint(self):
         """Pretty-print the graph."""
+        self._pprint(0)
+    
+    def _pprint(self, depth):
         print '%s%s:%s' % (
             '\t' * depth,
             self.entity['type'],
@@ -43,12 +59,12 @@ class Context(object):
             return
         elif len(self.children) == 1:
             print '->',
-            self.children[0].pprint(depth)
+            self.children[0]._pprint(depth)
             return
         
         print '{'
         for child in self.children:
-            child.pprint(depth + 1)
+            child._pprint(depth + 1)
         print '\t' * depth + '}'
     
     @property
@@ -56,6 +72,7 @@ class Context(object):
         return '%s_ctx_%x' % (self.entity['type'].lower(), id(self))
     
     def dot(self):
+        """Get a GraphViz ``dot`` graph representing the context."""
         return ''.join(self._dot())
     
     def _dot(self):
@@ -77,18 +94,22 @@ class Context(object):
     
     @property
     def is_linear(self):
+        """Is the entire graph linear? E.g. Do all nodes have only a single child?"""
         if not self.children:
             return True
         return len(self.children) == 1 and self.children[0].is_linear
 
     @property
     def linear_base(self):
+        """The part of the context from the current node that has no forks."""
         base = [self]
         while len(base[-1].children) == 1:
             base.append(base[-1].children[0])
         return base
     
     def iter_leafs(self):
+        """An iterator yielding the leafs of the context graph (e.g. those
+        which have no children.)"""
         if not self.children:
             yield self
         else:
@@ -97,6 +118,11 @@ class Context(object):
                     yield leaf
     
     def iter_by_type(self, type_):
+        """An iterator yielding all nodes in the context graph of the given type.
+        
+        :param str type_: The Shotgun entity type; e.g. ``Shot``.
+        
+        """
         if self.entity['type'] == type_:
             yield self
         for child in self.children:
@@ -104,6 +130,8 @@ class Context(object):
                 yield entity
     
     def iter_linearized(self):
+        """An iterator yielding all possible linear paths from the given root
+        through to all of the leafs."""
         if not self.children:
             new = self.copy()
             new.parent = None
