@@ -1,0 +1,3 @@
+/_graphs/*.dot
+/_graphs/*/*.dot
+/_graphs/.make
