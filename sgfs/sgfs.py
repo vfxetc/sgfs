@@ -46,6 +46,7 @@ class SGFS(object):
                     return PathCache(self, project_root)
             return
         
+        project = project.project()
         project_root = self.project_roots.get(project)
         if project_root is not None:
             return PathCache(self, project_root)
