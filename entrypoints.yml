@@ -5,4 +5,7 @@ sgfs: sgfs.commands.sgfs:main
 sgfs-create-structure: sgfs.commands.create_structure:main
 sgfs-rebuild-cache: sgfs.commands.rebuild_cache:main
 sgfs-tag: sgfs.commands.tag:main
-sgfs-open: sgfs.commands.open:main
+
+sgfs-open: sgfs.commands.open:run_open
+sgfs-shotgun: sgfs.commands.open:run_shotgun
+sgfs-path: sgfs.commands.open:run_path
