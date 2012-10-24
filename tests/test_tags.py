@@ -34,7 +34,7 @@ class TestTags(TestCase):
     def test_metadata(self):
         
         proj = self.fix.Project(self.project_name())
-        seq = self.session.merge(proj.Sequence('Metadata'))
+        seq = self.session.merge(proj.Sequence('Sequence'))
         
         path = os.path.join(self.sandbox, 'test_metadata')
         os.makedirs(path)
@@ -54,6 +54,36 @@ class TestTags(TestCase):
         self.assertIn('key', tags[0])
         self.assertIs(tags[1]['entity'], seq)
         self.assertIn('key', tags[1])
+        
+    
+    def test_from_paths(self):
+        
+        proj = self.fix.Project(self.project_name())
+        seq = proj.Sequence('Sequence')
+        shot = seq.Shot('Shot')
+        
+        proj_path = os.path.join(self.sandbox, 'test_from_paths')
+        seq_path = os.path.join(proj_path, 'seq')
+        shot_path = os.path.join(seq_path, 'shot')
+        os.makedirs(shot_path)
+        
+        self.sgfs.tag_directory_with_entity(proj_path, self.session.merge(proj), cache=False)
+        self.sgfs.tag_directory_with_entity(seq_path, self.session.merge(seq), cache=False)
+        self.sgfs.tag_directory_with_entity(shot_path, self.session.merge(shot), cache=False)
+        
+        shots = self.sgfs.entities_from_path(shot_path)
+        self.assertEqual(len(shots), 1)
+        self.assertSameEntity(shots[0], shot)
+        
+        seqs = self.sgfs.entities_from_path(seq_path)
+        self.assertEqual(len(seqs), 1)
+        self.assertSameEntity(seqs[0], seq)
+        
+        seqs = self.sgfs.entities_from_path(shot_path, entity_type='Sequence')
+        self.assertEqual(len(seqs), 1)
+        self.assertSameEntity(seqs[0], seq)
+        
+        
         
         
     def test_set_get(self):

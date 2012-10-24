@@ -211,11 +211,11 @@ class SGFS(object):
             (<Entity Shot:5801 at 0x1011c03d0>,)
             
             >>> # Get the sequence from a shot.
-            >>> sgfs.entities_from_path('SEQ/GC/GC_001_011', types='Sequence')
+            >>> sgfs.entities_from_path('SEQ/GC/GC_001_011', entity_type='Sequence')
             (<Entity Sequence:345 at 0x1011c0948>,)
             
             >>> # Get the shot or asset from a task.
-            >>> sgfs.entities_from_path('SEQ/GC/GC_001_011/Light', types=('Shot', 'Asset'))
+            >>> sgfs.entities_from_path('SEQ/GC/GC_001_011/Light', entity_type=('Shot', 'Asset'))
             (<Entity Shot:5801 at 0x1011c03d0>,)
         
         """
