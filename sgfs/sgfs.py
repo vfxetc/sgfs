@@ -115,7 +115,7 @@ class SGFS(object):
             path = path_cache.get(entity) if path_cache is not None else None
             if path is not None:
                 return path
-    
+
     def tag_directory_with_entity(self, path, entity, meta=None, cache=True):
         """Tag a directory with the given entity, and add it to the cache.
         
@@ -191,11 +191,13 @@ class SGFS(object):
         
         return entity_to_tag.values()
     
-    def entities_from_path(self, path):
+    def entities_from_path(self, path, entity_type=None):
         """Get the most specific entities that have been tagged in a parent
-        directory of the given path.
+        directory of the given path, optionally limited to a given type.
         
         :param str path: The path to find entities for.
+        :param str entity_type: The type (or set of types) to look for. None will return
+            the first entities found.
         :return: ``tuple`` of :class:`~sgsession.entity.Entity`.
         
         E.g.::
@@ -207,13 +209,35 @@ class SGFS(object):
             >>> # Get the shot.
             >>> sgfs.entities_from_path('SEQ/GC/GC_001_001')
             (<Entity Shot:5801 at 0x1011c03d0>,)
+            
+            >>> # Get the sequence from a shot.
+            >>> sgfs.entities_from_path('SEQ/GC/GC_001_011', types='Sequence')
+            (<Entity Sequence:345 at 0x1011c0948>,)
+            
+            >>> # Get the shot or asset from a task.
+            >>> sgfs.entities_from_path('SEQ/GC/GC_001_011/Light', types=('Shot', 'Asset'))
+            (<Entity Shot:5801 at 0x1011c03d0>,)
         
         """
+        
+        # Convert type into a set of strings, or None.
+        if entity_type is not None:
+            if isinstance(entity_type, basestring):
+                entity_type = set([entity_type])
+            else:
+                entity_type = set(entity_type)
+        
         path = os.path.abspath(path)
         while path and path != '/':
             tags = self.get_directory_entity_tags(path)
+            
+            # Perform the type filter.
+            if entity_type is not None:
+                tags = [tag for tag in tags if tag['entity']['type'] in entity_type]
+            
             if tags:
                 return self.session.merge([x['entity'] for x in tags])
+            
             path = os.path.dirname(path)
         return ()
     
