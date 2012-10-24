@@ -1,4 +1,14 @@
 - Legacy schema.
-- Arbitrary data in tags.
 - Cache lookups by code/name as well as by ID.
 - Get setup.py including the schema (via a MANIFEST?).
+- Rename some SGFS methods:
+    Clumsy or too explicit:
+        - get_directory_entity_tags
+        - tag_directory_with_entity
+    Unify:
+        - path_for_entity (only for)
+        - entities_from_path
+        - entities_in_directory (recursive version of above)
+        - context_from_entities
+        - context_from_path
+    
