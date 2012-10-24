@@ -116,7 +116,7 @@ class SGFS(object):
             if path is not None:
                 return path
     
-    def tag_directory_with_entity(self, path, entity, cache=True):
+    def tag_directory_with_entity(self, path, entity, meta=None, cache=True):
         """Tag a directory with the given entity, and add it to the cache.
         
         This allows us to associate entities with directories, and the reverse.
@@ -126,10 +126,11 @@ class SGFS(object):
         :param bool cache: Add this to the path cache?
         
         """
-        tag = {
+        tag = dict(meta or {})
+        tag.update({
             'created_at': datetime.datetime.now(),
             'entity': entity.as_dict(),
-        }
+        })
         serialized = yaml.dump(tag,
             explicit_start=True,
             indent=4,
@@ -154,21 +155,41 @@ class SGFS(object):
                 raise ValueError('could not get path cache for %r from %r' % (entity.project(), entity))
             path_cache[entity] = path
     
-    def get_directory_entity_tags(self, path):
+    def get_directory_entity_tags(self, path, allow_duplicates=False):
         """Get the tags for the given directory.
         
+        The tags will not be returned in any specific order.
+        
         :param str path: The directory to get tags for.
+        :param bool allow_duplicates: Return all tags, or just the most recent
+            for each entity?
         :return: ``list`` of ``dict``.
         
         """
+        
         path = os.path.join(path, '.sgfs.yml')
         if not os.path.exists(path):
             return []
+        
         with open(path) as fh:
             tags = list(yaml.load_all(fh.read()))
-            for tag in tags:
-                tag['entity'] = self.session.merge(tag['entity'])
+        
+        # Merge all the entity data before filtering out duplicates so that
+        # older Shotgun data is still pulled in.
+        for tag in tags:
+            tag['entity'] = self.session.merge(tag['entity'])
+        
+        if allow_duplicates:
             return tags
+        
+        # Take the newest version of each tag.
+        entity_to_tag = {}
+        for tag in tags:
+            older = entity_to_tag.get(tag['entity'])
+            if older is None or tag['created_at'] > older['created_at']:
+                entity_to_tag[tag['entity']] = tag
+        
+        return entity_to_tag.values()
     
     def entities_from_path(self, path):
         """Get the most specific entities that have been tagged in a parent

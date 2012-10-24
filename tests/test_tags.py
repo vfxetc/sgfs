@@ -9,6 +9,52 @@ class TestTags(TestCase):
         
         self.session = Session(self.sg)
         self.sgfs = SGFS(root=self.sandbox, session=self.session)
+    
+    def test_duplicates(self):
+        
+        proj = self.fix.Project(self.project_name())
+        seq = self.session.merge(proj.Sequence('Duplicate'))
+        
+        path = os.path.join(self.sandbox, 'test_duplicates')
+        os.makedirs(path)
+        
+        self.sgfs.tag_directory_with_entity(path, seq, cache=False)
+        self.sgfs.tag_directory_with_entity(path, seq, cache=False)
+        
+        tags = self.sgfs.get_directory_entity_tags(path)
+        self.assertEqual(len(tags), 1)
+        self.assertIs(tags[0]['entity'], seq)
+        
+        
+        tags = self.sgfs.get_directory_entity_tags(path, allow_duplicates=True)
+        self.assertEqual(len(tags), 2)
+        self.assertIs(tags[0]['entity'], seq)
+        self.assertIs(tags[1]['entity'], seq)
+    
+    def test_metadata(self):
+        
+        proj = self.fix.Project(self.project_name())
+        seq = self.session.merge(proj.Sequence('Metadata'))
+        
+        path = os.path.join(self.sandbox, 'test_metadata')
+        os.makedirs(path)
+        
+        self.sgfs.tag_directory_with_entity(path, seq, {'key': 'first'}, cache=False)
+        self.sgfs.tag_directory_with_entity(path, seq, {'key': 'second'}, cache=False)
+        
+        tags = self.sgfs.get_directory_entity_tags(path)
+        self.assertEqual(len(tags), 1)
+        self.assertIs(tags[0]['entity'], seq)
+        self.assertEqual(tags[0].get('key'), 'second')
+        
+        
+        tags = self.sgfs.get_directory_entity_tags(path, allow_duplicates=True)
+        self.assertEqual(len(tags), 2)
+        self.assertIs(tags[0]['entity'], seq)
+        self.assertIn('key', tags[0])
+        self.assertIs(tags[1]['entity'], seq)
+        self.assertIn('key', tags[1])
+        
         
     def test_set_get(self):
         

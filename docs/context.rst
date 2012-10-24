@@ -1,5 +1,5 @@
-``sgfs.context``
-==================
+``sgfs.context`` API
+====================
 
 .. automodule:: sgfs.context
 

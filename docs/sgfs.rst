@@ -1,5 +1,5 @@
-``sgfs.SGFS``
-=============
+``sgfs.SGFS`` API
+=================
 
 The :class:`~sgfs.sgfs.SGFS` object is the main entrypoint into most functions
 of this package. Generally, you construct a ``SGFS`` object and use it to
