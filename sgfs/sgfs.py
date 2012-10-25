@@ -128,7 +128,7 @@ class SGFS(object):
         """
         tag = dict(meta or {})
         tag.update({
-            'created_at': datetime.datetime.now(),
+            'created_at': datetime.datetime.utcnow(),
             'entity': entity.as_dict(),
         })
         serialized = yaml.dump(tag,
