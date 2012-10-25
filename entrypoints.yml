@@ -1,11 +1,18 @@
-# Master entrypoint whcih delegates to children, much like git does.
-sgfs: sgfs.commands.sgfs:main
 
-# Individual commands.
-sgfs-create-structure: sgfs.commands.create_structure:main
-sgfs-rebuild-cache: sgfs.commands.rebuild_cache:main
+# Low-level structure.
 sgfs-tag: sgfs.commands.tag:main
+sgfs-create-structure: sgfs.commands.create_structure:main
 
+# Relinking or updating tags.
+sgfs-relink: sgfs.commands.relink:main
+sgfs-rebuild-cache:
+    entrypoint: sgfs.commands.relink:main
+    kwargs:
+        recurse: true
+
+sgfs-update: sgfs.commands.update:main
+
+# Opening commands.
 sgfs-open: sgfs.commands.open:run_open
 sgfs-shotgun: sgfs.commands.open:run_shotgun
 sgfs-path: sgfs.commands.open:run_path

@@ -24,7 +24,7 @@ class Command(object):
     def run(self, sgfs, opts, args):
         raise NotImplementedError()
     
-    def __call__(self):
+    def __call__(self, *call_args, **kwargs):
         opts, args = self.opt_parser.parse_args()
         sgfs = SGFS(root=opts.root)
-        self.run(sgfs, opts, args)
+        return self.run(sgfs, opts, args, *call_args, **kwargs)
