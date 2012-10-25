@@ -8,7 +8,7 @@ from . import utils
 class OpenCommand(Command):
     """%prog [options] [paths]
     
-    Open the specified entity. Can give paths, Shotgun URLs, sequence or shot
+    Open or print the specified entity. Can give paths, Shotgun URLs, sequence or shot
     codes.
     
     """
