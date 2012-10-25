@@ -42,20 +42,6 @@ sgfs-tag
 .. todo:: Document this.
 
 
-sgfs-relink
-^^^^^^^^^^^
-
-When a folder is moved on disk, the one of the two links between Shotgun and that folder is broken, and you will not be able to get a path from an entity any more.
-
-The links must be recreated with this tool::
-
-    Relink the entity for the current folder.
-    $ sgfs-relink .
-    
-    Relink all entities under this folder.
-    $ sgfs-relink -vr .
-
-
 sgfs-update
 ^^^^^^^^^^^
 
@@ -70,11 +56,19 @@ This command will rewrite the tags with up-to-date data::
     $ sgfs-update -r .
 
 
-Relink and Update
-^^^^^^^^^^^^^^^^^
+sgfs-relink
+^^^^^^^^^^^
 
-If a file was moved to line it up with a rename, then a combination of ``sgfs-relink`` and ``sgfs-update`` is required::
+When a folder is moved on disk, the one of the two links between Shotgun and that folder is broken, and you will not be able to get a path from an entity any more.
 
-    $ sgfs-relink -r . | sgfs-update -v
+The links must be recreated with this tool::
 
+    Relink the entity for the current folder.
+    $ sgfs-relink .
+    
+    Relink all entities under this folder.
+    $ sgfs-relink -vr .
 
+Since this is a common situation after renaming shots or sequences, this tool can automatically call the updater::
+
+    $ sgfs-relink -vr --update .
