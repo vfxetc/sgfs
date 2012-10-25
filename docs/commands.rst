@@ -42,7 +42,39 @@ sgfs-tag
 .. todo:: Document this.
 
 
-sgfs-rebuild-cache
-^^^^^^^^^^^^^^^^^^
+sgfs-relink
+^^^^^^^^^^^
 
-.. todo:: Document this.
+When a folder is moved on disk, the one of the two links between Shotgun and that folder is broken, and you will not be able to get a path from an entity any more.
+
+The links must be recreated with this tool::
+
+    Relink the entity for the current folder.
+    $ sgfs-relink .
+    
+    Relink all entities under this folder.
+    $ sgfs-relink -vr .
+
+
+sgfs-update
+^^^^^^^^^^^
+
+When operating with paths instead of entities, SGFS uses entity fields cached in the folder tags. We tend to only cache fields that rarely change, but sometimes, e.g. when a shot or sequence is renamed, those fields need to be updated.
+
+This command will rewrite the tags with up-to-date data::
+
+    Update the cached tag data for the current folder.
+    $ sgfs-update .
+    
+    Update the cached tag data for every entity in the current folder.
+    $ sgfs-update -r .
+
+
+Relink and Update
+^^^^^^^^^^^^^^^^^
+
+If a file was moved to line it up with a rename, then a combination of ``sgfs-relink`` and ``sgfs-update`` is required::
+
+    $ sgfs-relink -r . | sgfs-update -v
+
+

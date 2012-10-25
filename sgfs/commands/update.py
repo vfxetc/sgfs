@@ -3,6 +3,7 @@ import os
 import yaml
 from subprocess import call
 import datetime
+import sys
 
 from shotgun_api3_registry import connect
 from sgfs import SGFS
@@ -33,8 +34,12 @@ class UpdateCommand(Command):
     def run(self, sgfs, opts, args):
         
         if not args:
-            self.print_usage()
-            return 1
+            if not os.isatty(0):
+                args = [x.strip() for x in sys.stdin]
+                args = [x for x in args if x]
+            else:
+                self.print_usage()
+                return 1
         
         # Collect all the existing data.
         tags_by_path = {}
@@ -46,7 +51,7 @@ class UpdateCommand(Command):
         else:
             for arg in args:
                 for tag in sgfs.get_directory_entity_tags(arg, merge_into_session=False):
-                    tags_by_path.setdefault(path, []).append(tag)
+                    tags_by_path.setdefault(arg, []).append(tag)
         
         # Merge all the data.
         entities = dict()
@@ -69,8 +74,12 @@ class UpdateCommand(Command):
                         'entity': to_dump,
                         'created_at': datetime.datetime.utcnow(),
                     })
-            if changed:
+            if changed or opts.verbose:
                 print path
+            if changed:
+                if opts.verbose:
+                    for tag in tags:
+                        print '\t%s %d' % (tag['entity']['type'], tag['entity']['id'])
                 serialized = yaml.dump_all(tags,
                     explicit_start=True,
                     indent=4,

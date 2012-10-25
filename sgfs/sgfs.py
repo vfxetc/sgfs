@@ -2,6 +2,7 @@ from pprint import pprint
 import copy
 import datetime
 import os
+import itertools
 
 import yaml
 
@@ -295,8 +296,8 @@ class SGFS(object):
             for tag in self.get_directory_entity_tags(path, **kwargs):
                 yield path, tag
     
-    def rebuild_cache(self, path, recurse=False, verbose=False):
-        """Rebuils the cache for a given directory.
+    def rebuild_cache(self, path, recurse=False):
+        """Rebuilds the cache for a given directory.
         
         This is useful when a tagged directory has been moved, breaking the
         reverse path cache. Rebuilding the cache of that directory using this
@@ -306,25 +307,33 @@ class SGFS(object):
         :param bool recurse: Should we recursively walk the path, or just look
             at the given one?
         :raises ValueError: when ``path`` is not within a project.
-        
+        :returns: ``list`` of changed ``(old_path, found_path, tag)``
         """
         
-        cache = self.path_cache(path)
+        root_path = os.path.abspath(path)
+        cache = self.path_cache(root_path)
         if cache is None:
             raise ValueError('Could not get path cache from %r' % path)
         
+        # Find all the tags.
+        to_check = []
         if recurse:
-            for dir_path, dir_names, file_names in os.walk(path):
-                for tag in self.get_directory_entity_tags(dir_path):
-                    cache[tag['entity']] = dir_path
-                    if verbose:
-                        print '%s -> %s %d' % (dir_path, tag['entity']['type'], tag['entity']['id'])
-        
+            for path, dir_names, file_names in os.walk(root_path):
+                for tag in self.get_directory_entity_tags(path):
+                    to_check.append((path, tag))
         else:
             for tag in self.get_directory_entity_tags(path):
+                to_check.append((path, tag))
+        
+        # Update them.
+        changed = []
+        for path, tag in to_check:
+            old_path = cache.get(tag['entity'])
+            if old_path != path:
+                changed.append((old_path, path, tag))
                 cache[tag['entity']] = path
-                if verbose:
-                    print '%s -> %s %d' % (path, tag['entity']['type'], tag['entity']['id'])
+        
+        return changed
     
     def context_from_entities(self, entities):
         """Construct a :class:`~sgfs.context.Context` graph which includes all
