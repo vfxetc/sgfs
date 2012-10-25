@@ -275,6 +275,26 @@ class SGFS(object):
                 self.get_directory_entity_tags(path)
             yield path, entity
     
+    def entity_tags_in_directory(self, path, **kwargs):
+        """Iterate across every tag within the given directory.
+        
+        This uses the path cache to avoid actually walking the directory.
+        
+        :param str path: The path to walk for entities.
+        :param **kwargs: Passed to :func:`~sgfs.sgfs.SGFS.get_directory_entity_tags`.
+        :return: Iterator of ``(path, tag_dict)`` tuples.
+            
+        """
+        path = os.path.abspath(path)
+        cache = self.path_cache(path)
+        visited = set()
+        for path, entity in cache.walk_directory(path):
+            if path in visited:
+                continue
+            visited.add(path)
+            for tag in self.get_directory_entity_tags(path, **kwargs):
+                yield path, tag
+    
     def rebuild_cache(self, path, recurse=False, verbose=False):
         """Rebuils the cache for a given directory.
         

@@ -37,8 +37,7 @@ Tags and Caches
 
 .. automethod:: sgfs.sgfs.SGFS.tag_directory_with_entity
 .. automethod:: sgfs.sgfs.SGFS.get_directory_entity_tags
+.. automethod:: sgfs.sgfs.SGFS.entity_tags_in_directory
 .. automethod:: sgfs.sgfs.SGFS.path_cache
 .. automethod:: sgfs.sgfs.SGFS.rebuild_cache
-        
-    
-    
+
