@@ -269,23 +269,36 @@ class SGFS(object):
                 self.get_directory_entity_tags(path)
             yield path, entity
     
-    def rebuild_cache(self, path):
-        """Walk a directory looking for tags, and rebuild the cache for them.
+    def rebuild_cache(self, path, recurse=False, verbose=False):
+        """Rebuils the cache for a given directory.
         
         This is useful when a tagged directory has been moved, breaking the
         reverse path cache. Rebuilding the cache of that directory using this
         method will reconnect the tags to the path cache.
         
-        :param str path: The path to walk and rebuild the cache for.
+        :param str path: The path to rebuild the cache for.
+        :param bool recurse: Should we recursively walk the path, or just look
+            at the given one?
         :raises ValueError: when ``path`` is not within a project.
         
         """
+        
         cache = self.path_cache(path)
         if cache is None:
             raise ValueError('Could not get path cache from %r' % path)
-        for dir_path, dir_names, file_names in os.walk(path):
-            for tag in self.get_directory_entity_tags(dir_path):
-                cache[tag['entity']] = dir_path
+        
+        if recurse:
+            for dir_path, dir_names, file_names in os.walk(path):
+                for tag in self.get_directory_entity_tags(dir_path):
+                    cache[tag['entity']] = dir_path
+                    if verbose:
+                        print '%s -> %s %d' % (dir_path, tag['entity']['type'], tag['entity']['id'])
+        
+        else:
+            for tag in self.get_directory_entity_tags(path):
+                cache[tag['entity']] = path
+                if verbose:
+                    print '%s -> %s %d' % (path, tag['entity']['type'], tag['entity']['id'])
     
     def context_from_entities(self, entities):
         """Construct a :class:`~sgfs.context.Context` graph which includes all

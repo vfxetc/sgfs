@@ -262,7 +262,7 @@ class TestMutatedStructure(Base):
         call(['mv', root + '/SEQ/AA', root + '/SEQ/XX'])
         call(['mv', root + '/SEQ/BB', root + '/SEQ_BB'])
         print '==== MUTATION ===='
-        self.sgfs.rebuild_cache(root)
+        self.sgfs.rebuild_cache(root, recurse=True)
         
         self.create(self.shots)
         paths.scan()
