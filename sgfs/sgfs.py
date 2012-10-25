@@ -123,6 +123,7 @@ class SGFS(object):
         
         :param str path: The directory to tag.
         :param entity: The :class:`~sgsession.entity.Entity` to tag it with.
+        :param dict meta: Metadata to include in the tag.
         :param bool cache: Add this to the path cache?
         
         """
@@ -155,7 +156,7 @@ class SGFS(object):
                 raise ValueError('could not get path cache for %r from %r' % (entity.project(), entity))
             path_cache[entity] = path
     
-    def get_directory_entity_tags(self, path, allow_duplicates=False):
+    def get_directory_entity_tags(self, path, allow_duplicates=False, merge_into_session=True):
         """Get the tags for the given directory.
         
         The tags will not be returned in any specific order.
@@ -163,6 +164,8 @@ class SGFS(object):
         :param str path: The directory to get tags for.
         :param bool allow_duplicates: Return all tags, or just the most recent
             for each entity?
+        :param bool merge_into_session: Merge raw data into the session, or
+            return the raw data? This implies ``allow_duplicates``.
         :return: ``list`` of ``dict``.
         
         """
@@ -176,8 +179,11 @@ class SGFS(object):
         
         # Merge all the entity data before filtering out duplicates so that
         # older Shotgun data is still pulled in.
-        for tag in tags:
-            tag['entity'] = self.session.merge(tag['entity'])
+        if merge_into_session:
+            for tag in tags:
+                tag['entity'] = self.session.merge(tag['entity'])
+        else:
+            return tags
         
         if allow_duplicates:
             return tags
