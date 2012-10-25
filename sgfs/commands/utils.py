@@ -47,6 +47,9 @@ def parse_spec(sgfs, parts, entity_types=None):
         for entity in sgfs.entities_from_path('/Volumes/VFX/Projects/Super_Buddies'):
             _expand_entity(data, entity)
     
+    if 'project_id' not in data:
+        raise ValueError('could not identify project from context')
+        
     if len(parts) == 1:
         
         # Paths (which must have been created via Tank).
@@ -81,8 +84,13 @@ def parse_spec(sgfs, parts, entity_types=None):
             _expand_entity(data, page)
             return data
     
-    # Direct entities.
-    if len(parts) == 2 and re.match(r'^[A-Za-z]{3,}$', parts[0]) and parts[1].isdigit():
+    # Sequence and shot codes. E.g. `pv 7`
+    if len(parts) == 2 and re.match(r'^[A-Za-z]{2}$', parts[0]) and parts[1].isdigit():
+        data['sequence_code'] = parts[0].upper()
+        data['shot_code'] = '%s_%03d' % (parts[0].upper(), int(parts[1]))
+    
+    # Direct entities. E.g. `shot 12345`
+    elif len(parts) == 2 and re.match(r'^[A-Za-z]{3,}$', parts[0]) and parts[1].isdigit():
         data.update({'type': parts[0].title(), 'id': int(parts[1])})
         return data
     
@@ -97,6 +105,7 @@ def parse_spec(sgfs, parts, entity_types=None):
             if seq or reuse:
                 if seq:
                     data['sequence_code'] = seq.upper()
+                    data.pop('sequence_id', None)
                 if reuse:
                     data['reuse_number'] = int(reuse)
                 data['shot_number'] = int(shot)
@@ -111,13 +120,11 @@ def parse_spec(sgfs, parts, entity_types=None):
         # Sequences by themselves..
         if len(part) == 2:
             data['sequence_code'] = part.upper()
+            data.pop('sequence_id', None)
             continue
         
         raise ValueError('could not parse part %r' % part)
         # TODO: task, asset_type, asset_name
-        
-    if 'project_id' not in data:
-        raise ValueError('need a project')
     
     # Start with shot since it is most specific.
     if 'shot_number' in data:
