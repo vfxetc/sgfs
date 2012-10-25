@@ -17,6 +17,34 @@ from . import Command
 from . import utils
 
 
+def delta(a, b):
+    return list(_delta(a, b))
+
+def _delta(a, b):
+    a = dict(a)
+    a.pop('updated_at', None)
+    for k, v in b.iteritems():
+        
+        if k == 'updated_at':
+            continue
+        
+        if k not in a:
+            yield k, None, v
+            continue
+        
+        if isinstance(v, dict):
+            for n, x, y in _delta(a.pop(k), v):
+                yield k + '.' + n, x, y
+            continue
+        
+        av = a.pop(k)
+        if av != v:
+            yield k, av, v
+    
+    for k, v in a.iteritems():
+        yield k, v, None
+    
+    
 class UpdateCommand(Command):
     """%prog [options] path [...]
     
@@ -28,7 +56,7 @@ class UpdateCommand(Command):
         super(UpdateCommand, self).__init__()
         self.add_option('-v', '--verbose', action="store_true", dest="verbose")
         self.add_option('-r', '--recurse', action="store_true", dest="recurse")
-        # self.add_option('-t', '--type', action="append", dest="entity_types")
+        self.add_option('-n', '--dry-run', action="store_true", dest="dry_run")
         self.add_option('-f', '--field', action='append', dest="fields")
         
     def run(self, sgfs, opts, args):
@@ -66,20 +94,32 @@ class UpdateCommand(Command):
         for path, tags in sorted(tags_by_path.iteritems()):
             changed = False
             for tag in tags:
+                
                 entity = entities[(tag['entity']['type'], tag['entity']['id'])]
                 to_dump = entity.as_dict()
-                if to_dump != tag['entity']:
+                changes = delta(tag['entity'], to_dump)
+                
+                if changes:
+                    
+                    if not changed:
+                        print path
+                    print '\t%s %d:' % (to_dump['type'], to_dump['id'])
+                        
                     changed = True
+                    
+                    if opts.verbose:
+                        for name, old, new in changes:
+                            print '\t\t%s: %r -> %r' % (name, old, new)
+                    
                     tag.update({
                         'entity': to_dump,
                         'created_at': datetime.datetime.utcnow(),
                     })
-            if changed or opts.verbose:
-                print path
+            
+            if opts.dry_run:
+                continue
+            
             if changed:
-                if opts.verbose:
-                    for tag in tags:
-                        print '\t%s %d' % (tag['entity']['type'], tag['entity']['id'])
                 serialized = yaml.dump_all(tags,
                     explicit_start=True,
                     indent=4,
