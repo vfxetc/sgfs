@@ -1,7 +1,6 @@
 import optparse
 import os
 
-from shotgun_api3_registry import connect
 from sgfs import SGFS
 
 
@@ -25,6 +24,8 @@ class Command(object):
         raise NotImplementedError()
     
     def __call__(self, *call_args, **kwargs):
+        
         opts, args = self.opt_parser.parse_args()
         sgfs = SGFS(root=opts.root)
+        
         return self.run(sgfs, opts, args, *call_args, **kwargs)

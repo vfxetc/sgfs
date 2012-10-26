@@ -17,12 +17,19 @@ from . import Command
 from . import utils
 
 
-def delta(a, b):
-    return list(_delta(a, b))
-
-def _delta(a, b):
+def iter_entity_delta(a, b):
+    """Determine the deep diferences bettween two entities.
+    
+    This function ignores ``updated_at``, and currently cannot deal with lists.
+    
+    Yields ``(name, left_value, right_value)``, where either value may be ``None``
+    if it was not present.
+    
+    """
+    
     a = dict(a)
     a.pop('updated_at', None)
+    
     for k, v in b.iteritems():
         
         if k == 'updated_at':
@@ -32,8 +39,9 @@ def _delta(a, b):
             yield k, None, v
             continue
         
+        # This doesn't distinguish bettween entities and dicts. Oh well.
         if isinstance(v, dict):
-            for n, x, y in _delta(a.pop(k), v):
+            for n, x, y in iter_entity_delta(a.pop(k), v):
                 yield k + '.' + n, x, y
             continue
         
@@ -71,7 +79,6 @@ class UpdateCommand(Command):
         
         # Collect all the existing data.
         tags_by_path = {}
-        # entity_types = set(opts.entity_types) if opts.entity_types else None
         if opts.recurse:
             for arg in args:
                 for path, tag in sgfs.entity_tags_in_directory(arg, merge_into_session=False):
@@ -97,7 +104,7 @@ class UpdateCommand(Command):
                 
                 entity = entities[(tag['entity']['type'], tag['entity']['id'])]
                 to_dump = entity.as_dict()
-                changes = delta(tag['entity'], to_dump)
+                changes = list(iter_entity_delta(tag['entity'], to_dump))
                 
                 if changes:
                     
