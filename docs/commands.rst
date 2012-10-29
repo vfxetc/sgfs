@@ -67,8 +67,8 @@ The links must be recreated with this tool::
     $ sgfs-relink .
     
     Relink all entities under this folder.
-    $ sgfs-relink -vr .
+    $ sgfs-relink -r .
 
-Since this is a common situation after renaming shots or sequences, this tool can automatically call the updater::
+Since this is a common situation after renaming shots or sequences, this tool can automatically call the updater on paths that were relinked::
 
-    $ sgfs-relink -vr --update .
+    $ sgfs-relink -r --update .
