@@ -1,4 +1,5 @@
 import ast
+import os
 import re
 
 
@@ -40,8 +41,10 @@ class Template(object):
         $
     ''', re.VERBOSE)
     
-    def __init__(self, format_string):
+    def __init__(self, format_string, path=None, namespace=None):
         self.format_string = format_string
+        self.path = path
+        self.namespace = namespace or {}
         self._compile_reverse()
     
     def _compile_reverse(self):
@@ -76,7 +79,15 @@ class Template(object):
         return '(%s)' % (pattern)
     
     def format(self, **kwargs):
-        return self.format_string.format(**kwargs)
+        relative = self.format_relative(**kwargs)
+        if self.path:
+            return os.path.join(self.path, relative)
+        return relative
+        
+    def format_relative(self, **kwargs):
+        namespace = dict(self.namespace)
+        namespace.update(kwargs)
+        return self.format_string.format(**namespace)
     
     def match(self, input):
         m = self.reverse_re.match(input)
