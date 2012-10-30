@@ -1,3 +1,4 @@
+import ast
 import re
 
 
@@ -85,14 +86,17 @@ class Template(object):
         res = {}
         
         for field, parser, value in zip(self.fields, self.field_parsers, m.groups()):
+            
             if parser is None:
+                # Default parser tries to interpret as an int and float, and
+                # finally gives up and turns it into a string.
                 try:
-                    value = int(value)
-                except ValueError:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        pass
+                    literal = ast.literal_eval(value)
+                except Exception:
+                    pass
+                else:
+                    if isinstance(literal, (int, float)):
+                        value = literal
             else:
                 value = parser(value)
             

@@ -25,6 +25,9 @@ class TestTemplates(TestCase):
         self.assertTemplateRoundtrip('A-{x}-Z', 'A-123-Z', x=123)
         self.assertTemplateRoundtrip('A-{x:s}-Z', 'A-1.23-Z', x='1.23')
         self.assertTemplateRoundtrip('A-{x}-Z', 'A-1.23-Z', x=1.23)
+        self.assertTemplateMatch('A-{x}-Z', 'A-0x123-Z', x=0x123)
+        self.assertTemplateMatch('A-{x}-Z', 'A-0o123-Z', x=0o123)
+        self.assertTemplateMatch('A-{x}-Z', 'A-0b111-Z', x=0b111)
     
     def test_integers(self):
         self.assertTemplateRoundtrip('A-{x}-Z', 'A-123-Z', x=123)
