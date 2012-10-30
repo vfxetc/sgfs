@@ -18,7 +18,7 @@ else:
 
 from sgsession import Session, Entity
 
-from sgfs import SGFS, Schema, Context, Structure
+from sgfs import SGFS, Schema, Context, Structure, Template
 
 
 if sys.version_info < (2, 6):
