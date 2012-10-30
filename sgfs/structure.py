@@ -39,14 +39,16 @@ class Structure(object):
         self.context = context
         self.config = config
         
-        self.name = str(self.get_or_eval('name', ''))
+        self._set_name_and_path(root)
         
+        self.children = []
+    
+    def _set_name_and_path(self, root):
+        self.name = str(self.get_or_eval('name', ''))
         if self.name:
             self.path = os.path.join(root, self.name)
         else:
             self.path = root
-        
-        self.children = []
     
     @property
     def sgfs(self):
@@ -175,11 +177,13 @@ class Directory(Structure):
 
 class Entity(Directory):
     
-    def __init__(self, context, config, root):
-        super(Entity, self).__init__(context, config, root)
+    def _set_name_and_path(self, root):
         self.existing_path = self.sgfs.path_for_entity(self.entity)
         if self.existing_path:
             self.path = self.existing_path
+            self.name = os.path.basename(self.path)
+        else:
+            super(Entity, self)._set_name_and_path(root)
         
     @property
     def entity(self):
@@ -220,13 +224,9 @@ class Entity(Directory):
 
 class Include(Directory):
     
-    def __init__(self, context, config, root):
-        super(Include, self).__init__(context, config, root)
-    
-    def get_or_eval(self, name, *args):
-        if name == 'name':
-            return ''
-        return super(Include, self).get_or_eval(name, *args)
+    def _set_name_and_path(self, root):
+        self.path = root
+        self.name = ''
     
     def pprint(self, depth):
         for child in self.children:
