@@ -6,7 +6,7 @@ class Template(object):
     """A template for formatting or parsing file paths and names."""
     
     _format_type_to_re = {
-        'b': (r'[-+]?(?:0b)?[01]+', int),
+        'b': (r'[-+]?(?:0b)?[01]+', lambda x: int(x, 2)),
         'c': (r'.+', str),
         'd': (r'[-+]?\d+', int),
         'e': (r'[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?', float),
@@ -16,10 +16,10 @@ class Template(object):
         'g': (r'[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?', float),
         'G': (r'[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?', float),
         'n': (r'[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?', None),
-        'o': (r'[-+]?(?:0o)?[0-7]+', int),
+        'o': (r'[-+]?(?:0o)?[0-7]+', lambda x: int(x, 8)),
         's': (r'.+', str),
-        'x': (r'[-+]?(?:0[xX])?[\dA-Fa-f]+', int),
-        'X': (r'[-+]?(?:0[xX])?[\dA-Fa-f]+', int),
+        'x': (r'[-+]?(?:0[xX])?[\dA-Fa-f]+', lambda x: int(x, 16)),
+        'X': (r'[-+]?(?:0[xX])?[\dA-Fa-f]+', lambda x: int(x, 16)),
         '%': (r'%', str),
         None: (r'.+', None),
     }
@@ -45,7 +45,7 @@ class Template(object):
     
     def _compile_reverse(self):
         self.fields = []
-        self.field_parsers = {}
+        self.field_parsers = []
         self.reverse_pattern = re.sub(r'{([^}]*)}', self._compile_reverse_sub, self.format_string)
         self.reverse_re = re.compile(self.reverse_pattern +'$')
     
@@ -63,7 +63,7 @@ class Template(object):
         
         # Parse the format_spec, but we are actually going to ignore most of it.
         m = re.search(r':(.+)', field_replacement)
-        format_spec = m.group(1) if m else 's'
+        format_spec = m.group(1) if m else ''
         m = self._format_type_re.match(format_spec)
         if not m:
             raise ValueError('could not parse format spec %r' % format_spec)
@@ -71,15 +71,42 @@ class Template(object):
         
         # Get the pattern and parser, and finally return a RE.
         pattern, parser = self._format_type_to_re[type_]
-        self.field_parsers[field_name] = parser
-        return '(?P<%s>%s)' % (field_name, pattern)
+        self.field_parsers.append(parser)
+        return '(%s)' % (pattern)
     
     def format(self, **kwargs):
         return self.format_string.format(**kwargs)
     
     def match(self, input):
         m = self.reverse_re.match(input)
-        if m:
-            return m.groupdict()
+        if not m:
+            return
+        
+        res = {}
+        
+        for field, parser, value in zip(self.fields, self.field_parsers, m.groups()):
+            if parser is None:
+                try:
+                    value = int(value)
+                except ValueError:
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
+            else:
+                value = parser(value)
+            
+            # Assemble a dictionary of the same approximate shape as the imput
+            # data. Unfortunately attributes will be converted into items, but
+            # oh well.
+            parts = re.split(r'[\s\[\]\.]+', field)
+            parts = [x for x in parts if x]
+            to_store = res
+            while len(parts) > 1:
+                to_store = to_store.setdefault(parts.pop(0), {})
+            to_store[parts[0]] = value
+        
+        return res
+            
     
         
