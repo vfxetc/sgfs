@@ -391,7 +391,7 @@ class SGFS(object):
             try:
                 context = entity_to_context[entity]
             except KeyError:
-                context = Context(self, entity)
+                context = Context(sgfs=self, entity=entity)
                 entity_to_context[entity] = context
             
             if entity['type'] == 'Project':
@@ -493,5 +493,17 @@ class SGFS(object):
         """
         structure = self._structure_from_entities(entities, schema_name)
         return dict(structure.tag_existing(self.root, **kwargs))
+    
+    def find_template(self, entity, template_name, schema_name=None):
+        structure = self._structure_from_entities([entity], schema_name)
+        for template in structure.iter_templates(template_name):
+            return template
+    
+    def path_from_template(self, entity_, template_name, schema_name=None, **kwargs):
+        template = self.find_template(entity_, template_name, schema_name)
+        if not template:
+            raise ValueError('could not find template %r under %r' % (template_name, entity_))
+        return template.format(**kwargs)
+    
     
     

@@ -26,11 +26,11 @@ class Schema(object):
         self.root = root
         self.entity_type = entity_type
         self.config_name = config_name or entity_type + '.yml'
-        self.config = yaml.load(open(self._join_path(self.config_name)).read())
+        self.config = yaml.load(open(os.path.join(root, self.config_name)).read())
         
         # Set some defaults on the config.
         self.config.setdefault('type', 'entity')
-        default_template = self._join_path(os.path.splitext(self.config_name)[0])
+        default_template = os.path.join(root, os.path.splitext(self.config_name)[0])
         if os.path.exists(default_template):
             self.config.setdefault('template', default_template)
         
@@ -38,9 +38,6 @@ class Schema(object):
         self.children = {}
         for child_type, child_config_name in self.config.get('children', {}).iteritems():
             self.children[child_type] = Schema(root, child_type, child_config_name)
-    
-    def _join_path(self, *args):
-        return os.path.join(self.root, *args)
     
     def __repr__(self):
         return '<Schema %s:%s at 0x%x>' % (os.path.basename(self.root), self.entity_type, id(self))

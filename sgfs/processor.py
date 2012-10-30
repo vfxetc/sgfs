@@ -13,6 +13,7 @@ class Processor(object):
         if not allow_project:
             self.disallowed_entities.add('Project')
         
+        # Various event logs.
         self.made_directories = set()
         self.touched_files = set()
         self.copied_files = set()
