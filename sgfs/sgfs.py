@@ -463,7 +463,7 @@ class SGFS(object):
             
     def _structure_from_entities(self, entities, schema_name):
         context = self.context_from_entities(entities)
-        return Schema(schema_name).structure(context)
+        return Schema(schema_name).build_structure(self, context)
     
     def create_structure(self, entities, schema_name=None, **kwargs):
         """Create the structure on disk for the given entities.
@@ -478,7 +478,7 @@ class SGFS(object):
         
         """
         structure = self._structure_from_entities(entities, schema_name)
-        return structure.create(self.root, **kwargs)
+        return structure.create(**kwargs)
     
     def tag_existing_structure(self, entities, schema_name=None, **kwargs):
         """Tag existing structures without creating new ones.
@@ -492,7 +492,7 @@ class SGFS(object):
         
         """
         structure = self._structure_from_entities(entities, schema_name)
-        return dict(structure.tag_existing(self.root, **kwargs))
+        return dict(structure.tag_existing(**kwargs))
     
     def find_template(self, entity, template_name, schema_name=None):
         structure = self._structure_from_entities([entity], schema_name)

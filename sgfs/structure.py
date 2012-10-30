@@ -13,7 +13,7 @@ from template import Template
 class Structure(object):
     
     @classmethod
-    def from_context(cls, context, config):
+    def from_context(cls, context, config, root):
         
         type_ = config.get('type')
         constructor = {
@@ -31,15 +31,21 @@ class Structure(object):
             condition,
             context.build_eval_namespace(config),
         ):
-            return constructor(context, config)
+            return constructor(context, config, root)
 
     
-    def __init__(self, context, config):
+    def __init__(self, context, config, root):
         
         self.context = context
         self.config = config
         
         self.name = str(self.get_or_eval('name', ''))
+        
+        if self.name:
+            self.path = os.path.join(root, self.name)
+        else:
+            self.path = root
+        
         self.children = []
     
     @property
@@ -69,37 +75,35 @@ class Structure(object):
         for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
-    def walk(self, path='', children_first=False):
+    def walk(self, children_first=False):
         """Walk depth-first, yielding ``(path, node)`` pairs."""
-        if self.name:
-            path = os.path.join(path, self.name)
         if not children_first:
-            yield path, self
+            yield self
         for child in self.children:
-            for x in child.walk(path):
+            for x in child.walk():
                 yield x
         if children_first:
-            yield path, self
+            yield self
     
-    def create(self, root, **kwargs):
+    def create(self, **kwargs):
         processor = Processor(**kwargs)
-        self._create(root, processor)
+        for node in self.walk():
+            node._create(processor)
         return processor.log_events
         
-    def _create(self, root, processor):
-        for child in self.children:
-            child._create(root, processor)
+    def _create(self, processor):
+        pass
     
-    def tag_existing(self, root, **kwargs):
+    def tag_existing(self, **kwargs):
         res = []
         processor = Processor(**kwargs)
-        for path, node in self.walk(root):
-            x = node._tag_existing(path, processor)
+        for node in self.walk():
+            x = node._tag_existing(processor)
             if x:
                 res.append(x)
         return res
     
-    def _tag_existing(self, path, processor):
+    def _tag_existing(self, processor):
         pass
     
     def iter_templates(self, name):
@@ -112,22 +116,15 @@ class Structure(object):
 
 class Directory(Structure):
     
-    def __init__(self, context, config):
-        super(Directory, self).__init__(context, config)
-        
+    def __init__(self, context, config, root):
+        super(Directory, self).__init__(context, config, root)
         template = config.get('template')
         if template:
             self._scan_template(template)
     
-    def _create(self, root, processor):
-        
-        path = os.path.join(root, self.name).rstrip('/')
-        
-        if not os.path.exists(path):
-            processor.mkdir(path)
-            
-        for child in self.children:
-            child._create(path, processor)
+    def _create(self, processor):
+        if not os.path.exists(self.path):
+            processor.mkdir(self.path)
         
     def _scan_template(self, template):
         
@@ -158,7 +155,7 @@ class Directory(Structure):
                 config['template'] = local_template
                 paths.remove(local_template)
                 
-            child = Structure.from_context(self.context, config)
+            child = Structure.from_context(self.context, config, self.path)
             if child is not None:
                 self.children.append(child)
         
@@ -169,7 +166,8 @@ class Directory(Structure):
                     'name': os.path.basename(path),
                     'type': 'directory' if os.path.isdir(path) else 'file',
                     'template': path,
-            }))
+                }, self.path,
+            ))
     
     def _repr_headline(self):
         return (self.name or '.') + '/'
@@ -177,6 +175,12 @@ class Directory(Structure):
 
 class Entity(Directory):
     
+    def __init__(self, context, config, root):
+        super(Entity, self).__init__(context, config, root)
+        self.existing_path = self.sgfs.path_for_entity(self.entity)
+        if self.existing_path:
+            self.path = self.existing_path
+        
     @property
     def entity(self):
         return self.context.entity
@@ -184,50 +188,45 @@ class Entity(Directory):
     def _repr_headline(self):
         return '%s/ <- %s %s' % (self.name or '.', self.entity['type'], self.entity['id'])
     
-    def _tag_existing(self, path, processor):
+    def _tag_existing(self, processor):
         
-        if not os.path.exists(path):
+        if not os.path.exists(self.path):
             return
         
         # Skip this one if it has already been done.
-        if any(tag['entity'] is self.entity for tag in self.sgfs.get_directory_entity_tags(path)):
+        if any(tag['entity'] is self.entity for tag in self.sgfs.get_directory_entity_tags(self.path)):
             return
         
-        processor.comment('tag %r with %s %d' % (path, self.entity['type'], self.entity['id']))
+        processor.comment('tag %r with %s %d' % (self.path, self.entity['type'], self.entity['id']))
         if not processor.dry_run:
-            self.sgfs.tag_directory_with_entity(path, self.entity)
+            self.sgfs.tag_directory_with_entity(self.path, self.entity)
             
-        return self.entity, path
+        return self.entity, self.path
 
-    def _create(self, root, processor):
-        
-        # Latch onto existing paths instead of what the structure says we should
-        # create, to allow for users to mutate the structure after it has been
-        # partially created.
-        existing_path = self.sgfs.path_for_entity(self.entity)
-        path = existing_path or os.path.join(root, self.name).rstrip('/')
+    def _create(self, processor):
         
         # If this is from the cache, then clearly we don't need to tag it.
         # If this is a dry run, we also don't care about asserting permissions.
-        if not existing_path and not processor.dry_run:
+        if not self.existing_path and not processor.dry_run:
             
             # Don't let people create Projects.
             processor.assert_allow_entity(self.entity)
             
-            if not os.path.exists(path):
-                processor.mkdir(path)
-            self.sgfs.tag_directory_with_entity(path, self.entity)
-        
-        for child in self.children:
-            child._create(path, processor)
+            if not os.path.exists(self.path):
+                processor.mkdir(self.path)
+            self.sgfs.tag_directory_with_entity(self.path, self.entity)
         
 
 
 class Include(Directory):
     
-    def __init__(self, *args, **kwargs):
-        super(Include, self).__init__(*args, **kwargs)
-        self.name = ''
+    def __init__(self, context, config, root):
+        super(Include, self).__init__(context, config, root)
+    
+    def get_or_eval(self, name, *args):
+        if name == 'name':
+            return ''
+        return super(Include, self).get_or_eval(name, *args)
     
     def pprint(self, depth):
         for child in self.children:
@@ -239,13 +238,12 @@ class File(Structure):
     def _repr_headline(self):
         return self.name
     
-    def _create(self, root, processor):
-        path = os.path.join(root, self.name).rstrip('/')
-        if not os.path.exists(path):
+    def _create(self, processor):
+        if not os.path.exists(self.path):
             template = self.config.get('template')
             if template:
-                processor.copy(template, path)
+                processor.copy(template, self.path)
             else:
-                processor.touch(path)
+                processor.touch(self.path)
 
 

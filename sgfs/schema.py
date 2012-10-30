@@ -55,7 +55,7 @@ class Schema(object):
             child.pprint(depth + 1)
         print '\t' * depth + '}'
     
-    def structure(self, context):
+    def build_structure(self, sgfs, context, root=None):
         
         # Make sure that this schema matches the context we have been asked to
         # create a structure for.
@@ -64,8 +64,11 @@ class Schema(object):
                 self.entity_type, context.entity['type']
             ))
         
+        if root is None:
+            root = sgfs.root
+        
         # Create the structure node for this entity.
-        structure = Structure.from_context(context, self.config.copy())
+        structure = Structure.from_context(context, self.config.copy(), root)
         if not structure:
             return
         
@@ -73,7 +76,7 @@ class Schema(object):
         for child_context in context.children:
             child_type = child_context.entity['type']
             if child_type in self.children:
-                child_structure = self.children[child_type].structure(child_context)
+                child_structure = self.children[child_type].build_structure(sgfs, child_context, structure.path)
                 if child_structure:
                     structure.children.append(child_structure)
         
