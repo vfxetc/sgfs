@@ -1,5 +1,8 @@
 import copy
 
+from . import utils
+
+
 class Context(object):
     
     """A selection of Shotgun entities and their relationship.
@@ -142,4 +145,13 @@ class Context(object):
                 ctx.children = [child_ctx]
                 child_ctx.parent = ctx
                 yield ctx
+    
+    def build_eval_namespace(self, base=None):
+        namespace = dict(base or {})
+        namespace['self'] = self.entity
+        head = self
+        while head:
+            namespace[head.entity['type']] = head.entity
+            head = head.parent
+        return namespace
     

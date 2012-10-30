@@ -9,15 +9,6 @@ from . import utils
 from template import Template
 
 
-def _namespace_from_context(context, base=None):
-    namespace = dict(base or {})
-    namespace['self'] = context.entity
-    head = context
-    while head:
-        namespace[head.entity['type']] = head.entity
-        head = head.parent
-    return namespace
-
 
 class Structure(object):
     
@@ -34,17 +25,14 @@ class Structure(object):
         if not constructor:
             raise ValueError('invalid structure type; %r' % type_)
         
-        if constructor._should_construct(context, config):
+        # Make sure there isn't a condition, or that it is satisfied.
+        condition = config.get('condition')
+        if not condition or utils.eval_expr_or_func(
+            condition,
+            context.build_eval_namespace(config),
+        ):
             return constructor(context, config)
-        
-    @classmethod
-    def _should_construct(cls, context, config):
-        if 'condition' not in config:
-            return True
-        return bool(utils.eval_expr_or_func(
-            config['condition'],
-            _namespace_from_context(context, base=config),
-        ))
+
     
     def __init__(self, context, config):
         
@@ -65,7 +53,7 @@ class Structure(object):
         if expr_name in self.config:
             return utils.eval_expr_or_func(
                 self.config[expr_name],
-                _namespace_from_context(self.context, self.config),
+                self.context.build_eval_namespace(self.config),
             )
         return default
         

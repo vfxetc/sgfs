@@ -6,8 +6,6 @@ from . import utils
 from .structure import Structure
 
 
-
-
 class Schema(object):
     
     def __init__(self, name=None, entity_type='Project', config_name=None):
