@@ -12,7 +12,7 @@ class Template(object):
     Matching does not take all parts of the format specification into account
     (currently on the type), and so it may be more lenient that it should be.
     
-    While they may be used independantly, a :class:`MountedTemplate` is normally
+    While they may be used independantly, a :class:`BoundTemplate` is normally
     sourced via :meth:`.SGFS.find_template`, and so they will be relative to
     the real disk location of the coresponding
     :class:`~sgfs.structure.Structure` node.
@@ -107,6 +107,7 @@ class Template(object):
         self._field_parsers.append(parser)
         return '(%s)' % (pattern)
     
+    # `self_` so that `self` can be passed via kwargs.
     def format(self_, **kwargs):
         """Format the template with the given kwargs.
         
@@ -169,7 +170,7 @@ class Template(object):
         return res
 
 
-class MountedTemplate(object):
+class BoundTemplate(object):
     """A :class:`Template` relative to a path in the file system, with default
     values for entities in the context of that path.
     
@@ -198,19 +199,20 @@ class MountedTemplate(object):
         self.namespace = namespace
     
     def __repr__(self):
-        return '<MountedTemplate %r>' % os.path.join(self.path, self.template.format_string)
+        return '<BoundTemplate %r>' % os.path.join(self.path, self.template.format_string)
     
+    # `self_` so that `self` can be passed via kwargs.
     def format(self_, **kwargs):
         """Format the template as a path with the given kwargs.
         
         The underlying template will be joined to the ``path`` given to the
-        :class:`MountedTemplate` constructor.
+        :class:`BoundTemplate` constructor.
         
         Also uses values from the ``namespace`` given to the constructor, but
         priority is given to values in ``**kwargs``.
         
         ::
-            >>> tpl = MountedTemplate('{basename}_v{version:04d}{ext}',
+            >>> tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
             ...     path='/path/to/shot',
             ...     namespace={'basename': 'Awesome_Shot', 'ext': '.mb'},
             ... )
@@ -234,7 +236,7 @@ class MountedTemplate(object):
         
         ::
         
-            >>> tpl = MountedTemplate('{basename}_v{version:04d}{ext}',
+            >>> tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
             ...     path='/path/to/shot',
             )
             >>> tpl.match('/path/to/shot/Awesome_Shot_v0123.ma')

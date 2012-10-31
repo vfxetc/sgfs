@@ -50,10 +50,10 @@ class TestBareTemplates(TestCase):
         self.assertEqual(out, 'Anim_v0002_r0008.mb')
         self.assertEqual(tpl.match(out), data)
 
-class TestMountedTemplates(TestCase):
+class TestBoundTemplates(TestCase):
     
     def test_format(self):
-        tpl = MountedTemplate('{basename}_v{version:04d}{ext}',
+        tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
             path='/path/to/shot',
             namespace={'basename': 'Awesome_Shot', 'ext': '.mb'},
         )
@@ -63,7 +63,7 @@ class TestMountedTemplates(TestCase):
         )
     
     def test_match(self):
-        tpl = MountedTemplate('{basename}_v{version:04d}{ext}',
+        tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
             path='/path/to/shot'
         )
         self.assertEqual(
@@ -104,7 +104,7 @@ class TestSGFSTemplates(TestCase):
         self.sgfs.create_structure(self.tasks, allow_project=True)
         
         tpl = self.sgfs.find_template(self.tasks[0], 'maya_scene_publish')
-        self.assertIsInstance(tpl, MountedTemplate)
+        self.assertIsInstance(tpl, BoundTemplate)
         self.assertTrue(tpl.path.endswith('AA_001/Anm/maya'), tpl.path)
         path = tpl.format(publish_type="maya_scene", name="Bouncing_Ball", version=1)
         self.assertEqual(os.path.join(tpl.path, 'scenes/published/maya_scene/Bouncing_Ball/v0001'), path)

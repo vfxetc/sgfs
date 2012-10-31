@@ -6,7 +6,7 @@ import yaml
 
 from .processor import Processor
 from . import utils
-from .template import MountedTemplate
+from .template import BoundTemplate
 
 
 
@@ -113,7 +113,7 @@ class Structure(object):
         for node in self.walk(children_first=True):
             raw_template = node.config.get('templates', {}).get(name)
             if raw_template is not None:
-                yield MountedTemplate(raw_template, path=node.path, namespace=self.context.build_eval_namespace(self.config))
+                yield BoundTemplate(raw_template, path=node.path, namespace=self.context.build_eval_namespace(self.config))
             
 
 

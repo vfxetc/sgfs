@@ -5,8 +5,8 @@ Templates
     :members:
 
 
-Mounted Templates
------------------
+Bound Templates
+---------------
 
-.. autoclass:: sgfs.template.MountedTemplate
+.. autoclass:: sgfs.template.BoundTemplate
     :members:
