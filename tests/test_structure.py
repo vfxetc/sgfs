@@ -176,14 +176,14 @@ class Base(TestCase):
         self.assets = map(minimal, assets)
 
         self.session = Session(self.sg)
-        self.sgfs = SGFS(root=self.sandbox, session=self.session)
+        self.sgfs = SGFS(root=self.sandbox, session=self.session, schema_name='testing')
         self = None
     
     def pathTester(self):
         return PathTester(self, os.path.join(self.sandbox, self.proj_name.replace(' ', '_')))
         
     def create(self, entities, *args, **kwargs):
-        self.sgfs.create_structure(entities, *args, schema_name='testing', **kwargs)
+        self.sgfs.create_structure(entities, *args, **kwargs)
         
 
 class TestFullStructure(Base):
@@ -295,7 +295,7 @@ class TestDisallowProject(TestCase):
         self.sg = self.fix = fix = Fixture(sg)
         self.proj_name = 'Test Project ' + mini_uuid()
         self.proj = fix.Project(self.proj_name)
-        self.sgfs = SGFS(root=self.sandbox, shotgun=fix)
+        self.sgfs = SGFS(root=self.sandbox, shotgun=fix, schema_name='testing')
         
     def tearDown(self):
         self.fix.delete_all()

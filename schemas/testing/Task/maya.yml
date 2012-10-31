@@ -5,3 +5,7 @@ steps_to_include:
     - Light
     - Model
     
+templates:
+    maya_workspace: ""
+    maya_scene_publish: scenes/published/{publish_type}/{name}/v{version:04d}
+    

@@ -23,7 +23,7 @@ class Base(TestCase):
         self.assets = map(minimal, assets)
 
         self.session = Session(self.sg)
-        self.sgfs = SGFS(root=self.sandbox, session=self.session)
+        self.sgfs = SGFS(root=self.sandbox, session=self.session, schema_name='testing')
         self = None
 
 
@@ -47,7 +47,7 @@ class TestTagExistingV1(Base):
         
         self.assertIsNone(self.sgfs.path_cache(proj))
         
-        self.sgfs.tag_existing_structure(tasks, schema_name='v1', verbose=True)
+        self.sgfs.tag_existing_structure(tasks, verbose=True)
         
         cache = self.sgfs.path_cache(proj)
         
@@ -83,7 +83,7 @@ class TestTagDryRun(Base):
         
         self.assertIsNone(self.sgfs.path_cache(proj))
         
-        self.sgfs.tag_existing_structure(tasks, schema_name='v1', verbose=True, dry_run=True)
+        self.sgfs.tag_existing_structure(tasks, verbose=True, dry_run=True)
         
         cache = self.sgfs.path_cache(proj)
         

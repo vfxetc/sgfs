@@ -1,7 +1,7 @@
 from common import *
 
 
-class TestTemplates(TestCase):
+class TestBareTemplates(TestCase):
     
     def assertTemplateFormat(self, format, output, **data):
         tpl = Template(format)
@@ -50,4 +50,44 @@ class TestTemplates(TestCase):
         self.assertEqual(out, 'Anim_v0002_r0008.mb')
         self.assertEqual(tpl.match(out), data)
 
+
+class TestMountedTemplates(TestCase):
     
+    def setUp(self):
+        sg = Shotgun()
+        self.sg = self.fix = fix = Fixture(sg)
+        
+        self.proj_name = 'Test Project ' + mini_uuid()
+        proj = fix.Project(self.proj_name)
+        seqs = [proj.Sequence(code, project=proj) for code in ('AA', 'BB')]
+        shots = [seq.Shot('%s_%03d' % (seq['code'], i), project=proj) for seq in seqs for i in range(1, 3)]
+        steps = [fix.find_or_create('Step', code=code, short_name=code) for code in ('Anm', 'Comp', 'Light', 'Model')]
+        assets = [proj.Asset(sg_asset_type=type_, code="%s %d" % (type_, i)) for type_ in ('Character', 'Vehicle') for i in range(1, 3)]
+        tasks = [entity.Task(step['code'] + ' something', step=step, entity=entity, project=proj) for step in (steps + steps[-1:]) for entity in (shots + assets)]
+        
+        self.proj = minimal(proj)
+        self.seqs = map(minimal, seqs)
+        self.shots = map(minimal, shots)
+        self.steps = map(minimal, steps)
+        self.tasks = map(minimal, tasks)
+        self.assets = map(minimal, assets)
+
+        self.session = Session(self.sg)
+        self.sgfs = SGFS(root=self.sandbox, session=self.session, schema_name='testing')
+        self.sgfs.create_structure(self.tasks, allow_project=True)
+        self = None
+    
+    def test_shot_workspace(self):
+        
+        tpl = self.sgfs.find_template(self.tasks[0], 'maya_scene_publish')
+        print tpl
+        path = tpl.format(publish_type="maya_scene", name="Bouncing_Ball", version=1)
+        print path
+        
+        tpl, m = self.sgfs.template_from_path(path, 'maya_scene_publish')
+        print tpl, m
+        
+        # self.fail()
+        
+        
+        
