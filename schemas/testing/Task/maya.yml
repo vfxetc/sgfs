@@ -1,11 +1,18 @@
 condition: any(self['step'][x] in steps_to_include for x in ('code', 'short_name'))
 
+
 steps_to_include:
     - Anm
     - Light
     - Model
-    
+
+
 templates:
     maya_workspace: ""
-    maya_scene_publish: scenes/published/{publish_type}/{name}/v{version:04d}
+    
+    maya_scene: scenes/{Task[entity][code]}_{name}_v{version:04d}{ext}
+    
+    # Don't need the publish type in here since we won't put any other types
+    # into this folder.
+    maya_scene_publish: published/{publish.code}/v{publish.version:04d}
     

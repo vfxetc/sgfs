@@ -258,7 +258,8 @@ class BoundTemplate(object):
         The underlying template will be joined to the ``path`` of the bound
         :class:`.Structure`
         
-        Also uses entities from the bound :class:`.Context`, but priority is
+        Also uses entities from the bound :class:`.Context`, and values from
+        the bound :attr:`.Schema.config`, but priority is
         given to values in ``**kwargs``.
         
         ::
@@ -270,7 +271,7 @@ class BoundTemplate(object):
             
         """
         
-        namespace = self_.context.build_eval_namespace()
+        namespace = self_.context.build_eval_namespace(self_.structure.config)
         namespace.update(kwargs)
         rel_path = self_.template.format(**namespace)
         return os.path.join(self_.path, rel_path)
