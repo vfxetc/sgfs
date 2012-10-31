@@ -25,7 +25,7 @@ class SGFS(object):
     
     """
     
-    def __init__(self, root=None, session=None, shotgun=None):
+    def __init__(self, root=None, session=None, shotgun=None, schema_name=None):
         
         # Take the given root, or look it up in the environment.
         if root is None:
@@ -48,6 +48,8 @@ class SGFS(object):
             for tag in self.get_directory_entity_tags(path):
                 if tag['entity']['type'] == 'Project':
                     self.project_roots[tag['entity']] = path
+        
+        self.schema_name = schema_name
     
     def path_cache(self, project):
         """Get a :class:`~sgfs.cache.PathCache` for a given path or entity..
@@ -461,11 +463,12 @@ class SGFS(object):
             path = os.path.dirname(path)
         return
             
-    def _structure_from_entities(self, entities, schema_name):
+    def structure_from_entities(self, entities):
+        """Create a :class:`.Structure` graph from the given entities"""
         context = self.context_from_entities(entities)
-        return Schema(schema_name).build_structure(self, context)
+        return Schema(self.schema_name).build_structure(self, context)
     
-    def create_structure(self, entities, schema_name=None, **kwargs):
+    def create_structure(self, entities, **kwargs):
         """Create the structure on disk for the given entities.
         
         :param list entities: The set of :class:`~sgsession.entity.Entity` to
@@ -477,10 +480,10 @@ class SGFS(object):
         :return: A ``list`` of steps taken.
         
         """
-        structure = self._structure_from_entities(entities, schema_name)
+        structure = self.structure_from_entities(entities)
         return structure.create(**kwargs)
     
-    def tag_existing_structure(self, entities, schema_name=None, **kwargs):
+    def tag_existing_structure(self, entities, **kwargs):
         """Tag existing structures without creating new ones.
         
         :param list entities: The set of :class:`~sgsession.entity.Entity` to
@@ -491,19 +494,30 @@ class SGFS(object):
         :return: ``dict`` mapping entities to paths.
         
         """
-        structure = self._structure_from_entities(entities, schema_name)
+        structure = self.structure_from_entities(entities)
         return dict(structure.tag_existing(**kwargs))
     
-    def find_template(self, entity, template_name, schema_name=None):
-        structure = self._structure_from_entities([entity], schema_name)
+    def find_template(self, entity, template_name):
+        structure = self.structure_from_entities([entity])
         for template in structure.iter_templates(template_name):
             return template
     
-    def path_from_template(self, entity_, template_name, schema_name=None, **kwargs):
-        template = self.find_template(entity_, template_name, schema_name)
+    def path_from_template(self, entity_, template_name, **kwargs):
+        template = self.find_template(entity_, template_name)
         if not template:
             raise ValueError('could not find template %r under %r' % (template_name, entity_))
         return template.format(**kwargs)
+    
+    def template_from_path(self, path, template_name):
+        entities = self.entities_from_path(path)
+        structure = self.structure_from_entities(entities)
+        for template in structure.iter_templates(template_name):
+            rel_path = os.path.relpath(path, template.path)
+            res = template.match(rel_path)
+            print rel_path, res, template
+            if res is not None:
+                return template, res
+        
     
     
     
