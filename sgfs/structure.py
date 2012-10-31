@@ -39,6 +39,7 @@ class Structure(object):
         self.context = context
         self.config = config
         
+        # Delegate to subclasses.
         self._set_name_and_path(root)
         
         self.children = []
@@ -109,10 +110,10 @@ class Structure(object):
         pass
     
     def iter_templates(self, name):
-        for path, node in self.walk(children_first=True):
-            template_string = node.config.get('templates', {}).get(name)
-            if template_string is not None:
-                yield Template(template_string, path=path, namespace=_namespace_from_context(self.context, self.config))
+        for node in self.walk(children_first=True):
+            raw_template = node.config.get('templates', {}).get(name)
+            if raw_template is not None:
+                yield Template(raw_template, path=node.path, namespace=self.context.build_eval_namespace(self.config))
             
 
 
