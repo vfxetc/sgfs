@@ -1,7 +1,12 @@
 Templates
 =========
 
-.. automodule:: sgfs.template
+.. autoclass:: sgfs.template.Template
+    :members:
 
-    .. autoclass:: Template
-        :members:
+
+Mounted Templates
+-----------------
+
+.. autoclass:: sgfs.template.MountedTemplate
+    :members:

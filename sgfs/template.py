@@ -5,22 +5,20 @@ import re
 
 class Template(object):
     
-    """A template for formatting or parsing file paths.
+    """A template for formatting or matching/parsing file paths.
     
-    While they may be used independantly, templates are normally sourced via
-    :func:`sgfs.sgfs.SGFS.find_template`, and so they will be relative to the real disk
-    location of the coresponding :class:`~sgfs.structure.Structure` node. They
-    will also have a namespace including the entities above that node in the
-    context in which the sutrcture was created.
+    Formatting is done via the builtin :meth:`python:str.format`. Matching is
+    done via regular expressions constructed to mimick the given format.
+    Matching does not take all parts of the format specification into account
+    (currently on the type), and so it may be more lenient that it should be.
     
-    For example, a template located in a ``Task`` schema config will have access
-    to ``Task`` (also via ``self``) and ``Shot`` or ``Asset``, and all other
-    entities up the chain to the ``Project``.
+    While they may be used independantly, a :class:`MountedTemplate` is normally
+    sourced via :meth:`.SGFS.find_template`, and so they will be relative to
+    the real disk location of the coresponding
+    :class:`~sgfs.structure.Structure` node.
     
-    :param str format_string: A :ref:`Python format string <python:formatstrings>`
-        for a relative path.
+    :param str format: A format string.
     :param str path: The path from which the format string is relative to.
-    :param dict namespace: The base values for the formatting operation.
     
     """
     
@@ -58,20 +56,31 @@ class Template(object):
         $
     ''', re.VERBOSE)
     
-    def __init__(self, format_string, path=None, namespace=None):
+    _reverse_cache = {}
+    
+    def __init__(self, format_string):
         self.format_string = format_string
-        self.path = path
-        self.namespace = namespace or {}
-        self._compile_reverse()
+        # Cache the parsing stage.
+        try:
+            self.fields, self._field_parsers, self.reverse_pattern, self._reverse_re = self._reverse_cache[format_string]
+        except KeyError:
+            self._compile_reverse()
+            self._reverse_cache[format_string] = self.fields, self._field_parsers, self.reverse_pattern, self._reverse_re
     
     def __repr__(self):
-        return '<Template %r at %r>' % (self.format_string, self.path)
+        return '<Template %r>' % (self.format_string)
     
     def _compile_reverse(self):
+        
         self.fields = []
-        self.field_parsers = []
+        self._field_parsers = []
+        
         self.reverse_pattern = re.sub(r'{([^}]*)}', self._compile_reverse_sub, self.format_string)
-        self.reverse_re = re.compile(self.reverse_pattern +'$')
+        self._reverse_re = re.compile(self.reverse_pattern +'$')
+        
+        self.fields = tuple(self.fields)
+        self._field_parsers = tuple(self._field_parsers)
+        
     
     def _compile_reverse_sub(self, m):
         """Convert a field replacement to a regex which matches its output."""
@@ -95,28 +104,44 @@ class Template(object):
         
         # Get the pattern and parser, and finally return a RE.
         pattern, parser = self._format_type_to_re[type_]
-        self.field_parsers.append(parser)
+        self._field_parsers.append(parser)
         return '(%s)' % (pattern)
     
-    def format(self, **kwargs):
-        relative = self.format_relative(**kwargs)
-        if self.path:
-            return os.path.join(self.path, relative)
-        return relative
+    def format(self_, **kwargs):
+        """Format the template with the given kwargs.
         
-    def format_relative(self, **kwargs):
-        namespace = dict(self.namespace)
-        namespace.update(kwargs)
-        return os.path.normpath(self.format_string.format(**namespace))
+        :param dict **kwargs: Values to substitute into the pattern.
+        :raises KeyError: When there is a missing value.
+        
+        ::
+        
+            >>> tpl = Template('{basename}_v{version:04d}{ext}')
+            >>> tpl.format(basename='Awesome_Shot', version=123, ext='.ma')
+            'Awesome_Shot_v0123.ma'
+            
+        """
+        return self_.format_string.format(**kwargs)
     
     def match(self, input):
-        m = self.reverse_re.match(input)
+        """Match a name or path, returning a ``dict`` of fields if the input matched.
+        
+        :param str input: The name or path to attempt to parse.
+        :returns: ``dict`` or ``None``.
+        
+        ::
+        
+            >>> tpl = Template('{basename}_v{version:04d}{ext}')
+            >>> tpl.match('Awesome_Shot_v0123.ma')
+            {'basename': 'Awesome_Shot', 'version': 123, 'ext': '.ma'}
+        
+        """
+        m = self._reverse_re.match(input)
         if not m:
             return
         
         res = {}
         
-        for field, parser, value in zip(self.fields, self.field_parsers, m.groups()):
+        for field, parser, value in zip(self.fields, self._field_parsers, m.groups()):
             
             if parser is None:
                 # Default parser tries to interpret as an int and float, and
@@ -142,6 +167,96 @@ class Template(object):
             to_store[parts[0]] = value
         
         return res
+
+
+class MountedTemplate(object):
+    """A :class:`Template` relative to a path in the file system, with default
+    values for entities in the context of that path.
+    
+    This behaves like a normal template, except it will :meth:`format` and
+    :meth:`match` relative to a given path. It will also have a namespace
+    including the entities in the context in which the sutrcture was created.
+    For example, a template located in a ``Task`` schema config will have
+    access to ``Task`` (also via ``self``) and ``Shot`` or ``Asset``, and all
+    other entities up the chain to the ``Project``.
+    
+    :param str format: A format string, or a :class:`Template` instance.
+    :param str path: The path from which the format string is relative to.
+    :param dict namespace: The base values for the formatting operation.
+    
+    """
+    
+    
+    def __init__(self, template, path, namespace=None):
+        if isinstance(template, basestring):
+            template = Template(template)
+        
+        #: The underlying :class:`Template`.
+        self.template = template
+        
+        self.path = path
+        self.namespace = namespace
+    
+    def __repr__(self):
+        return '<MountedTemplate %r>' % os.path.join(self.path, self.template.format_string)
+    
+    def format(self_, **kwargs):
+        """Format the template as a path with the given kwargs.
+        
+        The underlying template will be joined to the ``path`` given to the
+        :class:`MountedTemplate` constructor.
+        
+        Also uses values from the ``namespace`` given to the constructor, but
+        priority is given to values in ``**kwargs``.
+        
+        ::
+            >>> tpl = MountedTemplate('{basename}_v{version:04d}{ext}',
+            ...     path='/path/to/shot',
+            ...     namespace={'basename': 'Awesome_Shot', 'ext': '.mb'},
+            ... )
+            >>> tpl.format(version=123, ext='.ma')
+            '/path/to/shot/Awesome_Shot_v0123.ma'
+            
+        """
+        
+        namespace = dict(self_.namespace or {})
+        namespace.update(kwargs)
+        rel_path = self_.template.format(**namespace)
+        return os.path.join(self_.path, rel_path)
+    
+    def match(self, path):
+        """Match a path, returning a ``dict`` of fields if the input matched.
+        
+        Will match relative to the path passed to the constructor.
+        
+        :param str input: The name or path to attempt to parse.
+        :returns: ``dict`` or ``None``.
+        
+        ::
+        
+            >>> tpl = MountedTemplate('{basename}_v{version:04d}{ext}',
+            ...     path='/path/to/shot',
+            )
+            >>> tpl.match('/path/to/shot/Awesome_Shot_v0123.ma')
+            {'basename': 'Awesome_Shot', 'version': 123, 'ext': '.ma'}
+        
+        """
+        rel_path = os.path.relpath(path, self.path)
+        return self.template.match(rel_path)
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
             
     
         

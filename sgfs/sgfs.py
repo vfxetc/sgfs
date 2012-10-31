@@ -364,6 +364,9 @@ class SGFS(object):
         # Assert that they are entities.
         entities = self.session.merge(entities)
         
+        if not entities:
+            raise ValueError('not given any entities')
+        
         # If we don't already have the parent of the entity then populate as
         # much as we can from the cache.
         for entity in entities:
@@ -374,13 +377,15 @@ class SGFS(object):
                 self.get_directory_entity_tags(path)
         
         self.session.fetch_heirarchy(entities)
-        
+                
         # Assert project conditions.
-        projects = filter(None, (x.project(fetch=False) for x in entities))
+        projects = [x.project(fetch=False) for x in entities]
+        projects = [x for x in projects if x]
+                
         if len(projects) != len(entities):
             raise ValueError('given entities do not all have projects')
         if len(set(projects)) != 1:
-            raise ValueError('given entities have multiple projects')
+            raise ValueError('given entities have multiple projects: %s' % (', '.join(str(x['id']) for x in set(projects))))
         
         # Reverse the parent relationships to construct a Context graph
         entity_to_context = {}

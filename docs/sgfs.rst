@@ -1,5 +1,5 @@
-The Master SGFS
-===============
+SGFS API Reference
+==================
 
 The :class:`.SGFS` object is the main entrypoint into most functions
 of this package. Generally, you construct a :class:`.SGFS` object and use it to
