@@ -18,7 +18,6 @@ class Template(object):
     :class:`~sgfs.structure.Structure` node.
     
     :param str format: A format string.
-    :param str path: The path from which the format string is relative to.
     
     """
     
@@ -212,6 +211,7 @@ class BoundTemplate(object):
         priority is given to values in ``**kwargs``.
         
         ::
+        
             >>> tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
             ...     path='/path/to/shot',
             ...     namespace={'basename': 'Awesome_Shot', 'ext': '.mb'},
