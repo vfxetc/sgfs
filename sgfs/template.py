@@ -3,6 +3,35 @@ import os
 import re
 
 
+class MatchResult(dict):
+    """Match results from :meth:`.Template.match`.
+    
+    This object will have roughly the same structure as that
+    which was used to :meth:`~.Template.format` the path, however attribute
+    and item access has been rolled together.
+    You may access values by either
+    attribute or item access.
+    
+    This means that you cannot distinguish between
+    attributes and items of the same name.
+    
+    Since we have not had this problem
+    in practise, it has not been addressed, but for future compatibility be
+    sure to access the result values in the same way that you would from the
+    original objects passed to :meth:`.Template.format`.
+    
+    We have prioritized item access, so any attributes will be shadowed by
+    attributes of the :class:`dict` class.
+    
+    """
+    
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+
 class Template(object):
     
     """A template for formatting or matching/parsing file paths.
@@ -126,20 +155,29 @@ class Template(object):
         """Match a name or path, returning a ``dict`` of fields if the input matched.
         
         :param str input: The name or path to attempt to parse.
-        :returns: ``dict`` or ``None``.
+        :returns: :class:`.MatchResult` or ``None``.
         
         ::
         
             >>> tpl = Template('{basename}_v{version:04d}{ext}')
-            >>> tpl.match('Awesome_Shot_v0123.ma')
+            >>> m = tpl.match('Awesome_Shot_v0123.ma')
+            >>> m
             {'basename': 'Awesome_Shot', 'version': 123, 'ext': '.ma'}
+            
+            >>> m['basename']
+            'Awesome_Shot'
+            
+            >>> m.version
+            123
+        
+        .. warning:: See :class:`.MatchResult` for some caveats.
         
         """
         m = self._reverse_re.match(input)
         if not m:
             return
         
-        res = {}
+        res = MatchResult()
         
         for field, parser, value in zip(self.fields, self._field_parsers, m.groups()):
             
@@ -163,65 +201,76 @@ class Template(object):
             parts = [x for x in parts if x]
             to_store = res
             while len(parts) > 1:
-                to_store = to_store.setdefault(parts.pop(0), {})
+                to_store = to_store.setdefault(parts.pop(0), MatchResult())
             to_store[parts[0]] = value
         
         return res
 
 
 class BoundTemplate(object):
-    """A :class:`Template` relative to a path in the file system, with default
-    values for entities in the context of that path.
+    """A :class:`.Template` relative to a :class:`.Structure` in the file
+    system, with default values for entities in the context of that structure.
+
     
-    This behaves like a normal template, except it will :meth:`format` and
-    :meth:`match` relative to a given path. It will also have a namespace
-    including the entities in the context in which the sutrcture was created.
-    For example, a template located in a ``Task`` schema config will have
-    access to ``Task`` (also via ``self``) and ``Shot`` or ``Asset``, and all
-    other entities up the chain to the ``Project``.
+    This behaves like a normal template, except it will
+    :meth:`~.BoundTemplate.format` and :meth:`~.BoundTemplate.match` relative to
+    a given path. It will also have a namespace including the entities in the
+    context in which the sutrcture was created. For example, a template located
+    in a ``Task`` schema config will have access to ``Task`` (also via
+    ``self``) and ``Shot`` or ``Asset``, and all other entities up the chain to
+    the ``Project``.
     
     :param str format: A format string, or a :class:`Template` instance.
-    :param str path: The path from which the format string is relative to.
-    :param dict namespace: The base values for the formatting operation.
+    :param structure: The :class:`.Structure` to bind to.
     
     """
     
     
-    def __init__(self, template, path, namespace=None):
+    def __init__(self, template, structure):
         if isinstance(template, basestring):
             template = Template(template)
         
-        #: The underlying :class:`Template`.
         self.template = template
-        
-        self.path = path
-        self.namespace = namespace
+        self.structure = structure
     
     def __repr__(self):
-        return '<BoundTemplate %r>' % os.path.join(self.path, self.template.format_string)
+        return '<BoundTemplate %r on %r>' % (os.path.join(self.path, self.template.format_string), self.entity)
+    
+    @property
+    def path(self):
+        """The path of the bound :attr:`.structure`."""
+        return self.structure.path
+    
+    @property
+    def context(self):
+        """The :class:`.Context` of the bound :class:`.Structure`."""
+        return self.structure.context
+    
+    @property
+    def entity(self):
+        """The :class:`~sgsession:sgsession.entity.Entity` of the bound :class:`.Context`."""
+        return self.structure.context.entity
     
     # `self_` so that `self` can be passed via kwargs.
     def format(self_, **kwargs):
         """Format the template as a path with the given kwargs.
         
-        The underlying template will be joined to the ``path`` given to the
-        :class:`BoundTemplate` constructor.
+        The underlying template will be joined to the ``path`` of the bound
+        :class:`.Structure`
         
-        Also uses values from the ``namespace`` given to the constructor, but
-        priority is given to values in ``**kwargs``.
+        Also uses entities from the bound :class:`.Context`, but priority is
+        given to values in ``**kwargs``.
         
         ::
         
-            >>> tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
-            ...     path='/path/to/shot',
-            ...     namespace={'basename': 'Awesome_Shot', 'ext': '.mb'},
-            ... )
-            >>> tpl.format(version=123, ext='.ma')
+            >>> # Get a Structure with path '/path/to/shot'
+            >>> tpl = BoundTemplate('{Shot[code]}_v{version:04d}{ext}', structure)
+            >>> tpl.format(version=123, ext='.mb')
             '/path/to/shot/Awesome_Shot_v0123.ma'
             
         """
         
-        namespace = dict(self_.namespace or {})
+        namespace = self_.context.build_eval_namespace()
         namespace.update(kwargs)
         rel_path = self_.template.format(**namespace)
         return os.path.join(self_.path, rel_path)
@@ -229,18 +278,19 @@ class BoundTemplate(object):
     def match(self, path):
         """Match a path, returning a ``dict`` of fields if the input matched.
         
-        Will match relative to the path passed to the constructor.
+        Will match relative to the ``path`` of the bound :class:`.Structure`.
         
         :param str input: The name or path to attempt to parse.
-        :returns: ``dict`` or ``None``.
-        
+        :returns: :class:`.MatchResult` or ``None``.
+                
         ::
         
-            >>> tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
-            ...     path='/path/to/shot',
-            )
+            >>> # Get a Structure with path '/path/to/shot'
+            >>> tpl = BoundTemplate('{Shot[code]}_v{version:04d}{ext}', structure)
             >>> tpl.match('/path/to/shot/Awesome_Shot_v0123.ma')
-            {'basename': 'Awesome_Shot', 'version': 123, 'ext': '.ma'}
+            {'Shot': {'code': 'Awesome_Shot'}, 'version': 123, 'ext': '.ma'}
+        
+        .. warning:: See :class:`.MatchResult` for some caveats.
         
         """
         rel_path = os.path.relpath(path, self.path)

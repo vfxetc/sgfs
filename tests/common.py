@@ -4,6 +4,8 @@ import itertools
 import os
 import sys
 
+from mock import Mock
+
 from sgmock import Fixture
 from sgmock import TestCase as BaseTestCase
 

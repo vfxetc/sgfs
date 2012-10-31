@@ -503,23 +503,56 @@ class SGFS(object):
         return dict(structure.tag_existing(**kwargs))
     
     def find_template(self, entity, template_name):
+        """Find a :class:`.BoundTemplate` within the :class:`.Structure` of the
+        given :class:`~sgsession:sgsession.entity.Entity`.
+        
+        :param entity: The :class:`~sgsession:sgsession.entity.Entity` whose
+            :class:`.Structure` should be searched for a template.
+        :param str template_name: The name of the template to look for.
+        :returns: :class:`.BoundTemplate` or ``None``.
+        
+        """
         structure = self.structure_from_entities([entity])
         for template in structure.iter_templates(template_name):
             return template
     
     def path_from_template(self, entity_, template_name, **kwargs):
+        """Construct a path.
+        
+        :param entity: The :class:`~sgsession:sgsession.entity.Entity` whose
+            :class:`.Structure` should be searched for a template.
+        :param str template_name: The name of the template to look for.
+        :param **kwargs: Values to pass to :meth:`.BoundTemplate.format`.
+        :returns str: The absolute path.
+        :raises ValueError: When the template cannot be found.
+        
+        ::
+        
+            >>> sgfs.path_from_template(shot, 'maya_scene_publish',
+            ...     version=123,
+            ...     name='My_Publish',
+            ...     ext=123,
+            ... )
+            '/Project/SEQ/AA/AA_001/maya/scenes/published/v0123/AA_001_My_Publish_v0123.mb'
+            
+        """
         template = self.find_template(entity_, template_name)
         if not template:
             raise ValueError('could not find template %r under %r' % (template_name, entity_))
         return template.format(**kwargs)
     
     def template_from_path(self, path, template_name):
+        """Parse a path from a given template.
+        
+        :param str path: The absolute path to attempt to parse.
+        :param str template_name: The name of the template to use to parse it.
+        :returns: (:class:`.BoundTemplate`, :class:`.MatchResult`) tuple, or ``None``.
+        
+        """
         entities = self.entities_from_path(path)
         structure = self.structure_from_entities(entities)
         for template in structure.iter_templates(template_name):
-            rel_path = os.path.relpath(path, template.path)
-            res = template.match(rel_path)
-            print rel_path, res, template
+            res = template.match(path)
             if res is not None:
                 return template, res
         

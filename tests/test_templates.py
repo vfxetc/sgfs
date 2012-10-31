@@ -52,20 +52,28 @@ class TestBareTemplates(TestCase):
 
 class TestBoundTemplates(TestCase):
     
+    def mock_structure(self, path, namespace=None):
+        context = Mock()
+        context.build_eval_namespace.return_value = namespace or {}
+        structure = Mock(path=path, context=context)
+        return structure
+        
     def test_format(self):
-        tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
+        structure = self.mock_structure(
             path='/path/to/shot',
             namespace={'basename': 'Awesome_Shot', 'ext': '.mb'},
         )
+        tpl = BoundTemplate('{basename}_v{version:04d}{ext}', structure)
         self.assertEqual(
             tpl.format(version=123, ext='.ma'),
             '/path/to/shot/Awesome_Shot_v0123.ma',
         )
     
     def test_match(self):
-        tpl = BoundTemplate('{basename}_v{version:04d}{ext}',
-            path='/path/to/shot'
+        structure = self.mock_structure(
+            path='/path/to/shot',
         )
+        tpl = BoundTemplate('{basename}_v{version:04d}{ext}', structure)
         self.assertEqual(
             tpl.match('/path/to/shot/Awesome_Shot_v0123.ma'),
             {'basename': 'Awesome_Shot', 'version': 123, 'ext': '.ma'},
@@ -109,8 +117,10 @@ class TestSGFSTemplates(TestCase):
         path = tpl.format(publish_type="maya_scene", name="Bouncing_Ball", version=1)
         self.assertEqual(os.path.join(tpl.path, 'scenes/published/maya_scene/Bouncing_Ball/v0001'), path)
         
-        # tpl, m = self.sgfs.template_from_path(path, 'maya_scene_publish')
-        # print tpl, m
+        res = self.sgfs.template_from_path(path, 'maya_scene_publish')
+        self.assertIsNotNone(res)
+        tpl, m = res
+        self.assertEqual(m.get('name'), 'Bouncing_Ball')
         
         # self.fail()
         
