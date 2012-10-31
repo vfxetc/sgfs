@@ -5,7 +5,24 @@ import re
 
 class Template(object):
     
-    """A template for formatting or parsing file paths and names."""
+    """A template for formatting or parsing file paths.
+    
+    While they may be used independantly, templates are normally sourced via
+    :func:`sgfs.sgfs.SGFS.find_template`, and so they will be relative to the real disk
+    location of the coresponding :class:`~sgfs.structure.Structure` node. They
+    will also have a namespace including the entities above that node in the
+    context in which the sutrcture was created.
+    
+    For example, a template located in a ``Task`` schema config will have access
+    to ``Task`` (also via ``self``) and ``Shot`` or ``Asset``, and all other
+    entities up the chain to the ``Project``.
+    
+    :param str format_string: A :ref:`Python format string <python:formatstrings>`
+        for a relative path.
+    :param str path: The path from which the format string is relative to.
+    :param dict namespace: The base values for the formatting operation.
+    
+    """
     
     _format_type_to_re = {
         'b': (r'[-+]?(?:0b)?[01]+', lambda x: int(x, 2)),
@@ -47,6 +64,9 @@ class Template(object):
         self.namespace = namespace or {}
         self._compile_reverse()
     
+    def __repr__(self):
+        return '<Template %r at %r>' % (self.format_string, self.path)
+    
     def _compile_reverse(self):
         self.fields = []
         self.field_parsers = []
@@ -87,7 +107,7 @@ class Template(object):
     def format_relative(self, **kwargs):
         namespace = dict(self.namespace)
         namespace.update(kwargs)
-        return self.format_string.format(**namespace)
+        return os.path.normpath(self.format_string.format(**namespace))
     
     def match(self, input):
         m = self.reverse_re.match(input)

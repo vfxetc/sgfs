@@ -7,14 +7,14 @@ class Context(object):
     
     """A selection of Shotgun entities and their relationship.
     
-    A ``Context`` is a directed acyclic graph of Shotgun entities. It is usually
+    A :class:`Context` is a directed acyclic graph of Shotgun entities. It is usually
     rooted at a ``Project``, but technically there is no such restriction. This
     class exists solely to encapsulate a selection of entities and to be able
     to navigate and query their graph.
     
     Each node in a context graph is an instance of this class, and its children
-    are stored in the ``children`` list. ``Context`` graphs are constructed by a
-    :class:`~sgfs.sgfs.SGFS` object.
+    are stored in the ``children`` list. :class:`Context` graphs should be
+    constructed by a :class:`.SGFS` object.
     
     """
     
@@ -33,7 +33,7 @@ class Context(object):
         self.parent = None
         
     def copy(self):
-        """Shallow copy the ``Context``; children and entities remain references."""
+        """Shallow copy the :class:`Context`; children and entities remain references."""
         return copy.copy(self)
     
     def __repr__(self):
@@ -79,7 +79,7 @@ class Context(object):
         return ''.join(self._dot())
     
     def _dot(self):
-        """Construct a GraphViz dot graph of this node and its children."""
+        """Construct a GraphViz ``dot`` graph of this node and its children."""
         name_field = {
             'Project': 'name',
             'Sequence': 'code',
@@ -123,7 +123,7 @@ class Context(object):
     def iter_by_type(self, type_):
         """An iterator yielding all nodes in the context graph of the given type.
         
-        :param str type_: The Shotgun entity type; e.g. ``Shot``.
+        :param str type_: The Shotgun entity type; e.g. ``"Shot"``.
         
         """
         if self.entity['type'] == type_:

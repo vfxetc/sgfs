@@ -256,6 +256,9 @@ texinfo_documents = [
 
 # graphviz_dot = os.path.abspath(os.path.join(__file__, '..', 'pydot'))
 
+autodoc_member_order = 'bysource'
+autodoc_default_flags = ['undoc-members']
+
 todo_include_todos = True
 
 intersphinx_mapping = {

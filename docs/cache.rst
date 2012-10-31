@@ -1,5 +1,5 @@
-``sgfs.cache``
-==================
+Path Caches
+===========
 
 .. automodule:: sgfs.cache
 
