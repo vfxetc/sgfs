@@ -28,7 +28,7 @@
         title: Jump to Folder
         icon: folder-go
     list_order: 23
-    entity_types: [Sequence, Asset, Shot, Task]
+    entity_types: [Sequence, Asset, Shot, Task, PublishEvent]
     selection_required: true
 
 -
