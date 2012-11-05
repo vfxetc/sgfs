@@ -2,6 +2,7 @@
 # gevent.monkey.patch_socket()
 
 import sys
+import os
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -23,67 +24,167 @@ heirarchy = {
     'Shot': ('Task', 'entity'),
     'Task': ('PublishEvent', 'sg_link'),
 }
+
 entity_name = {
     'Project': '{name}',
     'Sequence': '{code}',
+    'Asset': '{code}',
     'Shot': '{code}',
     'Task': '{step[short_name]} - {content}',
     'PublishEvent': '{code} ({sg_type}) at {sg_version}',
 }
 
 
+class TextOption(object):
+
+    def __init__(self, key, *options):
+        self.key = key
+        self.options = options
+    
+    def __call__(self, data):
+        for option in self.options:
+            yield option, {self.key: option}
+
+
+class ShotgunQuery(object):
+
+    def __init__(self, *args):
+        self.args = args
+        
+    
+    def __call__(self, data):
+        for entity in sgfs.session.find(*self.args):
+            try:
+                label = entity_name[entity['type']].format(**entity)
+            except KeyError:
+                label = repr(entity)
+            yield label, {entity['type']: entity}
+
+
+class Node(object):
+    
+    def __init__(self, parent, label, data, child_iter_func=None):
+        self.parent = parent
+        self.label = label
+        self.data = data
+        self.child_iter_func = child_iter_func
+        self.child_iter_called = False
+    
+    def children(self):
+        if not self.child_iter_called:
+            self.child_iter_called = True
+            self._children = []
+            
+            if self.child_iter_func:
+                for label, new_data in self.child_iter_func(self.data):
+                    child_data = dict(self.data)
+                    child_data.update(new_data)
+                    self._children.append(Node(self, label, child_data, model._get_iter(child_data)))
+            
+            self._children = tuple(self._children)
+        return self._children
+
+
 class Model(QtCore.QAbstractItemModel):
     
-    _header = 'Default'
+    _header = 'Header Not Set'
     
+    def __init__(self):
+        super(Model, self).__init__()
+        
+        self._root = None
+    
+    def _get_iter(self, data):
+        
+        if 'Task' in data:
+            return ShotgunQuery('PublishEvent', [('sg_link', 'is', data['Task'])])
+
+        if 'Shot' in data:
+            return ShotgunQuery('Task', [('entity', 'is', data['Shot'])])
+            
+        if 'Asset' in data:
+            return ShotgunQuery('Task', [('entity', 'is', data['Asset'])])
+        
+        if 'Sequence' in data:
+            return ShotgunQuery('Shot', [('sg_sequence', 'is', data['Sequence'])])
+        
+        if 'asset_type' in data:
+            return ShotgunQuery('Asset', [
+                ('project', 'is', data['Project']),
+                ('sg_asset_type', 'is', data['asset_type']),
+            ])
+            
+        if data.get('entity_type') == 'Sequences':
+            return ShotgunQuery('Sequence', [('project', 'is', data['Project'])])
+            
+        if data.get('entity_type') == 'Assets':
+            project_dir = sgfs.path_for_entity(data['Project'])
+            asset_types = os.listdir(os.path.join(project_dir, 'Assets'))
+            asset_types = [x for x in asset_types if not x.startswith('.')]
+            return TextOption('asset_type', *asset_types)
+        
+        if 'Project' in data:
+            return TextOption('entity_type', 'Assets', 'Sequences')
+        
+        if not data:
+            return lambda data: [(x['name'], {'Project': x}) for x in sgfs.project_roots]
+        
+        print 'Cant do anything with %r' % data
+        return None
+    
+    def root(self):
+        if self._root is None:
+            self._root = Node(None, '', {}, self._get_iter({}))
+        return self._root
+    
+    def node_from_index(self, index):
+        if not index.isValid():
+            return self.root()
+        else:
+            return index.internalPointer()
+            
     def headerData(self, section, orientation, role):
-        if role != Qt.DisplayRole:
-            return QtCore.QVariant()
-        return self._header
-    
-    def setHeaderData(self, section, orientation, data, role):
+        
         if role == Qt.DisplayRole:
-            self._header = data
+            # This is set by the TreeView widgets as they are being painted.
+            # I.e.: This is a huge hack.
+            return self._header
+        
+        return QtCore.QVariant()
         
     def hasChildren(self, parent):
         return True
     
     def rowCount(self, parent):
         
-        # Top-level.
-        if not parent.isValid():
-            return len(sgfs.project_roots)
-        
-        entity = parent.internalPointer()
-        backref_key = heirarchy[entity['type']]
-        if not hasattr(entity, '_model_loaded'):
-            # print 'fetching backrefs for', entity, 'on', backref_key
-            entity.fetch_backrefs(*backref_key)
-            # print entity.backrefs
-            entity._model_loaded = True
-        return len(entity.backrefs.get(backref_key) or ())
+        node = self.node_from_index(parent)
+        return len(node.children())
     
     def columnCount(self, parent):
         return 1
     
     def index(self, row, col, parent):
         
-        if not parent.isValid():
-            entity = sorted(sgfs.project_roots.iterkeys())[row]
-            entity._model_parent = parent
-            return self.createIndex(row, col, entity)
+        if col > 0:
+            return QtCore.QModelIndex()
         
-        entity = parent.internalPointer()
-        backref_key = heirarchy[entity['type']]
-        child = sorted(entity.backrefs.get(backref_key) or ())[row]
-        child._model_parent = parent
-        return self.createIndex(row, col, child)
+        node = self.node_from_index(parent)
+        node.index = parent
+        node_children = node.children()
+        
+        if row >= len(node_children):
+            return QtCore.QModelIndex()
+        
+        return self.createIndex(row, col, node_children[row])
     
     def parent(self, child):
-        if not child.isValid():
+
+        node = self.node_from_index(child)
+        if node.parent is None:
             return QtCore.QModelIndex()
-        entity = child.internalPointer()
-        return entity._model_parent
+        
+        return node.parent.index
+        
     
     def data(self, index, role):
         
@@ -91,12 +192,8 @@ class Model(QtCore.QAbstractItemModel):
             return QtCore.QVariant()
         
         if role == Qt.DisplayRole:
-            entity = index.internalPointer()
-            try:
-                return entity_name[entity['type']].format(**entity)
-            except KeyError as e:
-                print e
-                return repr(entity)
+            node = self.node_from_index(index)
+            return node.label
         
         else:
             # Invalid variant.
@@ -136,6 +233,8 @@ class TreeView(QtGui.QTreeView):
         # Make this behave like a fancier ListView
         self.setRootIsDecorated(False)
         self.setExpandsOnDoubleClick(False)
+        
+        self.expanded.connect(lambda index: self.collapse(index))
 
 
 
@@ -146,16 +245,13 @@ class ColumnView(QtGui.QColumnView):
     def __init__(self):
         super(ColumnView, self).__init__()
         self.setMinimumWidth(800)
-        self.setColumnWidths([200, 100, 120, 400] + [150] * 20)
+        self.setColumnWidths([200, 150, 150, 120, 400] + [150] * 20)
     
     def createColumn(self, index):
         
-        if index.isValid():
-            entity = index.internalPointer()
-            next_type = heirarchy.get(entity['type'])
-            header = next_type[0] if next_type else 'END'
-        else:
-            header = 'Project'
+        node = self.model().node_from_index(index)
+        header = node.label or 'NO LABEL'
+
         view = TreeView(self.model(), index, header)
         
         view.setTextElideMode(Qt.ElideMiddle)
