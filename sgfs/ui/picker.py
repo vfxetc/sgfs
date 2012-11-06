@@ -3,6 +3,8 @@
 
 import sys
 import os
+import random
+import threading
 
 import concurrent.futures
 
@@ -14,39 +16,14 @@ from sgfs import SGFS
 app = QtGui.QApplication(sys.argv)
 sgfs = SGFS()
 
-threadpool = concurrent.futures.ThreadPoolExecutor(4)
+threadpool = concurrent.futures.ThreadPoolExecutor(8)
 
 # sys.path.append('/home/mboers/Documents/RemoteConsole')
 # import remoteconsole 
 # remoteconsole.spawn(('', 12345), globals())
 
 
-heirarchy = {
-    'Project': ('Sequence', 'project'),
-    'Sequence': ('Shot', 'sg_sequence'),
-    'Shot': ('Task', 'entity'),
-    'Task': ('PublishEvent', 'sg_link'),
-}
 
-entity_name = {
-    'Project': '{name}',
-    'Sequence': '{code}',
-    'Asset': '{code}',
-    'Shot': '{code}',
-    'Task': '{step[short_name]} - {content}',
-    'PublishEvent': '{code} ({sg_type}) at {sg_version}',
-}
-
-
-class TextOption(object):
-
-    def __init__(self, key, *options):
-        self.key = key
-        self.options = options
-    
-    def __call__(self, data):
-        for option in self.options:
-            yield option, {self.key: option}
 
 
 
@@ -65,29 +42,44 @@ class Node(object):
         
         self.model = model
         self.parent = parent
+        
         self.view_data = view_data or {}
         self.state = state
         self.goal_state = goal_state
         
-        self.index = None # Set by the model.
+        self.index = None
         
-        self.is_loading = False
         self._children = None
+        self._child_lock = threading.Lock()
     
     def has_children(self):
         return True
     
-    def fetch_children(self):
-        raise NotImplementedError()
+    def get_child_from_goal(self):
+        return None
     
-    def update_children(self, new_children, signal=True):
+    def get_children(self):
+        
+        try:
+            async = self.get_children_async
+        except AttributeError:
+            raise NotImplementedError()
+        
+        future = threadpool.submit(async)
+        future.add_done_callback(lambda f: self.update_children(f.result()))
+        
+        return []
+    
+    def update_children(self, new_children):
         
         children = []
-        for view_data, new_state in new_children:
+        for key, view_data, new_state in new_children:
             child_state = dict(self.state)
             child_state.update(new_state)
-            child = self.model.get_next_node(self, view_data, child_state)
+            child = self.model.construct_node(self, view_data, child_state, self.goal_state)
             children.append(child)
+        
+        signal = self.index is not None and self._children is not None
         
         if signal:
             self.model.beginInsertRows(self.index, 0, len(children))
@@ -97,76 +89,99 @@ class Node(object):
         if signal:
             self.model.endInsertRows()
     
-
     def children(self):
-        if self._children is None:
-            self.update_children(self.fetch_children(), signal=False)
-        return self._children
+        with self._child_lock:
+            if self._children is None:
+                self.update_children(self.get_children())
+            return self._children
 
 
 class LeafNode(Node):
 
     def __init__(self, *args):
         super(LeafNode, self).__init__(*args)
-        self.view_data['header'] = ''
+        self.view_data['header'] = 'LEAF'
     
     def has_children(self):
         return False
     
-    def fetch_children(self):
+    def get_children(self):
         return []
 
 
+class SGFSRoots(Node):
+    
+    @staticmethod
+    def is_next_node(state, goal_state):
+        return 'Project' not in state and (goal_state is None or 'Project' in goal_state)
+    
+    def get_children(self):
+        for project, path in sorted(sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
+            yield project.cache_key, {Qt.DisplayRole: project['name']}, {
+                'Project': project,
+                'Project.path': path,
+            }
+            
+    
+    
 class ShotgunQuery(Node):
     
     entity_type = 'Project'
-    backref = (None, None)
+    backref = None
+    display_format = '{name}'
     
     @classmethod
-    def build_basic(cls, entity_type, backref):
+    def for_entity_type(cls, entity_type, backref=None, display_format='{type} {id}'):
         class Specialized(cls):
             pass
         Specialized.__name__ = '%s%s' % (entity_type, cls.__name__)
         Specialized.entity_type = entity_type
         Specialized.backref = backref
+        Specialized.display_format = display_format
         return Specialized
     
     @classmethod
     def is_next_node(cls, state, goal_state):
-        if cls.entity_type not in state and (cls.backref is None or cls.backref[0] in state):
-            if goal_state is not None and cls.entity_type not in goal_state:
-                return False
-            return True
-        return False
+        return (
+            cls.entity_type not in state and # Avoid cycles.
+            (cls.backref is None or cls.backref[0] in state) and # Has backref.
+            (goal_state is None or cls.entity_type in goal_state) # Match goal.
+        )
     
     def __init__(self, *args):
         super(ShotgunQuery, self).__init__(*args)
         self.view_data['header'] = self.entity_type
     
-    def fetch_children(self):
-        print 'fetching children'
-        future = threadpool.submit(self._fetch_children)
-        future.add_done_callback(lambda f: self.update_children(f.result()))
-        return []
-    
-    def _fetch_children(self):
+    def get_children_async(self):
+        
+        # Apply backref filter.
         filters = []
         if self.backref is not None:
             filters.append((self.backref[1], 'is', self.state[self.backref[0]]))
         
-        for entity in sgfs.session.find(self.entity_type, filters):
-
-            print 'have', entity
+        res = []
+        for entity in sgfs.session.find(self.entity_type, filters, ['step.Step.color']):
+            
             try:
-                label = entity_name[entity['type']].format(**entity)
+                label = self.display_format.format(**entity)
             except KeyError:
                 label = repr(entity)
-                
+            
             view_data = {
                 Qt.DisplayRole: label,
             }
             
-            yield view_data, {entity['type']: entity}
+            # Apply step colour decoration.
+            if 'step' in entity and 'color' in entity['step']:
+                view_data[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
+            
+            res.append((
+                entity.cache_key, # Key.
+                view_data,
+                {entity['type']: entity}, # New state.
+            ))
+        
+        return res
 
 
 class Model(QtCore.QAbstractItemModel):
@@ -179,60 +194,42 @@ class Model(QtCore.QAbstractItemModel):
         self._root = None
         self.node_types = []
     
-    def get_next_node(self, parent, view_data, state):
+    def set_initial_state(self, goal_state):
+        if self._root is not None:
+            raise ValueError('cannot set initial state with existing root')
+        
+        nodes = [self.root(goal_state)]
+        leafs = []
+        while True:
+            
+            leafs.extend(x for x in nodes if isinstance(x, LeafNode))
+            nodes = [x for x in nodes if not isinstance(x, LeafNode)]
+            if not nodes:
+                break
+            
+            node = nodes.pop()
+            print 'checking', node
+            nodes.extend(node.children())
+        
+        print leafs
+        
+    
+    def construct_node(self, parent, view_data, state, goal_state=None):
         for node_type in self.node_types:
             try:
-                return node_type(self, parent, view_data, state)
+                return node_type(self, parent, view_data, state, goal_state)
             except KeyError:
                 pass
+        print "Leaf", state
         return LeafNode(self, parent, view_data, state)
         
     def hasChildren(self, index):
         node = self.node_from_index(index)
         return node.has_children()
-        
-        
-    def _get_iter(self, data):
-        
-        if 'Task' in data:
-            return ShotgunQuery('PublishEvent', [('sg_link', 'is', data['Task'])])
-
-        if 'Shot' in data:
-            return ShotgunQuery('Task', [('entity', 'is', data['Shot'])])
-            
-        if 'Asset' in data:
-            return ShotgunQuery('Task', [('entity', 'is', data['Asset'])])
-        
-        if 'Sequence' in data:
-            return ShotgunQuery('Shot', [('sg_sequence', 'is', data['Sequence'])])
-        
-        if 'asset_type' in data:
-            return ShotgunQuery('Asset', [
-                ('project', 'is', data['Project']),
-                ('sg_asset_type', 'is', data['asset_type']),
-            ])
-            
-        if data.get('entity_type') == 'Sequences':
-            return ShotgunQuery('Sequence', [('project', 'is', data['Project'])])
-            
-        if data.get('entity_type') == 'Assets':
-            project_dir = sgfs.path_for_entity(data['Project'])
-            asset_types = os.listdir(os.path.join(project_dir, 'Assets'))
-            asset_types = [x for x in asset_types if not x.startswith('.')]
-            return TextOption('asset_type', *asset_types)
-        
-        if 'Project' in data:
-            return TextOption('entity_type', 'Assets', 'Sequences')
-        
-        if not data:
-            return lambda data: [(x['name'], {'Project': x}) for x in sgfs.project_roots]
-        
-        print 'Cant do anything with %r' % data
-        return None
     
-    def root(self):
+    def root(self, goal_state=None):
         if self._root is None:
-            self._root = self.get_next_node(None, {}, {})
+            self._root = self.construct_node(None, {}, {}, goal_state)
             self._root.index = QtCore.QModelIndex()
         return self._root
     
@@ -253,7 +250,7 @@ class Model(QtCore.QAbstractItemModel):
     
     def rowCount(self, parent):
         node = self.node_from_index(parent)
-        return len(node.children()) if node is not None else 0
+        return len(node.children())
     
     def columnCount(self, parent):
         return 1
@@ -281,30 +278,36 @@ class Model(QtCore.QAbstractItemModel):
             return QtCore.QModelIndex()
         
         return node.parent.index
-        
-    # def flags(self, index):
-    #     if not index.row():
-    #         return Qt.NoItemFlags
-    #     return super(Model, self).flags(index)
     
     def data(self, index, role):
         
         if not index.isValid():
             return QtCore.QVariant()
+
+        node = self.node_from_index(index)
         
         if role == Qt.DisplayRole:
+            data = node.view_data.get(Qt.DisplayRole, repr(node))
+            return data
+        
+        if role == Qt.DecorationRole:
+            
             node = self.node_from_index(index)
-            return node.view_data.get(Qt.DisplayRole, repr(node))
+            data = node.view_data.get(Qt.DecorationRole)
+            
+            if data is None:
+                return QtCore.QVariant()
+            
+            if isinstance(data, basestring):
+                return QtGui.QPixmap(data)
+            
+            return data
         
-        # if role == Qt.DecorationRole:
-        #     return QtGui.QColor(256, 128, 64)
-        
-        else:
-            # Invalid variant.
+        # Passthrough other roles.
+        try:
+            return node.view_data[role]
+        except KeyError:
             return QtCore.QVariant()
-
-
-_views = []
 
 
 
@@ -350,6 +353,7 @@ class TestDelegate(QtGui.QStyledItemDelegate):
             self._pixmap
         )
 
+
 class TreeView(QtGui.QTreeView):
     
     def __init__(self, model, index, header):
@@ -361,7 +365,7 @@ class TreeView(QtGui.QTreeView):
         self.setModel(model)
         self.setRootIndex(index)
         
-        # Make this behave like a fancier ListView. This also allows for the
+        # Make this behave like a fancier QListView. This also allows for the
         # right arrow to select.
         self.setRootIsDecorated(False)
         self.setItemsExpandable(False)
@@ -380,17 +384,25 @@ class ColumnView(QtGui.QColumnView):
     def createColumn(self, index):
         
         node = self.model().node_from_index(index)
-        header = node.view_data.get('header', 'No Header')
+        header = node.view_data.get('header', '')
 
         view = TreeView(self.model(), index, header)
         
+        # Look like the default QListView if we don't override createColumn.
         view.setTextElideMode(Qt.ElideMiddle)
         view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            
-        _views.append(view)
+        
+        # We must hold a reference to this somewhere so that it isn't
+        # garbage collected on us.
+        node.__view = view
                 
         return view
+    
+    def currentChanged(self, current, previous):
+        super(ColumnView, self).currentChanged(current, previous)
+        x = self.selectionModel().currentIndex()
+        print 'currentChanged', x.internalPointer().state if x.isValid() else None
         
 
 
@@ -402,16 +414,34 @@ class Dialog(QtGui.QDialog):
         
 
 
-obj = ColumnView()
+
+
 
 model = Model()
-model.node_types.append(ShotgunQuery.build_basic('Project', None))
-model.node_types.append(ShotgunQuery.build_basic('Sequence', ('Project', 'project')))
-model.node_types.append(ShotgunQuery.build_basic('Shot', ('Sequence', 'sg_sequence')))
-model.node_types.append(ShotgunQuery.build_basic('Task', ('Shot', 'entity')))
+model.node_types.append(SGFSRoots) # Defaults to Project level.
+model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
+model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
+model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
+model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
+
+if False:
+    entity = shot = sgfs.session.get('Shot', 5887)
+    print 'setting', shot
+    shot.fetch_heirarchy()
+
+    goal_state = {}
+    while entity and entity['type'] not in goal_state:
+        goal_state[entity['type']] = entity
+        entity = entity.parent()
+
+    print 'goal_state', goal_state
+
+    model.set_initial_state(goal_state)
 
 
+obj = ColumnView()
 obj.setModel(model)
+
 
 obj.show()
 obj.raise_()
