@@ -35,7 +35,7 @@ def debug(msg, *args):
         msg = msg % args
     ident = _debug_thread_ids.setdefault(thread.get_ident(), len(_debug_thread_ids))
     current_time = time.time()
-    sys.stdout.write('%8.3f (%.3f) %3d %s\n' % ((current_time - _debug_start) * 1000, (current_time - _debug_last) * 1000, ident, msg))
+    sys.stdout.write('%8.3f (%8.3f) %3d %s\n' % ((current_time - _debug_start) * 1000, (current_time - _debug_last) * 1000, ident, msg))
     sys.stdout.flush()
     _debug_last = current_time
 
@@ -87,15 +87,20 @@ class Node(object):
         self.model = model
         self.parent = parent
         
-        self.view_data = view_data or {}
-        self.state = state
+        self.view_data = None
+        self.state = None
+        self.update(view_data or {}, state or {})
         
         self.index = None
         
         self._child_lock = DummyLock() if False else threading.RLock()
         self._children = None
         self.is_loading = False
-        
+    
+    def update(self, view_data, state):
+        self.view_data = view_data
+        self.state = state
+    
     def has_children(self):
         return True
     
@@ -107,7 +112,7 @@ class Node(object):
     
     def fetch_children(self, goal_state):
         
-        # debug('fetch_children')
+        debug('fetch_children')
         
         if hasattr(self, 'fetch_async_children'):
             self.is_loading = True
@@ -125,39 +130,48 @@ class Node(object):
         # the update lock.
         children = list(self.fetch_async_children())
         
-        # debug('2nd fetch_children (async) is done')
+        debug('2nd fetch_children (async) is done on %r: %r', self, children)
         
         # This forces the update to wait until after the first (static) children
         # have been put into place, even if this function runs very quickly.
         with self._child_lock:
-            # debug('2nd replace_children (async)')
+            debug('2nd replace_children (async) on %r', self)
             self.is_loading = False
-            self._replace_children(children)
+            self._add_children(children)
         
     def get_immediate_children_from_goal(self, goal_state):
         """Return temporary children that we can from the given goal_state, so
         that there is something there while we load the real children."""
         return []
     
-    def _replace_children(self, new_children):
+    def _add_children(self, new_children):
         
+        old_nodes = []
         new_nodes = []
         
         for key, view_data, new_state in new_children:
             
             full_state = dict(self.state)
             full_state.update(new_state)
-            node = self.model.construct_node(self, view_data, full_state)
             
+            # Update old nodes if we have them.
+            if self._children is not None:
+                node = self._children.get(key)
+                if node is not None:
+                    node.update(view_data, full_state)
+                    old_nodes.append((key, node))
+                    continue
+            
+            node = self.model.construct_node(self, view_data, full_state)
             new_nodes.append((key, node))
         
         signal = self.index is not None and self._children is not None
         
         if signal:
-            # debug('    signalling insert')
-            self.model.beginInsertRows(self.index, 0, len(new_nodes))
+            debug('    signalling insert')
+            self.model.beginInsertRows(self.index, len(self._children), len(new_nodes))
         
-        self._children = ChildList(new_nodes)
+        self._children = ChildList(old_nodes + new_nodes)
         
         if signal:
             self.model.endInsertRows()
@@ -165,18 +179,14 @@ class Node(object):
     def children(self, goal_state=None):
         with self._child_lock:
             if self._children is None:
-                # debug('1st fetch_children')
+                debug('1st fetch_children on %r', self)
                 initial_children = list(self.fetch_children(goal_state))
-                # debug('1st replace_children (static)')
-                self._replace_children(initial_children)
+                debug('1st replace_children (static) on %r', self)
+                self._add_children(initial_children)
             return self._children
 
 
 class Leaf(Node):
-
-    def __init__(self, *args):
-        super(Leaf, self).__init__(*args)
-        self.view_data['header'] = 'LEAF'
     
     def has_children(self):
         return False
@@ -187,8 +197,8 @@ class Leaf(Node):
 
 class SGFSRoots(Node):
     
-    def __init__(self, *args, **kwargs):
-        super(SGFSRoots, self).__init__(*args, **kwargs)
+    def update(self, *args):
+        super(SGFSRoots, self).update(*args)
         self.view_data.setdefault('header', 'SGFS Project')
         
     @staticmethod
@@ -232,13 +242,14 @@ class ShotgunQuery(Node):
             (cls.backref is None or cls.backref[0] in state) # Has backref.
         )
     
-    def __init__(self, *args):
-        super(ShotgunQuery, self).__init__(*args)
+    def update(self, *args):
+        super(ShotgunQuery, self).update(*args)
         self.view_data['header'] = self.entity_type
     
     def get_immediate_children_from_goal(self, goal_state):
         if self.entity_type in goal_state:
             entity = goal_state[self.entity_type]
+            debug('Shotgun goal entity: %r', entity)
             return [self._child_tuple(entity)]
     
     def _child_tuple(self, entity):
@@ -302,19 +313,19 @@ class Model(QtCore.QAbstractItemModel):
             if not nodes:
                 break
             
-            node = nodes.pop()
+            node = nodes.pop(0)
             if node.matches_goal(goal_state):
-                # print 'matches', node.state
+                debug('matches: %r', node.state)
                 last_match = node
             else:
                 continue
             
             nodes.extend(node.children(goal_state))
-        
-        # print 'last match was', last_match
+
+        debug('last_match: %r', last_match.state)
         if last_match:
             for k, v in sorted(last_match.state.iteritems()):
-                print '\t%s: %r' % (k, v)
+                debug('\t%s: %r', k, v)
     
     def construct_node(self, parent, view_data, state):
         for node_type in self.node_types:
@@ -498,13 +509,13 @@ class Dialog(QtGui.QDialog):
 
 
 model = Model()
-model.node_types.append(SGFSRoots) # Defaults to Project level.
+model.node_types.append(SGFSRoots)
 model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
 model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
 model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
 model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
 
-if False:
+if True:
     
     entity = shot = sgfs.session.get('Shot', 5887)
     print 'shot', shot
@@ -514,7 +525,8 @@ if False:
         entity = entity.parent()
 
     print 'goal_state', goal_state
-
+    print
+    
     model.set_initial_state(goal_state)
 
 
