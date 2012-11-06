@@ -94,6 +94,7 @@ class Node(object):
         
         self._child_lock = DummyLock() if False else threading.RLock()
         self._children = None
+        self.is_loading = False
         
     def has_children(self):
         return True
@@ -104,15 +105,19 @@ class Node(object):
         except KeyError:
             pass
     
-    def fetch_children(self, goal_state=None):
+    def fetch_children(self, goal_state):
         
-        debug('fetch_children')
+        # debug('fetch_children')
         
         if hasattr(self, 'fetch_async_children'):
+            self.is_loading = True
             threadpool.submit(self._fetch_async_children)
         
         # Return any children we can figure out from the goal_state.
-        return self.get_immediate_children(goal_state)
+        if goal_state is not None and self.matches_goal(goal_state):
+            return self.get_immediate_children_from_goal(goal_state) or []
+        
+        return []
         
     def _fetch_async_children(self):
         
@@ -120,15 +125,16 @@ class Node(object):
         # the update lock.
         children = list(self.fetch_async_children())
         
-        debug('2nd fetch_children (async) is done')
+        # debug('2nd fetch_children (async) is done')
         
         # This forces the update to wait until after the first (static) children
         # have been put into place, even if this function runs very quickly.
         with self._child_lock:
-            debug('2nd replace_children (async)')
+            # debug('2nd replace_children (async)')
+            self.is_loading = False
             self._replace_children(children)
         
-    def get_immediate_children(self, goal_state):
+    def get_immediate_children_from_goal(self, goal_state):
         """Return temporary children that we can from the given goal_state, so
         that there is something there while we load the real children."""
         return []
@@ -148,7 +154,7 @@ class Node(object):
         signal = self.index is not None and self._children is not None
         
         if signal:
-            debug('    signalling insert')
+            # debug('    signalling insert')
             self.model.beginInsertRows(self.index, 0, len(new_nodes))
         
         self._children = ChildList(new_nodes)
@@ -159,9 +165,9 @@ class Node(object):
     def children(self, goal_state=None):
         with self._child_lock:
             if self._children is None:
-                debug('1st fetch_children')
-                initial_children = self.fetch_children(goal_state)
-                debug('1st replace_children (static)')
+                # debug('1st fetch_children')
+                initial_children = list(self.fetch_children(goal_state))
+                # debug('1st replace_children (static)')
                 self._replace_children(initial_children)
             return self._children
 
@@ -175,21 +181,31 @@ class Leaf(Node):
     def has_children(self):
         return False
     
-    def fetch_children(self, goal_state=None):
+    def fetch_children(self, goal_state):
         return []
 
 
 class SGFSRoots(Node):
     
+    def __init__(self, *args, **kwargs):
+        super(SGFSRoots, self).__init__(*args, **kwargs)
+        self.view_data.setdefault('header', 'SGFS Project')
+        
     @staticmethod
     def is_next_node(state):
         return 'Project' not in state
     
-    def fetch_children(self, goal_state=None):
+    def fetch_children(self, goal_state):
         for project, path in sorted(sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
-            yield project.cache_key, {Qt.DisplayRole: project['name']}, {
-                'Project': project,
-            }
+            yield (
+                project.cache_key,
+                {
+                    Qt.DisplayRole: project['name'],
+                    Qt.DecorationRole: '/home/mboers/Documents/icons/fatcow/16x16/newspaper.png',
+                }, {
+                    'Project': project,
+                },
+            )
             
     
     
@@ -223,16 +239,24 @@ class ShotgunQuery(Node):
     def get_immediate_children_from_goal(self, goal_state):
         if self.entity_type in goal_state:
             entity = goal_state[self.entity_type]
-            return self._child_tuple(entity)
+            return [self._child_tuple(entity)]
     
     def _child_tuple(self, entity):
+        
         try:
-            label = self.display_format.format(**entity)
+            display_role = self.display_format.format(**entity)
         except KeyError:
-            label = repr(entity)
+            display_role = repr(entity)
             
         view_data = {
-            Qt.DisplayRole: label,
+            Qt.DisplayRole: display_role,
+            Qt.DecorationRole: {
+                'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
+                'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
+                'Task': '/home/mboers/Documents/icons/fatcow/16x16/tick.png',
+                'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
+                'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
+            }.get(entity['type'])
         }
             
         # Apply step colour decoration.
@@ -254,8 +278,7 @@ class ShotgunQuery(Node):
         
         for entity in sgfs.session.find(self.entity_type, filters, ['step.Step.color']):
             yield self._child_tuple(entity)
-            
-        
+
 
 
 class Model(QtCore.QAbstractItemModel):
@@ -391,9 +414,9 @@ class Model(QtCore.QAbstractItemModel):
 
 class Header(QtGui.QHeaderView):
     
-    def __init__(self, name):
+    def __init__(self, node):
         super(Header, self).__init__(Qt.Horizontal)
-        self._name = name
+        self._node = node
         self.setResizeMode(0, QtGui.QHeaderView.Fixed)
         self.setStretchLastSection(True)
         
@@ -401,43 +424,27 @@ class Header(QtGui.QHeaderView):
         # self._timer.singleShot(1000, self._upper_header)
     
     def _upper_header(self, *args):
-        print '_upper_header', args
         self._name = self._name.upper()
         self.model().headerDataChanged.emit(Qt.Horizontal, 0, 0)
         
     def paintEvent(self, e):
+
         # Such a horrible hack.
-        self.model()._header = self._name
+        if self._node.is_loading:
+            header = 'Loading...'
+        else:
+            header = self._node.view_data.get('header', '')
+        self.model()._header = header
+        
         super(Header, self).paintEvent(e)
-
-
-class TestDelegate(QtGui.QStyledItemDelegate):
-    
-    def __init__(self):
-        super(TestDelegate, self).__init__()
-        self._pixmap = QtGui.QPixmap('/home/mboers/Documents/icons/fatcow/32x32/3d_glasses.png')
-    
-    def sizeHint(self, option, index):
-        hint = super(TestDelegate, self).sizeHint(option, index)
-        hint.setHeight(hint.height() + self._pixmap.height())
-        return hint
-    
-    def paint(self, painter, option, index):
-        option.displayAlignment = Qt.AlignTop
-        super(TestDelegate, self).paint(painter, option, index)
-        painter.drawPixmap(
-            (option.rect.width() - self._pixmap.width()) / 2,
-            option.rect.height() - self._pixmap.height(),
-            self._pixmap
-        )
 
 
 class TreeView(QtGui.QTreeView):
     
-    def __init__(self, model, index, header):
+    def __init__(self, model, index, node):
         super(TreeView, self).__init__()
         
-        self._header = Header(header)
+        self._header = Header(node)
         self.setHeader(self._header)
         
         self.setModel(model)
@@ -447,9 +454,6 @@ class TreeView(QtGui.QTreeView):
         # right arrow to select.
         self.setRootIsDecorated(False)
         self.setItemsExpandable(False)
-
-        # self._delegate = TestDelegate()
-        # self.setItemDelegateForRow(0, self._delegate)
 
 
 class ColumnView(QtGui.QColumnView):
@@ -462,9 +466,7 @@ class ColumnView(QtGui.QColumnView):
     def createColumn(self, index):
         
         node = self.model().node_from_index(index)
-        header = node.view_data.get('header', '')
-
-        view = TreeView(self.model(), index, header)
+        view = TreeView(self.model(), index, node)
         
         # Look like the default QListView if we don't override createColumn.
         view.setTextElideMode(Qt.ElideMiddle)
