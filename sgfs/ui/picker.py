@@ -32,12 +32,12 @@ threadpool = concurrent.futures.ThreadPoolExecutor(8)
 class Node(object):
     
     @staticmethod
-    def is_next_node(state, goal_state):
+    def is_next_node(state):
         return True
     
-    def __init__(self, model, parent, view_data, state, goal_state=None):
+    def __init__(self, model, parent, view_data, state):
         
-        if not self.is_next_node(state, goal_state):
+        if not self.is_next_node(state):
             raise KeyError('not next state')
         
         self.model = model
@@ -45,81 +45,96 @@ class Node(object):
         
         self.view_data = view_data or {}
         self.state = state
-        self.goal_state = goal_state
         
         self.index = None
         
-        self._children = None
+        self._child_map = {}
+        self._child_list = None
         self._child_lock = threading.Lock()
     
     def has_children(self):
         return True
     
-    def get_child_from_goal(self):
+    def matches_goal(self, goal_state):
+        try:
+            return all(goal_state[k] == v for k, v in self.state.iteritems())
+        except KeyError:
+            pass
+        
+    def get_child_from_goal(self, goal_state):
         return None
     
-    def get_children(self):
+    def get_children(self, goal_state=None):
         
         try:
-            async = self.get_children_async
+            async = lambda: list(self.get_children_async())
         except AttributeError:
             raise NotImplementedError()
         
         future = threadpool.submit(async)
         future.add_done_callback(lambda f: self.update_children(f.result()))
         
+        if goal_state is not None and all(goal_state.get(k) == v for k, v in self.state.iteritems()):
+            child = self.get_child_from_goal(goal_state)
+            if child:
+                return [child]
+        
         return []
     
     def update_children(self, new_children):
         
-        children = []
+        child_map = {}
+        child_list = []
+        
         for key, view_data, new_state in new_children:
             child_state = dict(self.state)
             child_state.update(new_state)
-            child = self.model.construct_node(self, view_data, child_state, self.goal_state)
-            children.append(child)
+            child = self.model.construct_node(self, view_data, child_state)
+            
+            child_map[key] = len(child_list)
+            child_list.append(child)
         
-        signal = self.index is not None and self._children is not None
+        signal = self.index is not None and self._child_list is not None
         
         if signal:
-            self.model.beginInsertRows(self.index, 0, len(children))
+            self.model.beginInsertRows(self.index, 0, len(child_list))
         
-        self._children = children
+        self._child_map = child_map
+        self._child_list = child_list
         
         if signal:
             self.model.endInsertRows()
     
-    def children(self):
+    def children(self, goal_state=None):
         with self._child_lock:
-            if self._children is None:
-                self.update_children(self.get_children())
-            return self._children
+            if self._child_list is None:
+                self.update_children(self.get_children(goal_state))
+            return self._child_list
 
 
-class LeafNode(Node):
+class Leaf(Node):
 
     def __init__(self, *args):
-        super(LeafNode, self).__init__(*args)
+        super(Leaf, self).__init__(*args)
         self.view_data['header'] = 'LEAF'
     
     def has_children(self):
         return False
     
-    def get_children(self):
+    def get_children(self, goal_state=None):
         return []
 
 
 class SGFSRoots(Node):
     
     @staticmethod
-    def is_next_node(state, goal_state):
-        return 'Project' not in state and (goal_state is None or 'Project' in goal_state)
+    def is_next_node(state):
+        return 'Project' not in state
     
-    def get_children(self):
+    def get_children(self, goal_state=None):
         for project, path in sorted(sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
             yield project.cache_key, {Qt.DisplayRole: project['name']}, {
                 'Project': project,
-                'Project.path': path,
             }
             
     
@@ -141,17 +156,41 @@ class ShotgunQuery(Node):
         return Specialized
     
     @classmethod
-    def is_next_node(cls, state, goal_state):
+    def is_next_node(cls, state):
         return (
             cls.entity_type not in state and # Avoid cycles.
-            (cls.backref is None or cls.backref[0] in state) and # Has backref.
-            (goal_state is None or cls.entity_type in goal_state) # Match goal.
+            (cls.backref is None or cls.backref[0] in state) # Has backref.
         )
     
     def __init__(self, *args):
         super(ShotgunQuery, self).__init__(*args)
         self.view_data['header'] = self.entity_type
     
+    def get_child_from_goal(self, goal_state):
+        if self.entity_type in goal_state:
+            entity = goal_state[self.entity_type]
+            return self._child_tuple(entity)
+    
+    def _child_tuple(self, entity):
+        try:
+            label = self.display_format.format(**entity)
+        except KeyError:
+            label = repr(entity)
+            
+        view_data = {
+            Qt.DisplayRole: label,
+        }
+            
+        # Apply step colour decoration.
+        if 'step' in entity and 'color' in entity['step']:
+            view_data[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
+            
+        return (
+            entity.cache_key, # Key.
+            view_data,
+            {entity['type']: entity}, # New state.
+        )
+        
     def get_children_async(self):
         
         # Apply backref filter.
@@ -159,29 +198,10 @@ class ShotgunQuery(Node):
         if self.backref is not None:
             filters.append((self.backref[1], 'is', self.state[self.backref[0]]))
         
-        res = []
         for entity in sgfs.session.find(self.entity_type, filters, ['step.Step.color']):
+            yield self._child_tuple(entity)
             
-            try:
-                label = self.display_format.format(**entity)
-            except KeyError:
-                label = repr(entity)
-            
-            view_data = {
-                Qt.DisplayRole: label,
-            }
-            
-            # Apply step colour decoration.
-            if 'step' in entity and 'color' in entity['step']:
-                view_data[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
-            
-            res.append((
-                entity.cache_key, # Key.
-                view_data,
-                {entity['type']: entity}, # New state.
-            ))
         
-        return res
 
 
 class Model(QtCore.QAbstractItemModel):
@@ -198,38 +218,49 @@ class Model(QtCore.QAbstractItemModel):
         if self._root is not None:
             raise ValueError('cannot set initial state with existing root')
         
-        nodes = [self.root(goal_state)]
-        leafs = []
+        last_match = None
+        nodes = [self.root()]
         while True:
             
-            leafs.extend(x for x in nodes if isinstance(x, LeafNode))
-            nodes = [x for x in nodes if not isinstance(x, LeafNode)]
             if not nodes:
                 break
             
             node = nodes.pop()
-            print 'checking', node
-            nodes.extend(node.children())
+            if node.matches_goal(goal_state):
+                last_match = node
+            else:
+                continue
+            
+            print 'searching', node.state
+            for child in node.children(goal_state):
+                print '\t', child.state
+                for k, v in child.state.iteritems():
+                    if goal_state.get(k) != v:
+                        print '\t\tfailed on %s' % k
+                        break
+                else:
+                    nodes.append(child)
         
-        print leafs
-        
+        print 'last match was', last_match
+        if last_match:
+            for k, v in sorted(last_match.state.iteritems()):
+                print '\t%s: %r' % (k, v)
     
-    def construct_node(self, parent, view_data, state, goal_state=None):
+    def construct_node(self, parent, view_data, state):
         for node_type in self.node_types:
             try:
-                return node_type(self, parent, view_data, state, goal_state)
+                return node_type(self, parent, view_data, state)
             except KeyError:
                 pass
-        print "Leaf", state
-        return LeafNode(self, parent, view_data, state)
+        return Leaf(self, parent, view_data, state)
         
     def hasChildren(self, index):
         node = self.node_from_index(index)
         return node.has_children()
     
-    def root(self, goal_state=None):
+    def root(self):
         if self._root is None:
-            self._root = self.construct_node(None, {}, {}, goal_state)
+            self._root = self.construct_node(None, {}, {})
             self._root.index = QtCore.QModelIndex()
         return self._root
     
@@ -426,9 +457,7 @@ model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    
 
 if False:
     entity = shot = sgfs.session.get('Shot', 5887)
-    print 'setting', shot
-    shot.fetch_heirarchy()
-
+    print 'shot', shot
     goal_state = {}
     while entity and entity['type'] not in goal_state:
         goal_state[entity['type']] = entity
