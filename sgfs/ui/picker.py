@@ -322,10 +322,21 @@ class Model(QtCore.QAbstractItemModel):
             
             nodes.extend(node.children(goal_state))
 
-        debug('last_match: %r', last_match.state)
+        debug('last_match.state: %r', last_match.state)
+        debug('last_match.index: %r', last_match.index)
         if last_match:
             for k, v in sorted(last_match.state.iteritems()):
                 debug('\t%s: %r', k, v)
+        
+        debug('finding the index...')
+        index = QtCore.QModelIndex()
+        while True:
+            count = self.rowCount(index)
+            debug('%d...', count)
+            if not count:
+                break
+            index = self.index(count - 1, 0, index)
+        return index
     
     def construct_node(self, parent, view_data, state):
         for node_type in self.node_types:
@@ -515,6 +526,8 @@ model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence'
 model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
 model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
 
+
+
 if True:
     
     entity = shot = sgfs.session.get('Shot', 5887)
@@ -527,14 +540,20 @@ if True:
     print 'goal_state', goal_state
     print
     
-    model.set_initial_state(goal_state)
+    index = model.set_initial_state(goal_state)
+
+    view = ColumnView()
+    view.setModel(model)
+    debug('selecting %r -> %r', index, model.node_from_index(index))
+    view.setCurrentIndex(index)
+
+else:
+
+    view = ColumnView()
+    view.setModel(model)
 
 
-obj = ColumnView()
-obj.setModel(model)
-
-
-obj.show()
-obj.raise_()
+view.show()
+view.raise_()
 
 exit(app.exec_())
