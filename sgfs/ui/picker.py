@@ -108,6 +108,7 @@ class Node(object):
     def children(self, goal_state=None):
         with self._child_lock:
             if self._child_list is None:
+                print 'getting fresh children', self.state
                 self.update_children(self.get_children(goal_state))
             return self._child_list
 
@@ -227,21 +228,14 @@ class Model(QtCore.QAbstractItemModel):
             
             node = nodes.pop()
             if node.matches_goal(goal_state):
+                # print 'matches', node.state
                 last_match = node
             else:
                 continue
             
-            print 'searching', node.state
-            for child in node.children(goal_state):
-                print '\t', child.state
-                for k, v in child.state.iteritems():
-                    if goal_state.get(k) != v:
-                        print '\t\tfailed on %s' % k
-                        break
-                else:
-                    nodes.append(child)
+            nodes.extend(node.children(goal_state))
         
-        print 'last match was', last_match
+        # print 'last match was', last_match
         if last_match:
             for k, v in sorted(last_match.state.iteritems()):
                 print '\t%s: %r' % (k, v)
@@ -455,7 +449,8 @@ model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence'
 model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
 model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
 
-if False:
+if True:
+    
     entity = shot = sgfs.session.get('Shot', 5887)
     print 'shot', shot
     goal_state = {}
