@@ -9,6 +9,7 @@ import collections
 import functools
 import time
 import thread
+import traceback
 
 import concurrent.futures
 
@@ -79,23 +80,27 @@ class Node(object):
     def is_next_node(state):
         return True
     
-    def __init__(self, model, parent, view_data, state):
+    def __init__(self, model, view_data, state):
         
         if not self.is_next_node(state):
             raise KeyError('not next state')
         
         self.model = model
-        self.parent = parent
         
         self.view_data = None
         self.state = None
         self.update(view_data or {}, state or {})
         
+        # These are set by the model.
         self.index = None
+        self.parent = None
         
         self._child_lock = DummyLock() if False else threading.RLock()
         self._children = None
         self.is_loading = False
+    
+    def __repr__(self):
+        return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
     def update(self, view_data, state):
         self.view_data = view_data
@@ -126,25 +131,31 @@ class Node(object):
         
     def _fetch_async_children(self):
         
-        # Since async may be a generator, for it to completion before we grab
-        # the update lock.
-        children = list(self.fetch_async_children())
+        try:
+            
+            # Since async may be a generator, for it to completion before we grab
+            # the update lock.
+            children = list(self.fetch_async_children())
         
-        debug('2nd fetch_children (async) is done on %r: %r', self, children)
+            debug('2nd fetch_children (async) is done')
         
-        # This forces the update to wait until after the first (static) children
-        # have been put into place, even if this function runs very quickly.
-        with self._child_lock:
-            debug('2nd replace_children (async) on %r', self)
-            self.is_loading = False
-            self._add_children(children)
+            # This forces the update to wait until after the first (static) children
+            # have been put into place, even if this function runs very quickly.
+            with self._child_lock:
+                debug('2nd replace_children (async)')
+                self.is_loading = False
+                self._update_children(children)
+        
+        except Exception as e:
+            traceback.print_exc()
+            raise
         
     def get_immediate_children_from_goal(self, goal_state):
         """Return temporary children that we can from the given goal_state, so
         that there is something there while we load the real children."""
         return []
     
-    def _add_children(self, new_children):
+    def _update_children(self, new_children):
         
         old_nodes = []
         new_nodes = []
@@ -162,27 +173,30 @@ class Node(object):
                     old_nodes.append((key, node))
                     continue
             
-            node = self.model.construct_node(self, view_data, full_state)
+            debug('constructing node')
+            node = self.model.construct_node(view_data, full_state)
             new_nodes.append((key, node))
         
         signal = self.index is not None and self._children is not None
+        debug('signal? %r and %r', self.index is not None, self._children is not None)
         
         if signal:
-            debug('    signalling insert')
+            debug('    beginInsertRows')
             self.model.beginInsertRows(self.index, len(self._children), len(new_nodes))
         
         self._children = ChildList(old_nodes + new_nodes)
         
         if signal:
+            debug('    endInsertRows')
             self.model.endInsertRows()
     
     def children(self, goal_state=None):
         with self._child_lock:
             if self._children is None:
-                debug('1st fetch_children on %r', self)
+                debug('1st fetch_children')
                 initial_children = list(self.fetch_children(goal_state))
-                debug('1st replace_children (static) on %r', self)
-                self._add_children(initial_children)
+                debug('1st replace_children')
+                self._update_children(initial_children)
             return self._children
 
 
@@ -221,25 +235,27 @@ class SGFSRoots(Node):
     
 class ShotgunQuery(Node):
     
-    entity_type = 'Project'
-    backref = None
-    display_format = '{name}'
-    
     @classmethod
     def for_entity_type(cls, entity_type, backref=None, display_format='{type} {id}'):
-        class Specialized(cls):
-            pass
-        Specialized.__name__ = '%s%s' % (entity_type, cls.__name__)
-        Specialized.entity_type = entity_type
-        Specialized.backref = backref
-        Specialized.display_format = display_format
-        return Specialized
+        return functools.partial(cls,
+            entity_type=entity_type,
+            backref=backref,
+            display_format=display_format,
+        )
     
-    @classmethod
-    def is_next_node(cls, state):
+    def __init__(self, *args, **kwargs):
+        self.entity_type = kwargs.pop('entity_type', 'Project')
+        self.backref = kwargs.pop('backref', None)
+        self.display_format = kwargs.pop('display_format', '{name}')
+        super(ShotgunQuery, self).__init__(*args, **kwargs)
+    
+    def __repr__(self):
+        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.entity_type, id(self))
+    
+    def is_next_node(self, state):
         return (
-            cls.entity_type not in state and # Avoid cycles.
-            (cls.backref is None or cls.backref[0] in state) # Has backref.
+            self.entity_type not in state and # Avoid cycles.
+            (self.backref is None or self.backref[0] in state) # Has backref.
         )
     
     def update(self, *args):
@@ -249,7 +265,6 @@ class ShotgunQuery(Node):
     def get_immediate_children_from_goal(self, goal_state):
         if self.entity_type in goal_state:
             entity = goal_state[self.entity_type]
-            debug('Shotgun goal entity: %r', entity)
             return [self._child_tuple(entity)]
     
     def _child_tuple(self, entity):
@@ -288,6 +303,7 @@ class ShotgunQuery(Node):
             filters.append((self.backref[1], 'is', self.state[self.backref[0]]))
         
         for entity in sgfs.session.find(self.entity_type, filters, ['step.Step.color']):
+            # debug('\t%r', entity)
             yield self._child_tuple(entity)
 
 
@@ -323,45 +339,45 @@ class Model(QtCore.QAbstractItemModel):
             nodes.extend(node.children(goal_state))
 
         debug('last_match.state: %r', last_match.state)
-        debug('last_match.index: %r', last_match.index)
+        # debug('last_match.index: %r', last_match.index)
         if last_match:
             for k, v in sorted(last_match.state.iteritems()):
                 debug('\t%s: %r', k, v)
         
-        debug('finding the index...')
+        # debug('finding the index...')
         index = QtCore.QModelIndex()
         while True:
             count = self.rowCount(index)
-            debug('%d...', count)
+            # debug('%d...', count)
             if not count:
                 break
             index = self.index(count - 1, 0, index)
         return index
     
-    def construct_node(self, parent, view_data, state):
+    def construct_node(self, view_data, state):
         for node_type in self.node_types:
             try:
-                return node_type(self, parent, view_data, state)
+                return node_type(self, view_data, state)
             except KeyError:
                 pass
-        return Leaf(self, parent, view_data, state)
+        return Leaf(self, view_data, state)
         
     def hasChildren(self, index):
         node = self.node_from_index(index)
-        return node.has_children()
+        res = node.has_children()
+        # debug('%r.hasChildren: %r', node, res)
+        return res
     
     def root(self):
         if self._root is None:
-            self._root = self.construct_node(None, {}, {})
+            self._root = self.construct_node({}, {})
             self._root.index = QtCore.QModelIndex()
+            self._root.parent = QtCore.QModelIndex()
         return self._root
     
     def node_from_index(self, index):
-        if not index.isValid():
-            return self.root()
-        else:
-            return index.internalPointer()
-            
+        return index.internalPointer() if index.isValid() else self.root()
+    
     def headerData(self, section, orientation, role):
         
         if role == Qt.DisplayRole:
@@ -373,7 +389,9 @@ class Model(QtCore.QAbstractItemModel):
     
     def rowCount(self, parent):
         node = self.node_from_index(parent)
-        return len(node.children())
+        res = len(node.children())
+        # debug('%r.rowCount: %d', node, res)
+        return res
     
     def columnCount(self, parent):
         return 1
@@ -384,23 +402,23 @@ class Model(QtCore.QAbstractItemModel):
             return QtCore.QModelIndex()
         
         node = self.node_from_index(parent)
-        node_children = node.children()
-        
-        if row >= len(node_children):
+        try:
+            child = node.children()[row]
+        except IndexError:
             return QtCore.QModelIndex()
         
-        child = node_children[row]
-        index = self.createIndex(row, col, node_children[row])
-        child.index = index
+        index = self.createIndex(row, col, child)
+        child.index = index # Must hold onto this one or it will deallocate.
+        child.parent = node
+        
         return index
     
     def parent(self, child):
-
         node = self.node_from_index(child)
-        if node.parent is None:
+        if node.parent is not None:
+            return node.parent.index
+        else:
             return QtCore.QModelIndex()
-        
-        return node.parent.index
     
     def data(self, index, role):
         
