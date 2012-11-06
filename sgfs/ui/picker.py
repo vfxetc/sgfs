@@ -41,28 +41,21 @@ def debug(msg, *args):
     _debug_last = current_time
 
 
-class ChildList(collections.Mapping):
+class ChildList(list):
     
-    def __init__(self, children):
-        self._key_to_index = {}
-        self._children = []
-        for key, node in children:
-            self._key_to_index[key] = len(self._children)
-            self._children.append(node)
-    
-    def __len__(self):
-        return len(self._children)
-    
-    def __iter__(self):
-        return iter(self._children)
-    
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, IndexError):
+            return default
+        
     def __getitem__(self, key):
         if not isinstance(key, int):
-            key = self._key_to_index[key]
-        return self._children[key]
-    
-    def index(self, key):
-        return self._key_to_index[key]
+            for child in self:
+                if child.key == key:
+                    return child
+            raise KeyError(key)
+        return super(ChildList, self).__getitem__(key)
 
 
 class DummyLock(object):
@@ -80,12 +73,13 @@ class Node(object):
     def is_next_node(state):
         return True
     
-    def __init__(self, model, view_data, state):
+    def __init__(self, model, key, view_data, state):
         
         if not self.is_next_node(state):
             raise KeyError('not next state')
         
         self.model = model
+        self.key = key
         
         self.view_data = None
         self.state = None
@@ -155,12 +149,11 @@ class Node(object):
         that there is something there while we load the real children."""
         return []
     
-    def _update_children(self, new_children):
+    def _update_children(self, updated):
         
-        old_nodes = []
         new_nodes = []
         
-        for key, view_data, new_state in new_children:
+        for key, view_data, new_state in updated:
             
             full_state = dict(self.state)
             full_state.update(new_state)
@@ -170,25 +163,46 @@ class Node(object):
                 node = self._children.get(key)
                 if node is not None:
                     node.update(view_data, full_state)
-                    old_nodes.append((key, node))
                     continue
             
-            debug('constructing node')
-            node = self.model.construct_node(view_data, full_state)
-            new_nodes.append((key, node))
+            # debug('constructing node')
+            node = self.model.construct_node(key, view_data, full_state)
+            new_nodes.append(node)
         
         signal = self.index is not None and self._children is not None
-        debug('signal? %r and %r', self.index is not None, self._children is not None)
         
         if signal:
-            debug('    beginInsertRows')
-            self.model.beginInsertRows(self.index, len(self._children), len(new_nodes))
+            debug('    layoutAboutToBeChanged')
+            self.model.layoutAboutToBeChanged.emit()
         
-        self._children = ChildList(old_nodes + new_nodes)
+        if not self._children:
+            self._children = ChildList(new_nodes)
+        else:
+            self._children.extend(new_nodes)
+        
+        to_shuffle = list(self._children)
+        # debug('items %r', items)
+        random.shuffle(to_shuffle)
+        self._children = ChildList(to_shuffle)
+        
+        # Reset all of the indexes.
+        old_indexes = []
+        new_indexes = []
+        for i, child in enumerate(self._children):
+            if child.index is not None:
+                old_indexes.append(child.index)
+                index = self.model.index(i, 0, self.index)
+                new_indexes.append(index)
+                child.index = index
+        if old_indexes:
+            self.model.changePersistentIndexList(old_indexes, new_indexes)
         
         if signal:
-            debug('    endInsertRows')
-            self.model.endInsertRows()
+            debug('    layoutChanged')
+            self.model.layoutChanged.emit()
+        
+        
+        
     
     def children(self, goal_state=None):
         with self._child_lock:
@@ -330,6 +344,7 @@ class Model(QtCore.QAbstractItemModel):
                 break
             
             node = nodes.pop(0)
+            debug('node.matches_goal: %s', repr(node))
             if node.matches_goal(goal_state):
                 debug('matches: %r', node.state)
                 last_match = node
@@ -354,10 +369,10 @@ class Model(QtCore.QAbstractItemModel):
             index = self.index(count - 1, 0, index)
         return index
     
-    def construct_node(self, view_data, state):
+    def construct_node(self, key, view_data, state):
         for node_type in self.node_types:
             try:
-                return node_type(self, view_data, state)
+                return node_type(self, key, view_data, state)
             except KeyError:
                 pass
         return Leaf(self, view_data, state)
@@ -370,7 +385,7 @@ class Model(QtCore.QAbstractItemModel):
     
     def root(self):
         if self._root is None:
-            self._root = self.construct_node({}, {})
+            self._root = self.construct_node(None, {}, {})
             self._root.index = QtCore.QModelIndex()
             self._root.parent = QtCore.QModelIndex()
         return self._root
@@ -522,6 +537,7 @@ class ColumnView(QtGui.QColumnView):
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
         x = self.selectionModel().currentIndex()
+        debug('currentChanged')
         # print 'currentChanged', x.internalPointer().state if x.isValid() else None
         
 
