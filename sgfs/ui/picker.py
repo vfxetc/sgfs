@@ -5,6 +5,10 @@ import sys
 import os
 import random
 import threading
+import collections
+import functools
+import time
+import thread
 
 import concurrent.futures
 
@@ -22,11 +26,51 @@ threadpool = concurrent.futures.ThreadPoolExecutor(8)
 # import remoteconsole 
 # remoteconsole.spawn(('', 12345), globals())
 
+_debug_start = time.time()
+_debug_last = _debug_start
+_debug_thread_ids = {}
+def debug(msg, *args):
+    global _debug_last
+    if args:
+        msg = msg % args
+    ident = _debug_thread_ids.setdefault(thread.get_ident(), len(_debug_thread_ids))
+    current_time = time.time()
+    sys.stdout.write('%8.3f (%.3f) %3d %s\n' % ((current_time - _debug_start) * 1000, (current_time - _debug_last) * 1000, ident, msg))
+    sys.stdout.flush()
+    _debug_last = current_time
 
 
+class ChildList(collections.Mapping):
+    
+    def __init__(self, children):
+        self._key_to_index = {}
+        self._children = []
+        for key, node in children:
+            self._key_to_index[key] = len(self._children)
+            self._children.append(node)
+    
+    def __len__(self):
+        return len(self._children)
+    
+    def __iter__(self):
+        return iter(self._children)
+    
+    def __getitem__(self, key):
+        if not isinstance(key, int):
+            key = self._key_to_index[key]
+        return self._children[key]
+    
+    def index(self, key):
+        return self._key_to_index[key]
 
 
-
+class DummyLock(object):
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args):
+        pass
 
 
 class Node(object):
@@ -48,10 +92,9 @@ class Node(object):
         
         self.index = None
         
-        self._child_map = {}
-        self._child_list = None
-        self._child_lock = threading.Lock()
-    
+        self._child_lock = DummyLock() if False else threading.RLock()
+        self._children = None
+        
     def has_children(self):
         return True
     
@@ -60,57 +103,67 @@ class Node(object):
             return all(goal_state[k] == v for k, v in self.state.iteritems())
         except KeyError:
             pass
-        
-    def get_child_from_goal(self, goal_state):
-        return None
     
-    def get_children(self, goal_state=None):
+    def fetch_children(self, goal_state=None):
         
-        try:
-            async = lambda: list(self.get_children_async())
-        except AttributeError:
-            raise NotImplementedError()
+        debug('fetch_children')
         
-        future = threadpool.submit(async)
-        future.add_done_callback(lambda f: self.update_children(f.result()))
+        if hasattr(self, 'fetch_async_children'):
+            threadpool.submit(self._fetch_async_children)
         
-        if goal_state is not None and all(goal_state.get(k) == v for k, v in self.state.iteritems()):
-            child = self.get_child_from_goal(goal_state)
-            if child:
-                return [child]
+        # Return any children we can figure out from the goal_state.
+        return self.get_immediate_children(goal_state)
         
+    def _fetch_async_children(self):
+        
+        # Since async may be a generator, for it to completion before we grab
+        # the update lock.
+        children = list(self.fetch_async_children())
+        
+        debug('2nd fetch_children (async) is done')
+        
+        # This forces the update to wait until after the first (static) children
+        # have been put into place, even if this function runs very quickly.
+        with self._child_lock:
+            debug('2nd replace_children (async)')
+            self._replace_children(children)
+        
+    def get_immediate_children(self, goal_state):
+        """Return temporary children that we can from the given goal_state, so
+        that there is something there while we load the real children."""
         return []
     
-    def update_children(self, new_children):
+    def _replace_children(self, new_children):
         
-        child_map = {}
-        child_list = []
+        new_nodes = []
         
         for key, view_data, new_state in new_children:
-            child_state = dict(self.state)
-            child_state.update(new_state)
-            child = self.model.construct_node(self, view_data, child_state)
             
-            child_map[key] = len(child_list)
-            child_list.append(child)
+            full_state = dict(self.state)
+            full_state.update(new_state)
+            node = self.model.construct_node(self, view_data, full_state)
+            
+            new_nodes.append((key, node))
         
-        signal = self.index is not None and self._child_list is not None
+        signal = self.index is not None and self._children is not None
         
         if signal:
-            self.model.beginInsertRows(self.index, 0, len(child_list))
+            debug('    signalling insert')
+            self.model.beginInsertRows(self.index, 0, len(new_nodes))
         
-        self._child_map = child_map
-        self._child_list = child_list
+        self._children = ChildList(new_nodes)
         
         if signal:
             self.model.endInsertRows()
     
     def children(self, goal_state=None):
         with self._child_lock:
-            if self._child_list is None:
-                print 'getting fresh children', self.state
-                self.update_children(self.get_children(goal_state))
-            return self._child_list
+            if self._children is None:
+                debug('1st fetch_children')
+                initial_children = self.fetch_children(goal_state)
+                debug('1st replace_children (static)')
+                self._replace_children(initial_children)
+            return self._children
 
 
 class Leaf(Node):
@@ -122,7 +175,7 @@ class Leaf(Node):
     def has_children(self):
         return False
     
-    def get_children(self, goal_state=None):
+    def fetch_children(self, goal_state=None):
         return []
 
 
@@ -132,7 +185,7 @@ class SGFSRoots(Node):
     def is_next_node(state):
         return 'Project' not in state
     
-    def get_children(self, goal_state=None):
+    def fetch_children(self, goal_state=None):
         for project, path in sorted(sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
             yield project.cache_key, {Qt.DisplayRole: project['name']}, {
                 'Project': project,
@@ -167,7 +220,7 @@ class ShotgunQuery(Node):
         super(ShotgunQuery, self).__init__(*args)
         self.view_data['header'] = self.entity_type
     
-    def get_child_from_goal(self, goal_state):
+    def get_immediate_children_from_goal(self, goal_state):
         if self.entity_type in goal_state:
             entity = goal_state[self.entity_type]
             return self._child_tuple(entity)
@@ -192,7 +245,7 @@ class ShotgunQuery(Node):
             {entity['type']: entity}, # New state.
         )
         
-    def get_children_async(self):
+    def fetch_async_children(self):
         
         # Apply backref filter.
         filters = []
@@ -427,7 +480,7 @@ class ColumnView(QtGui.QColumnView):
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
         x = self.selectionModel().currentIndex()
-        print 'currentChanged', x.internalPointer().state if x.isValid() else None
+        # print 'currentChanged', x.internalPointer().state if x.isValid() else None
         
 
 
@@ -449,7 +502,7 @@ model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence'
 model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
 model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
 
-if True:
+if False:
     
     entity = shot = sgfs.session.get('Shot', 5887)
     print 'shot', shot
