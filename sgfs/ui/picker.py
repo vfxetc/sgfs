@@ -184,19 +184,24 @@ class Node(object):
                 node.update(view_data, full_state)
             else:
                 node = self.model.construct_node(key, view_data, full_state)
+                node.parent = self
                 
             self._children.append(node)
         
         
-        # Reset all of the indexes.
+        # (Re)Set all of the indexes.
         old_indexes = []
         new_indexes = []
         for i, child in enumerate(self._children):
-            if child.index is not None:
+            
+            if child.index is None:
+                child.index = self.model.createIndex(i, 0, child)
+            
+            else:
                 old_indexes.append(child.index)
-                index = self.model.index(i, 0, self.index)
-                new_indexes.append(index)
-                child.index = index
+                child.index = self.model.createIndex(i, 0, child)
+                new_indexes.append(child.index)
+            
         if old_indexes:
             self.model.changePersistentIndexList(old_indexes, new_indexes)
         
@@ -361,20 +366,11 @@ class Model(QtCore.QAbstractItemModel):
             nodes.extend(node.children(goal_state))
 
         debug('last_match.state: %r', last_match.state)
-        # debug('last_match.index: %r', last_match.index)
+        debug('last_match.index: %r', last_match.index)
         if last_match:
-            for k, v in sorted(last_match.state.iteritems()):
-                debug('\t%s: %r', k, v)
-        
-        # debug('finding the index...')
-        index = QtCore.QModelIndex()
-        while True:
-            count = self.rowCount(index)
-            # debug('%d...', count)
-            if not count:
-                break
-            index = self.index(count - 1, 0, index)
-        return index
+            # for k, v in sorted(last_match.state.iteritems()):
+            #    debug('\t%s: %r', k, v)
+            return last_match.index
     
     def construct_node(self, key, view_data, state):
         for node_type in self.node_types:
@@ -429,11 +425,14 @@ class Model(QtCore.QAbstractItemModel):
         except IndexError:
             return QtCore.QModelIndex()
         
-        index = self.createIndex(row, col, child)
-        child.index = index # Must hold onto this one or it will deallocate.
-        child.parent = node
+        if child.index is None:
+            debug('child.index is None: %r', child)
+            child.index = self.createIndex(row, col, child)
+            if child.parent is None:
+                debug('\tchild.parent is also None')
+                child.parent = node
         
-        return index
+        return child.index
     
     def parent(self, child):
         node = self.node_from_index(child)
@@ -559,42 +558,57 @@ class Dialog(QtGui.QDialog):
 
 
 
+if __name__ == '__main__':
 
-model = Model()
-model.node_types.append(SGFSRoots)
-model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
-model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
-model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
-model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
+    model = Model()
+    model.node_types.append(SGFSRoots)
+    model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
+    model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
+    model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
+    model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
 
 
-
-if True:
+    type_ = None
+    id_ = None
     
-    entity = shot = sgfs.session.get('Shot', 5887)
-    print 'shot', shot
-    goal_state = {}
-    while entity and entity['type'] not in goal_state:
-        goal_state[entity['type']] = entity
-        entity = entity.parent()
-
-    print 'goal_state', goal_state
-    print
+    if len(sys.argv) > 1:
     
-    index = model.set_initial_state(goal_state)
+        import sgfs.commands.utils as command_utils
+        data = command_utils.parse_spec(sgfs, sys.argv[1:])
+        
+        type_ = data.get('type')
+        id_ = data.get('id')
+    
+    if type_ and id_:
+        
+        print type_, id_
+        entity = sgfs.session.get(type_, id_)
+        
+        goal_state = {}
+        while entity and entity['type'] not in goal_state:
+            goal_state[entity['type']] = entity
+            entity = entity.parent()
 
-    view = ColumnView()
-    view.setModel(model)
-    debug('selecting %r -> %r', index, model.node_from_index(index))
-    view.setCurrentIndex(index)
+        print 'goal_state', goal_state
+        print
+    
+        index = model.set_initial_state(goal_state)
 
-else:
+        view = ColumnView()
+        view.setModel(model)
+        debug('selecting %r -> %r', index, model.node_from_index(index))
+        if index:
+            view.setCurrentIndex(index)
 
-    view = ColumnView()
-    view.setModel(model)
+    else:
+        
+        print 'no entity specified'
+        
+        view = ColumnView()
+        view.setModel(model)
 
 
-view.show()
-view.raise_()
+    view.show()
+    view.raise_()
 
-exit(app.exec_())
+    exit(app.exec_())
