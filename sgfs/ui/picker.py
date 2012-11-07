@@ -307,10 +307,6 @@ class ShotgunQuery(Node):
             }.get(entity['type'])
         }
             
-        # Apply step colour decoration.
-        if 'step' in entity and 'color' in entity['step']:
-            view_data[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
-            
         return (
             entity.cache_key, # Key.
             view_data,
@@ -522,7 +518,7 @@ class ColumnView(QtGui.QColumnView):
     def __init__(self):
         super(ColumnView, self).__init__()
         self.setMinimumWidth(800)
-        self.setColumnWidths([200, 150, 150, 120, 400] + [150] * 20)
+        self.setColumnWidths([200, 150, 150, 170, 200, 400] + [150] * 20)
     
     def createColumn(self, index):
         
@@ -556,15 +552,85 @@ class Dialog(QtGui.QDialog):
         
 
 
+class ShotgunSteps(Node):
+    
+    def is_next_node(self, state):
+        if 'Step' in state:
+            return
+        for x in ('Shot', 'Asset'):
+            if x in state:
+                self.entity_type = x
+                return True
+    
+    def fetch_async_children(self):
+        
+        # Get the tasks.
+        tasks_by_step = {}
+        for task in sgfs.session.find('Task', [('entity', 'is', self.state[self.entity_type])], ['step.Step.color']):
+            tasks_by_step.setdefault(task['step'], []).append(task)
+        
+        for step, tasks in sorted(tasks_by_step.iteritems(), key=lambda x: x[0]['code']):
+            yield (
+                step.cache_key,
+                {
+                    Qt.DisplayRole: ('%s (%d)' % (step['code'], len(tasks))),
+                    Qt.DecorationRole: QtGui.QColor.fromRgb(*[int(x) for x in step['color'].split(',')])
+                }, {
+                    'Step': step,
+                    'Step.tasks': tasks
+                }
+            )
+    
 
-
+class ShotgunTasks(ShotgunQuery):
+    
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('display_format', '{content}')
+        super(ShotgunTasks, self).__init__(*args, **kwargs)
+        self.entity_type = 'Task'
+        self.backref = (self.task_entity_type, 'entity')
+        
+    def is_next_node(self, state):
+        if 'Task' in state:
+            return
+        for x in ('Shot', 'Asset'):
+            if x in state:
+                self.task_entity_type = x
+                return True
+    
+    def fetch_async_children(self):
+        
+        # Shortcut!
+        entities = self.state.get('Step.tasks')
+        if entities is None:
+            entities = list(sgfs.session.find('Task', [('entity', 'is', self.state[self.task_entity_type])], ['step.Step.color']))
+        
+        res = []
+        for entity in entities:
+            key, view, state = self._child_tuple(entity)
+            if 'Step' not in self.state:
+                view[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
+            res.append((key, view, state))
+        
+        res.sort(key=lambda t: t[1][Qt.DisplayRole])
+        return res
+        
+        
 if __name__ == '__main__':
 
     model = Model()
     model.node_types.append(SGFSRoots)
+    
+
+    if True:
+        model.node_types.append(ShotgunSteps) # Must be before ShotgunTasks
+    
+    model.node_types.append(ShotgunTasks)
+    
+    
+    
     model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
     model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
-    model.node_types.append(ShotgunQuery.for_entity_type('Task'        , ('Shot'    , 'entity'     ), '{step[short_name]} - {content}'))
     model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
 
 
