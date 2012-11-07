@@ -43,6 +43,21 @@ def debug(msg, *args):
 
 class ChildList(list):
     
+    def pop(self, key, *args):
+        
+        if isinstance(key, int):
+            return super(ChildList, self).pop(key, *args)
+        
+        for i, child in enumerate(self):
+            if child.key == key:
+                break
+        else:
+            if args:
+                return args[0]
+            else:
+                raise KeyError(key)
+        return self.pop(i)
+    
     def get(self, key, default=None):
         try:
             return self[key]
@@ -151,7 +166,12 @@ class Node(object):
     
     def _update_children(self, updated):
         
-        new_nodes = []
+        signal = self.index is not None and self._children is not None
+        if signal:
+            debug('    layoutAboutToBeChanged')
+            self.model.layoutAboutToBeChanged.emit()
+        
+        self._children = self._children or ChildList()
         
         for key, view_data, new_state in updated:
             
@@ -159,31 +179,14 @@ class Node(object):
             full_state.update(new_state)
             
             # Update old nodes if we have them.
-            if self._children is not None:
-                node = self._children.get(key)
-                if node is not None:
-                    node.update(view_data, full_state)
-                    continue
-            
-            # debug('constructing node')
-            node = self.model.construct_node(key, view_data, full_state)
-            new_nodes.append(node)
+            node = self._children.pop(key, None)
+            if node is not None:
+                node.update(view_data, full_state)
+            else:
+                node = self.model.construct_node(key, view_data, full_state)
+                
+            self._children.append(node)
         
-        signal = self.index is not None and self._children is not None
-        
-        if signal:
-            debug('    layoutAboutToBeChanged')
-            self.model.layoutAboutToBeChanged.emit()
-        
-        if not self._children:
-            self._children = ChildList(new_nodes)
-        else:
-            self._children.extend(new_nodes)
-        
-        to_shuffle = list(self._children)
-        # debug('items %r', items)
-        random.shuffle(to_shuffle)
-        self._children = ChildList(to_shuffle)
         
         # Reset all of the indexes.
         old_indexes = []
@@ -316,9 +319,13 @@ class ShotgunQuery(Node):
         if self.backref is not None:
             filters.append((self.backref[1], 'is', self.state[self.backref[0]]))
         
+        res = []
         for entity in sgfs.session.find(self.entity_type, filters, ['step.Step.color']):
             # debug('\t%r', entity)
-            yield self._child_tuple(entity)
+            res.append(self._child_tuple(entity))
+        
+        res.sort(key=lambda x: x[1][Qt.DisplayRole])
+        return res
 
 
 
@@ -375,7 +382,7 @@ class Model(QtCore.QAbstractItemModel):
                 return node_type(self, key, view_data, state)
             except KeyError:
                 pass
-        return Leaf(self, view_data, state)
+        return Leaf(self, key, view_data, state)
         
     def hasChildren(self, index):
         node = self.node_from_index(index)
