@@ -119,13 +119,13 @@ class Node(object):
     def has_children(self):
         return True
     
-    def matches_goal(self, goal_state):
+    def matches_goal(self, init_state):
         try:
-            return all(goal_state[k] == v for k, v in self.state.iteritems())
+            return all(init_state[k] == v for k, v in self.state.iteritems())
         except KeyError:
             pass
     
-    def fetch_children(self, goal_state):
+    def fetch_children(self, init_state):
         
         debug('fetch_children')
         
@@ -134,9 +134,9 @@ class Node(object):
             threadpool.submit(self._fetch_async_children)
             # threading.Thread(target=self._fetch_async_children).start()
         
-        # Return any children we can figure out from the goal_state.
-        if goal_state is not None and self.matches_goal(goal_state):
-            return self.get_immediate_children_from_goal(goal_state) or []
+        # Return any children we can figure out from the init_state.
+        if init_state is not None and self.matches_goal(init_state):
+            return self.get_immediate_children_from_goal(init_state) or []
         
         return []
         
@@ -161,8 +161,8 @@ class Node(object):
             traceback.print_exc()
             raise
         
-    def get_immediate_children_from_goal(self, goal_state):
-        """Return temporary children that we can from the given goal_state, so
+    def get_immediate_children_from_goal(self, init_state):
+        """Return temporary children that we can from the given init_state, so
         that there is something there while we load the real children."""
         return []
     
@@ -214,11 +214,11 @@ class Node(object):
         
         
     
-    def children(self, goal_state=None):
+    def children(self, init_state=None):
         with self._child_lock:
             if self._children is None:
                 debug('1st fetch_children')
-                initial_children = list(self.fetch_children(goal_state))
+                initial_children = list(self.fetch_children(init_state))
                 debug('1st replace_children')
                 self._update_children(initial_children)
             return self._children
@@ -229,10 +229,10 @@ class Leaf(Node):
     def has_children(self):
         return False
     
-    def fetch_children(self, goal_state):
+    def fetch_children(self, init_state):
         return []
 
-
+    
 class SGFSRoots(Node):
     
     def update(self, *args):
@@ -243,7 +243,7 @@ class SGFSRoots(Node):
     def is_next_node(state):
         return 'Project' not in state
     
-    def fetch_children(self, goal_state):
+    def fetch_children(self, init_state):
         for project, path in sorted(sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
             yield (
                 project.cache_key,
@@ -286,9 +286,9 @@ class ShotgunQuery(Node):
         super(ShotgunQuery, self).update(*args)
         self.view_data['header'] = self.entity_type
     
-    def get_immediate_children_from_goal(self, goal_state):
-        if self.entity_type in goal_state:
-            entity = goal_state[self.entity_type]
+    def get_immediate_children_from_goal(self, init_state):
+        if self.entity_type in init_state:
+            entity = init_state[self.entity_type]
             return [self._child_tuple(entity)]
     
     def _child_tuple(self, entity):
@@ -339,12 +339,12 @@ class Model(QtCore.QAbstractItemModel):
     def __init__(self, root_state=None):
         super(Model, self).__init__()
         
-        self._root_state = root_state or {}
+        self.root_state = root_state or {}
         self._root = None
         
         self.node_types = []
     
-    def set_initial_state(self, goal_state):
+    def set_initial_state(self, init_state):
         if self._root is not None:
             raise ValueError('cannot set initial state with existing root')
         
@@ -357,17 +357,17 @@ class Model(QtCore.QAbstractItemModel):
             
             node = nodes.pop(0)
             debug('node.matches_goal: %s', repr(node))
-            if node.matches_goal(goal_state):
+            if node.matches_goal(init_state):
                 debug('matches: %r', node.state)
                 last_match = node
             else:
                 continue
             
-            nodes.extend(node.children(goal_state))
+            nodes.extend(node.children(init_state))
 
-        debug('last_match.state: %r', last_match.state)
-        debug('last_match.index: %r', last_match.index)
         if last_match:
+            debug('last_match.state: %r', last_match.state)
+            debug('last_match.index: %r', last_match.index)
             # for k, v in sorted(last_match.state.iteritems()):
             #    debug('\t%s: %r', k, v)
             return last_match.index
@@ -388,7 +388,7 @@ class Model(QtCore.QAbstractItemModel):
     
     def root(self):
         if self._root is None:
-            self._root = self.construct_node(None, {}, self._root_state)
+            self._root = self.construct_node(None, {}, self.root_state)
             self._root.index = QtCore.QModelIndex()
             self._root.parent = QtCore.QModelIndex()
         return self._root
@@ -592,24 +592,9 @@ class ColumnView(QtGui.QColumnView):
 
 
 
-class ComboBoxView(QtGui.QWidget):
-    
-    def __init__(self):
-        super(ComboBoxView, self).__init__()
-        self.setLayout(QtGui.QHBoxLayout())
-        self._box = QtGui.QComboBox()
-        self.layout().addWidget(self._box)
-    
-    def setModel(self, model):
-        self._box.setModel(model)
-    
 
-class Dialog(QtGui.QDialog):
-    
-    def __init__(self):
-        super(Dialog, self).__init__()
-        self.setWindowTitle(sys.argv[0])
-        self.setLayout(QtGui.QVBoxLayout())
+
+
         
 
 
@@ -699,10 +684,13 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
     
-    view_class = ComboBoxView
     view_class = ColumnView
     
-    model = Model(state_from_entity(sgfs.session.get('Sequence', 113)))
+    if False:
+        model = Model(state_from_entity(sgfs.session.get('Sequence', 113)))
+    else:
+        model = Model()
+    
     model.node_types.append(SGFSRoots)
     
 
@@ -734,20 +722,20 @@ if __name__ == '__main__':
         print type_, id_
         entity = sgfs.session.get(type_, id_)
         
-        goal_state = {}
-        while entity and entity['type'] not in goal_state:
-            goal_state[entity['type']] = entity
+        init_state = {}
+        while entity and entity['type'] not in init_state:
+            init_state[entity['type']] = entity
             entity = entity.parent()
 
-        print 'goal_state', goal_state
+        print 'init_state', init_state
         print
     
-        index = model.set_initial_state(goal_state)
+        index = model.set_initial_state(init_state)
 
         view = view_class()
         view.setModel(model)
-        debug('selecting %r -> %r', index, model.node_from_index(index))
         if index:
+            debug('selecting %r -> %r', index, model.node_from_index(index))
             view.setCurrentIndex(index)
 
     else:
@@ -763,8 +751,10 @@ if __name__ == '__main__':
     # view.setResizeGripsVisible(False)
 
     view.setPreviewVisible(False)
-    
-    dialog = Dialog()
+
+    dialog = QtGui.QDialog()
+    dialog.setWindowTitle(sys.argv[0])
+    dialog.setLayout(QtGui.QVBoxLayout())
     dialog.layout().addWidget(view)
     
     dialog.show()
