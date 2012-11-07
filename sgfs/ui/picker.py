@@ -18,10 +18,11 @@ Qt = QtCore.Qt
 
 from sgfs import SGFS
 
-app = QtGui.QApplication(sys.argv)
 sgfs = SGFS()
 
-threadpool = concurrent.futures.ThreadPoolExecutor(8)
+
+threadpool = concurrent.futures.ThreadPoolExecutor(1)
+
 
 # sys.path.append('/home/mboers/Documents/RemoteConsole')
 # import remoteconsole 
@@ -131,6 +132,7 @@ class Node(object):
         if hasattr(self, 'fetch_async_children'):
             self.is_loading = True
             threadpool.submit(self._fetch_async_children)
+            # threading.Thread(target=self._fetch_async_children).start()
         
         # Return any children we can figure out from the goal_state.
         if goal_state is not None and self.matches_goal(goal_state):
@@ -301,7 +303,7 @@ class ShotgunQuery(Node):
             Qt.DecorationRole: {
                 'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
                 'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
-                'Task': '/home/mboers/Documents/icons/fatcow/16x16/tick.png',
+                'Task': '/home/mboers/Documents/icons/fatcow/16x16/to_do_list.png',
                 'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
                 'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
             }.get(entity['type'])
@@ -334,10 +336,12 @@ class Model(QtCore.QAbstractItemModel):
     
     _header = 'Header Not Set'
     
-    def __init__(self):
+    def __init__(self, root_state=None):
         super(Model, self).__init__()
         
+        self._root_state = root_state or {}
         self._root = None
+        
         self.node_types = []
     
     def set_initial_state(self, goal_state):
@@ -384,7 +388,7 @@ class Model(QtCore.QAbstractItemModel):
     
     def root(self):
         if self._root is None:
-            self._root = self.construct_node(None, {}, {})
+            self._root = self.construct_node(None, {}, self._root_state)
             self._root.index = QtCore.QModelIndex()
             self._root.parent = QtCore.QModelIndex()
         return self._root
@@ -517,18 +521,63 @@ class ColumnView(QtGui.QColumnView):
     
     def __init__(self):
         super(ColumnView, self).__init__()
-        self.setMinimumWidth(800)
-        self.setColumnWidths([200, 150, 150, 170, 200, 400] + [150] * 20)
+        
+        # self.setMinimumWidth(800)
+        # self.setColumnWidths([200, 150, 150, 170, 200, 400] + [150] * 20)
+        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        
+        self._widgetsize_max = None
+        self._preview_visible = True
+    
+    def previewVisible(self):
+        return self._preview_visible
+    
+    def setPreviewVisible(self, flag):
+        
+        flag = bool(flag)
+        
+        # debug('setPreviewVisible: %r', flag)
+        
+        # No-op.
+        if flag == self._preview_visible:
+            return
+        
+        # Hide it.
+        if not flag:
+            
+            # We need there to be some preview widget.
+            widget = self.previewWidget()
+            if not widget:
+                widget = self._preview_sentinel = QtGui.QWidget()
+                # widget.setFixedSize(0, 0)
+                self.setPreviewWidget(widget)
+                
+            # The protected preview column owns the preview widget.
+            column = widget.parent().parent()
+            
+            # We don't have access to this in macro form, so extract it from
+            # the widget.
+            if self._widgetsize_max is None:
+                self._widgetsize_max = column.maximumWidth()
+            
+            # The actual hiding.
+            column.setFixedWidth(0)
+        
+        # Show it.
+        else:
+            widget = self.previewWidget()
+            column = widget.parent().parent()
+            column.setFixedWidth(self._widgetsize_max)
+        
+        self._preview_visible = flag
     
     def createColumn(self, index):
         
-        node = self.model().node_from_index(index)
+        node = self.model().node_from_index(index)        
         view = TreeView(self.model(), index, node)
         
-        # Look like the default QListView if we don't override createColumn.
-        view.setTextElideMode(Qt.ElideMiddle)
-        view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # Transfer behaviour and options to the new column.
+        self.initializeColumn(view)
         
         # We must hold a reference to this somewhere so that it isn't
         # garbage collected on us.
@@ -538,17 +587,29 @@ class ColumnView(QtGui.QColumnView):
     
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
-        x = self.selectionModel().currentIndex()
-        debug('currentChanged')
-        # print 'currentChanged', x.internalPointer().state if x.isValid() else None
-        
+        x = self.model().node_from_index(self.selectionModel().currentIndex())
+        debug('currentChanged to %r', x)
 
+
+
+class ComboBoxView(QtGui.QWidget):
+    
+    def __init__(self):
+        super(ComboBoxView, self).__init__()
+        self.setLayout(QtGui.QHBoxLayout())
+        self._box = QtGui.QComboBox()
+        self.layout().addWidget(self._box)
+    
+    def setModel(self, model):
+        self._box.setModel(model)
+    
 
 class Dialog(QtGui.QDialog):
     
     def __init__(self):
         super(Dialog, self).__init__()
         self.setWindowTitle(sys.argv[0])
+        self.setLayout(QtGui.QVBoxLayout())
         
 
 
@@ -562,6 +623,10 @@ class ShotgunSteps(Node):
                 self.entity_type = x
                 return True
     
+    def update(self, view, state):
+        super(ShotgunSteps, self).update(view, state)
+        self.view_data['header'] = 'Pipeline Step'
+        
     def fetch_async_children(self):
         
         # Get the tasks.
@@ -574,7 +639,7 @@ class ShotgunSteps(Node):
                 step.cache_key,
                 {
                     Qt.DisplayRole: ('%s (%d)' % (step['code'], len(tasks))),
-                    Qt.DecorationRole: QtGui.QColor.fromRgb(*[int(x) for x in step['color'].split(',')])
+                    Qt.DecorationRole: QtGui.QColor.fromRgb(*[int(x) for x in step['color'].split(',')]),
                 }, {
                     'Step': step,
                     'Step.tasks': tasks
@@ -589,6 +654,13 @@ class ShotgunTasks(ShotgunQuery):
         super(ShotgunTasks, self).__init__(*args, **kwargs)
         self.entity_type = 'Task'
         self.backref = (self.task_entity_type, 'entity')
+    
+    def update(self, view, state):
+        super(ShotgunTasks, self).update(view, state)
+        if 'Step' in self.state:
+            self.view_data['header'] = '%s Task' % self.state['Step']['short_name']
+        else:
+            self.view_data['header'] = 'Task'
         
     def is_next_node(self, state):
         if 'Task' in state:
@@ -614,15 +686,27 @@ class ShotgunTasks(ShotgunQuery):
         
         res.sort(key=lambda t: t[1][Qt.DisplayRole])
         return res
+
+def state_from_entity(entity):
+    state = {}
+    while entity and entity['type'] not in state:
+        state[entity['type']] = entity
+        entity = entity.parent()
+    return state
         
         
 if __name__ == '__main__':
 
-    model = Model()
+    app = QtGui.QApplication(sys.argv)
+    
+    view_class = ComboBoxView
+    view_class = ColumnView
+    
+    model = Model(state_from_entity(sgfs.session.get('Sequence', 113)))
     model.node_types.append(SGFSRoots)
     
 
-    if True:
+    if False:
         model.node_types.append(ShotgunSteps) # Must be before ShotgunTasks
     
     model.node_types.append(ShotgunTasks)
@@ -660,7 +744,7 @@ if __name__ == '__main__':
     
         index = model.set_initial_state(goal_state)
 
-        view = ColumnView()
+        view = view_class()
         view.setModel(model)
         debug('selecting %r -> %r', index, model.node_from_index(index))
         if index:
@@ -670,11 +754,20 @@ if __name__ == '__main__':
         
         print 'no entity specified'
         
-        view = ColumnView()
+        view = view_class()
         view.setModel(model)
+    
+    # view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    view.setFixedWidth(800)
+    view.setColumnWidths([200, 200, 398]) # To be sure that the width is 2 more.
+    # view.setResizeGripsVisible(False)
 
-
-    view.show()
-    view.raise_()
+    view.setPreviewVisible(False)
+    
+    dialog = Dialog()
+    dialog.layout().addWidget(view)
+    
+    dialog.show()
+    dialog.raise_()
 
     exit(app.exec_())
