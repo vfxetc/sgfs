@@ -87,7 +87,7 @@ class Node(object):
     
     @staticmethod
     def is_next_node(state):
-        return True
+        raise NotImplementedError()
     
     def __init__(self, model, key, view_data, state):
         
@@ -106,7 +106,8 @@ class Node(object):
         self.parent = None
         
         self._child_lock = DummyLock() if False else threading.RLock()
-        self._children = None
+        self._created_children = None
+        self._direct_children = None
         self.is_loading = False
     
     def __repr__(self):
@@ -119,7 +120,7 @@ class Node(object):
     def has_children(self):
         return True
     
-    def matches_goal(self, init_state):
+    def matches_init_state(self, init_state):
         try:
             return all(init_state[k] == v for k, v in self.state.iteritems())
         except KeyError:
@@ -127,7 +128,7 @@ class Node(object):
     
     def fetch_children(self, init_state):
         
-        debug('fetch_children')
+        # debug('fetch_children')
         
         if hasattr(self, 'fetch_async_children'):
             self.is_loading = True
@@ -135,8 +136,8 @@ class Node(object):
             # threading.Thread(target=self._fetch_async_children).start()
         
         # Return any children we can figure out from the init_state.
-        if init_state is not None and self.matches_goal(init_state):
-            return self.get_immediate_children_from_goal(init_state) or []
+        if init_state is not None and self.matches_init_state(init_state):
+            return self.get_initial_children(init_state) or []
         
         return []
         
@@ -148,12 +149,12 @@ class Node(object):
             # the update lock.
             children = list(self.fetch_async_children())
         
-            debug('2nd fetch_children (async) is done')
+            # debug('2nd fetch_children (async) is done')
         
             # This forces the update to wait until after the first (static) children
             # have been put into place, even if this function runs very quickly.
             with self._child_lock:
-                debug('2nd replace_children (async)')
+                # debug('2nd replace_children (async)')
                 self.is_loading = False
                 self._update_children(children)
         
@@ -161,19 +162,25 @@ class Node(object):
             traceback.print_exc()
             raise
         
-    def get_immediate_children_from_goal(self, init_state):
+    def get_initial_children(self, init_state):
         """Return temporary children that we can from the given init_state, so
         that there is something there while we load the real children."""
         return []
     
+    def groups_for_child(self, node):
+        return node.groups()
+    
+    def groups(self):
+        return []
+    
     def _update_children(self, updated):
         
-        signal = self.index is not None and self._children is not None
+        signal = self.index is not None and self._direct_children is not None
         if signal:
-            debug('    layoutAboutToBeChanged')
+            # debug('    layoutAboutToBeChanged')
             self.model.layoutAboutToBeChanged.emit()
         
-        self._children = self._children or ChildList()
+        children = self._created_children or ChildList()
         
         for key, view_data, new_state in updated:
             
@@ -181,34 +188,63 @@ class Node(object):
             full_state.update(new_state)
             
             # Update old nodes if we have them.
-            node = self._children.pop(key, None)
+            node = children.pop(key, None)
             if node is not None:
                 node.update(view_data, full_state)
             else:
                 node = self.model.construct_node(key, view_data, full_state)
                 node.parent = self
                 
-            self._children.append(node)
+            children.append(node)
         
+        self._created_children = children
         
-        # (Re)Set all of the indexes.
+        # Slot them into groups
+        self._direct_children = ChildList()
         old_indexes = []
         new_indexes = []
-        for i, child in enumerate(self._children):
+        for node in children:
             
-            if child.index is None:
-                child.index = self.model.createIndex(i, 0, child)
+            # debug('groups on %r: %r', node, node.state)
+            groups = list(self.groups_for_child(node))
+            if groups:
+                pass
+                # debug('groups for %r: %r', self, groups)
             
-            else:
-                old_indexes.append(child.index)
-                child.index = self.model.createIndex(i, 0, child)
-                new_indexes.append(child.index)
+            parent = self
+            for key, view_data, new_state in groups:
+                group = parent.children().get(key)
+                if group is None:
+                    
+                    # debug('Creating new group %r: %r %r', key, view_data, new_state)
+                    group = Group(self, key, view_data, new_state)
+                    group.index = self.model.createIndex(len(parent.children()), 0, group)
+                    group.parent = parent
+                    
+                    parent.children().append(group)
+                # debug('Switching "parent" to %r', group)
+                parent = group
+
+            # debug('Adding new node to %r', parent)
             
+            new_index = self.model.createIndex(len(parent.children()), 0, node)
+            
+            # Calculate a new index.
+            if node.index:
+                old_indexes.append(node.index)
+                new_indexes.append(new_index)
+            node.index = new_index
+            
+            parent.children().append(node)
+            node.parent = parent
+        
+        # debug('num of children: %d', len(self._direct_children))
+        
         if old_indexes:
             self.model.changePersistentIndexList(old_indexes, new_indexes)
         
         if signal:
-            debug('    layoutChanged')
+            # debug('    layoutChanged')
             self.model.layoutChanged.emit()
         
         
@@ -216,15 +252,34 @@ class Node(object):
     
     def children(self, init_state=None):
         with self._child_lock:
-            if self._children is None:
-                debug('1st fetch_children')
+            if self._direct_children is None:
+                # debug('1st fetch_children')
                 initial_children = list(self.fetch_children(init_state))
-                debug('1st replace_children')
+                # debug('1st replace_children')
                 self._update_children(initial_children)
-            return self._children
+            return self._direct_children
+
+
+class Group(Node):
+    
+    @staticmethod
+    def is_next_node(state):
+        return True
+    
+    def __init__(self, model, key, view_data, state):
+        super(Group, self).__init__(model, key, view_data, state)
+        self._children = ChildList()
+    
+    def children(self, *args):
+        # debug('Group children: %r', self._children)
+        return self._children
 
 
 class Leaf(Node):
+    
+    @staticmethod
+    def is_next_node(state):
+        return True
     
     def has_children(self):
         return False
@@ -260,46 +315,50 @@ class SGFSRoots(Node):
 class ShotgunQuery(Node):
     
     @classmethod
-    def for_entity_type(cls, entity_type, backref=None, display_format='{type} {id}'):
+    def for_entity_type(cls, entity_type, backref=None, display_format=None, **kwargs):
         return functools.partial(cls,
             entity_type=entity_type,
             backref=backref,
             display_format=display_format,
+            **kwargs
         )
     
     def __init__(self, *args, **kwargs):
-        self.entity_type = kwargs.pop('entity_type', 'Project')
-        self.backref = kwargs.pop('backref', None)
-        self.display_format = kwargs.pop('display_format', '{name}')
+        self._entity_type = kwargs.pop('entity_type', 'Project')
+        self._backref = kwargs.pop('backref', None)
+        self.display_format = kwargs.pop('display_format') or '{type} {id}'
+        self._filters = list(kwargs.pop('filters', []))
+        self._fields = list(kwargs.pop('fields', []))
+        self._group_format = kwargs.pop('group_format', None)
         super(ShotgunQuery, self).__init__(*args, **kwargs)
     
     def __repr__(self):
-        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.entity_type, id(self))
+        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self._entity_type, id(self))
     
     def is_next_node(self, state):
         return (
-            self.entity_type not in state and # Avoid cycles.
-            (self.backref is None or self.backref[0] in state) # Has backref.
+            self._entity_type not in state and # Avoid cycles.
+            (self._backref is None or self._backref[0] in state) # Has backref.
         )
     
     def update(self, *args):
         super(ShotgunQuery, self).update(*args)
-        self.view_data['header'] = self.entity_type
+        self.view_data['header'] = self._entity_type
     
-    def get_immediate_children_from_goal(self, init_state):
-        if self.entity_type in init_state:
-            entity = init_state[self.entity_type]
-            return [self._child_tuple(entity)]
+    def get_initial_children(self, init_state):
+        if self._entity_type in init_state:
+            entity = init_state[self._entity_type]
+            return [self._child_tuple_from_entity(entity)]
     
-    def _child_tuple(self, entity):
+    def _child_tuple_from_entity(self, entity):
         
         try:
-            display_role = self.display_format.format(**entity)
+            label = self.display_format.format(**entity)
         except KeyError:
-            display_role = repr(entity)
+            label = repr(entity)
             
         view_data = {
-            Qt.DisplayRole: display_role,
+            Qt.DisplayRole: label,
             Qt.DecorationRole: {
                 'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
                 'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
@@ -309,25 +368,40 @@ class ShotgunQuery(Node):
             }.get(entity['type'])
         }
             
-        return (
-            entity.cache_key, # Key.
-            view_data,
-            {entity['type']: entity}, # New state.
-        )
-        
+        return entity.cache_key, view_data, {entity['type']: entity}
+    
+    def groups_for_child(self, node):
+        formats = getattr(self, '_group_format', None)
+        if formats is None:
+            return
+        formats = [formats] if isinstance(formats, basestring) else formats
+        for format_ in formats:
+            # debug('about to format %r (from %r) with %r', format_, node, node.state)
+            label = format_.format(**node.state)
+            yield ('group', label), {Qt.DisplayRole: label}, {'group': label}
+    
+    def filters(self):
+        if self._backref is not None:
+            yield (self._backref[1], 'is', self.state[self._backref[0]])
+        for x in self._filters:
+            yield x
+    
+    def fields(self):
+        return self._fields
+    
     def fetch_async_children(self):
         
         # Apply backref filter.
-        filters = []
-        if self.backref is not None:
-            filters.append((self.backref[1], 'is', self.state[self.backref[0]]))
+        filters = list(self.filters())
+        fields = list(self.fields())
         
         res = []
-        for entity in sgfs.session.find(self.entity_type, filters, ['step.Step.color']):
-            # debug('\t%r', entity)
-            res.append(self._child_tuple(entity))
+        for entity in sgfs.session.find(self._entity_type, filters, fields):
+            res.append(self._child_tuple_from_entity(entity))
         
+        # Sort by label.
         res.sort(key=lambda x: x[1][Qt.DisplayRole])
+        
         return res
 
 
@@ -356,9 +430,9 @@ class Model(QtCore.QAbstractItemModel):
                 break
             
             node = nodes.pop(0)
-            debug('node.matches_goal: %s', repr(node))
-            if node.matches_goal(init_state):
-                debug('matches: %r', node.state)
+            # debug('node.matches_init_state: %s', repr(node))
+            if node.matches_init_state(init_state):
+                # debug('matches: %r', node.state)
                 last_match = node
             else:
                 continue
@@ -366,10 +440,10 @@ class Model(QtCore.QAbstractItemModel):
             nodes.extend(node.children(init_state))
 
         if last_match:
-            debug('last_match.state: %r', last_match.state)
-            debug('last_match.index: %r', last_match.index)
+            # debug('last_match.state: %r', last_match.state)
+            # debug('last_match.index: %r', last_match.index)
             # for k, v in sorted(last_match.state.iteritems()):
-            #    debug('\t%s: %r', k, v)
+            #    # debug('\t%s: %r', k, v)
             return last_match.index
     
     def construct_node(self, key, view_data, state):
@@ -426,12 +500,13 @@ class Model(QtCore.QAbstractItemModel):
             return QtCore.QModelIndex()
         
         if child.index is None:
-            debug('child.index is None: %r', child)
+            # debug('child.index is None: %r', child)
             child.index = self.createIndex(row, col, child)
             if child.parent is None:
-                debug('\tchild.parent is also None')
+                # debug('\tchild.parent is also None')
                 child.parent = node
         
+        # debug('index %d of %r -> %r', row, node, child)
         return child.index
     
     def parent(self, child):
@@ -450,6 +525,7 @@ class Model(QtCore.QAbstractItemModel):
         
         if role == Qt.DisplayRole:
             data = node.view_data.get(Qt.DisplayRole, repr(node))
+            # debug('displayRole for %r -> %r', node, data)
             return data
         
         if role == Qt.DecorationRole:
@@ -588,7 +664,7 @@ class ColumnView(QtGui.QColumnView):
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
         x = self.model().node_from_index(self.selectionModel().currentIndex())
-        debug('currentChanged to %r', x)
+        # debug('currentChanged to %r', x)
 
 
 
@@ -598,47 +674,16 @@ class ColumnView(QtGui.QColumnView):
         
 
 
-class ShotgunSteps(Node):
-    
-    def is_next_node(self, state):
-        if 'Step' in state:
-            return
-        for x in ('Shot', 'Asset'):
-            if x in state:
-                self.entity_type = x
-                return True
-    
-    def update(self, view, state):
-        super(ShotgunSteps, self).update(view, state)
-        self.view_data['header'] = 'Pipeline Step'
-        
-    def fetch_async_children(self):
-        
-        # Get the tasks.
-        tasks_by_step = {}
-        for task in sgfs.session.find('Task', [('entity', 'is', self.state[self.entity_type])], ['step.Step.color']):
-            tasks_by_step.setdefault(task['step'], []).append(task)
-        
-        for step, tasks in sorted(tasks_by_step.iteritems(), key=lambda x: x[0]['code']):
-            yield (
-                step.cache_key,
-                {
-                    Qt.DisplayRole: ('%s (%d)' % (step['code'], len(tasks))),
-                    Qt.DecorationRole: QtGui.QColor.fromRgb(*[int(x) for x in step['color'].split(',')]),
-                }, {
-                    'Step': step,
-                    'Step.tasks': tasks
-                }
-            )
+
     
 
 class ShotgunTasks(ShotgunQuery):
     
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('display_format', '{content}')
+        kwargs.setdefault('entity_type', 'Task')
         super(ShotgunTasks, self).__init__(*args, **kwargs)
-        self.entity_type = 'Task'
-        self.backref = (self.task_entity_type, 'entity')
+        self._backref = (self.task_entity_type, 'entity')
     
     def update(self, view, state):
         super(ShotgunTasks, self).update(view, state)
@@ -664,7 +709,7 @@ class ShotgunTasks(ShotgunQuery):
         
         res = []
         for entity in entities:
-            key, view, state = self._child_tuple(entity)
+            key, view, state = self._child_tuple_from_entity(entity)
             if 'Step' not in self.state:
                 view[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
             res.append((key, view, state))
@@ -703,7 +748,7 @@ if __name__ == '__main__':
     
     model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
     model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
-    model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), '{code} ({sg_type}/{sg_version})'))
+    model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), 'v{sg_version:04d}', group_format='{PublishEvent[code]} ({PublishEvent[sg_type]})'))
 
 
     type_ = None
@@ -735,7 +780,7 @@ if __name__ == '__main__':
         view = view_class()
         view.setModel(model)
         if index:
-            debug('selecting %r -> %r', index, model.node_from_index(index))
+            # debug('selecting %r -> %r', index, model.node_from_index(index))
             view.setCurrentIndex(index)
 
     else:
