@@ -84,7 +84,7 @@ class Node(object):
     def __init__(self, model, key, view_data, state):
         
         if not self.is_next_node(state):
-            raise KeyError('not next state')
+            raise TypeError('not next state')
         
         self.model = model
         self.key = key
@@ -211,7 +211,8 @@ class Node(object):
                 # Create the new group if it doesn't already exist.
                 group = parent.children().pop(key, None)
                 if group is None:
-                    state = dict(self.state)
+                    node.state.update(new_state)
+                    state = dict(parent.state)
                     state.update(new_state)
                     group = Group(self.model, key, view_data, state)
                 parent.children().append(group)
@@ -267,6 +268,9 @@ class Group(Node):
     def is_next_node(state):
         return True
     
+    def matches_init_state(self, init_state):
+        return True
+    
     def __init__(self, model, key, view_data, state):
         super(Group, self).__init__(model, key, view_data, state)
         self._children = ChildList()
@@ -315,91 +319,157 @@ class SGFSRoots(Node):
     
 class ShotgunQuery(Node):
     
+    backrefs = {
+        'Project': [None],
+        'HumanUser': [None],
+        'Asset': [('Project', 'project')],
+        'Sequence': [('Project', 'project')],
+        'Shot': [('Sequence', 'sg_sequence')],
+        'Task': [('Shot', 'entity'), ('Asset', 'entity')],
+        'PublishEvent': [('Task', 'sg_link')],
+        'Tool': [('Project', 'project')],
+        'Ticket': [('Tool', 'sg_tool')],
+    }
+    
+    formats = {
+        'Project': ['{Project[name]}'],
+        'HumanUser': ['{HumanUser[email]}'],
+        'Sequence': ['{Sequence[code]}'],
+        'Asset': ['{Asset[sg_asset_type]}', '{Asset[code]}'],
+        'Shot': ['{Shot[code]}'],
+        'Task': ['{Task[step][code]}', '{Task[content]}'],
+        'PublishEvent': ['{PublishEvent[sg_type]}', '{PublishEvent[code]}', 'v{PublishEvent[sg_version]:04d}'],
+        'Tool': ['{Tool[code]}'],
+        'Ticket': ['{Ticket[title]}'],
+    }
+    
+    icons = {
+        'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
+        'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
+        'Task': '/home/mboers/Documents/icons/fatcow/16x16/to_do_list.png',
+        'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
+        'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
+    }
+    
+    fields = {
+        'Task': ['step.Step.color'],
+        'Tool': ['code'],
+        'Ticket': ['title'],
+        'HumanUser': ['firstname', 'lastname', 'email'],
+    }
+    
     @classmethod
-    def for_entity_type(cls, entity_type, backref=None, display_format=None, **kwargs):
+    def specialize(cls, entity_types, **kwargs):
         return functools.partial(cls,
-            entity_type=entity_type,
-            backref=backref,
-            display_format=display_format,
+            entity_types=entity_types,
             **kwargs
         )
     
     def __init__(self, *args, **kwargs):
-        self._entity_type = kwargs.pop('entity_type', 'Project')
-        self._backref = kwargs.pop('backref', None)
-        self.display_format = kwargs.pop('display_format', None) or '{type} {id}'
-        self._filters = list(kwargs.pop('filters', []))
-        self._fields = list(kwargs.pop('fields', []))
-        self._group_format = kwargs.pop('group_format', None)
+        self.entity_types = kwargs.pop('entity_types')
         super(ShotgunQuery, self).__init__(*args, **kwargs)
     
     def __repr__(self):
-        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self._entity_type, id(self))
+        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.entity_types, id(self))
     
     def is_next_node(self, state):
-        return (
-            self._entity_type not in state and # Avoid cycles.
-            (self._backref is None or self._backref[0] in state) # Has backref.
-        )
+        # If any types have a backref that isn't satisfied.
+        self.active_types = []
+        for type_ in self.entity_types:
+            if type_ in state or state.get('ignore_%s' % type_):
+                continue
+            for backref in self.backrefs[type_]:
+                if backref is None or backref[0] in state:
+                    self.active_types.append(type_)
+                    continue
+        # debug('is_next_node: %r -> %r', sorted(state.iterkeys()), self.active_types)
+        return bool(self.active_types)
+    
+    def matches_init_state(self, init_state):
+        for type_ in self.active_types:
+            a = init_state.get(type_)
+            b = self.state.get(type_)
+            debug('xxx %r %r %r', type_, a, b)
+            if a and b and a == b:
+                return True
     
     def update(self, *args):
         super(ShotgunQuery, self).update(*args)
-        self.view_data['header'] = self._entity_type
+        self.view_data['header'] = self.view_data[Qt.DisplayRole]
     
     def get_initial_children(self, init_state):
-        if self._entity_type in init_state:
-            entity = init_state[self._entity_type]
-            return [self._child_tuple_from_entity(entity)]
+        for type_ in self.active_types:
+            if type_ in init_state:
+                entity = init_state[type_]
+                yield self._child_tuple_from_entity(entity)
     
     def _child_tuple_from_entity(self, entity):
         
-        try:
-            label = self.display_format.format(**entity)
-        except KeyError:
-            label = repr(entity)
-            
-        view_data = {
-            Qt.DisplayRole: label,
-            Qt.DecorationRole: {
-                'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
-                'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
-                'Task': '/home/mboers/Documents/icons/fatcow/16x16/to_do_list.png',
-                'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
-                'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
-            }.get(entity['type'])
-        }
-            
-        return entity.cache_key, view_data, {entity['type']: entity}
-    
-    def groups_for_child(self, node):
-        formats = getattr(self, '_group_format', None)
-        if formats is None:
-            return
-        formats = [formats] if isinstance(formats, basestring) else formats
-        header = self.view_data[Qt.DisplayRole]
-        for format_ in formats:
-            # debug('about to format %r (from %r) with %r', format_, node, node.state)
-            label = format_.format(**node.state)
-            yield ('group', label), {Qt.DisplayRole: label, 'header': header}, {'group': label}
-            header = label
-    
-    def filters(self):
-        if self._backref is not None:
-            yield (self._backref[1], 'is', self.state[self._backref[0]])
-        for x in self._filters:
-            yield x
-    
-    def fields(self):
-        return self._fields
-    
-    def fetch_async_children(self):
+        labels = []
+        for format_ in self.formats[entity['type']]:
+            state = dict(self.state)
+            state[entity['type']] = entity
+            try:
+                labels.append(format_.format(**state))
+            except KeyError:
+                labels.append('%r %% %r' % (format_, entity))
         
-        # Apply backref filter.
-        filters = list(self.filters())
-        fields = list(self.fields())
+        groups = []
+        if len(self.active_types) > 1:
+            groups.append((
+                '%s group' % entity['type'],
+                {
+                    Qt.DisplayRole: entity['type'] + 's',
+                },
+                {
+                    'entity_type': entity['type'],
+                }
+            ))
+        
+        for i, label in enumerate(labels[:-1]):
+            groups.append((
+                '%s group' % label,
+                {
+                    Qt.DisplayRole: label
+                }, {
+                    '%s.%d' % (entity['type'], i): label
+                }
+            ))
+        
+        view_data = {
+            Qt.DisplayRole: labels[-1],
+            'groups': groups,
+            'header': labels[-1]
+        }
+        
+        if entity.get('step') and entity['step'].get('color'):
+            color = QtGui.QColor.fromRgb(*(int(x) for x in entity['step']['color'].split(',')))
+            for group in groups:
+                group[1][Qt.DecorationRole] = color
+            view_data[Qt.DecorationRole] = color
+            
+        if entity['type'] in self.icons:
+            view_data[Qt.DecorationRole] = self.icons[entity['type']]
+        
+        new_state = dict(('ignore_%s' % other, True) for other in self.active_types)
+        new_state[entity['type']] = entity
+        
+        return entity.cache_key, view_data, new_state
+    
+    def fetch_async_children(self, type_i=0):
+        
+        if type_i + 1 < len(self.active_types):
+            self.schedule_async_fetch(self.fetch_async_children, type_i + 1)
+        
+        type_ = self.active_types[type_i]
+        
+        filters = []
+        for backref in self.backrefs[type_]:
+            if backref and backref[0] in self.state:
+                filters.append((backref[1], 'is', self.state[backref[0]]))
         
         res = []
-        for entity in sgfs.session.find(self._entity_type, filters, fields):
+        for entity in sgfs.session.find(type_, filters, self.fields.get(type_) or []):
             res.append(self._child_tuple_from_entity(entity))
         
         # Sort by label.
@@ -433,9 +503,9 @@ class Model(QtCore.QAbstractItemModel):
                 break
             
             node = nodes.pop(0)
-            # debug('node.matches_init_state: %s', repr(node))
+            debug('node.matches_init_state: %s', repr(node))
             if node.matches_init_state(init_state):
-                # debug('matches: %r', node.state)
+                debug('matches: %r', node.state)
                 last_match = node
             else:
                 continue
@@ -443,8 +513,8 @@ class Model(QtCore.QAbstractItemModel):
             nodes.extend(node.children(init_state))
 
         if last_match:
-            # debug('last_match.state: %r', last_match.state)
-            # debug('last_match.index: %r', last_match.index)
+            debug('last_match.state: %r', last_match.state)
+            debug('last_match.index: %r', last_match.index)
             # for k, v in sorted(last_match.state.iteritems()):
             #    # debug('\t%s: %r', k, v)
             return last_match.index
@@ -453,7 +523,7 @@ class Model(QtCore.QAbstractItemModel):
         for node_type in self.node_types:
             try:
                 return node_type(self, key, view_data, state)
-            except KeyError:
+            except TypeError:
                 pass
         return Leaf(self, key, view_data, state)
         
@@ -677,47 +747,6 @@ class ColumnView(QtGui.QColumnView):
 
 
 
-
-class ShotgunTasks(ShotgunQuery):
-    
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault('display_format', '{content}')
-        kwargs.setdefault('entity_type', 'Task')
-        super(ShotgunTasks, self).__init__(*args, **kwargs)
-        self._backref = (self.task_entity_type, 'entity')
-    
-    def update(self, view, state):
-        super(ShotgunTasks, self).update(view, state)
-        if 'Step' in self.state:
-            self.view_data['header'] = '%s Task' % self.state['Step']['short_name']
-        else:
-            self.view_data['header'] = 'Task'
-        
-    def is_next_node(self, state):
-        if 'Task' in state:
-            return
-        for x in ('Shot', 'Asset'):
-            if x in state:
-                self.task_entity_type = x
-                return True
-    
-    def fetch_async_children(self):
-        
-        # Shortcut!
-        entities = self.state.get('Step.tasks')
-        if entities is None:
-            entities = list(sgfs.session.find('Task', [('entity', 'is', self.state[self.task_entity_type])], ['step.Step.color']))
-        
-        res = []
-        for entity in entities:
-            key, view, state = self._child_tuple_from_entity(entity)
-            if 'Step' not in self.state:
-                view[Qt.DecorationRole] = QtGui.QColor.fromRgb(*[int(x) for x in entity['step']['color'].split(',')])
-            res.append((key, view, state))
-        
-        res.sort(key=lambda t: t[1][Qt.DisplayRole])
-        return res
-
 def state_from_entity(entity):
     state = {}
     while entity and entity['type'] not in state:
@@ -726,89 +755,6 @@ def state_from_entity(entity):
     return state
         
 
-class ShotgunProjectTopLevel(ShotgunQuery):
-
-
-    @classmethod
-    def is_next_node(cls, state):
-        if 'Project' not in state:
-            return
-        if 'Asset' in state or 'Sequence' in state:
-            return
-        return True
-    
-    def __init__(self, *args):
-        super(ShotgunProjectTopLevel, self).__init__(*args)
-    
-    def update(self, view_data, state):
-        super(ShotgunProjectTopLevel, self).update(view_data, state)
-        view_data['header'] = 'Entity Type'
-    
-    def groups_for_child(self, node):
-        return node.groups()
-    
-    def fetch_children(self, init_state):
-        self.schedule_async_fetch(self.fetch_assets)
-        self.schedule_async_fetch(self.fetch_sequences)
-        return super(ShotgunProjectTopLevel, self).fetch_children(init_state)
-    
-    def fetch_async_children(self):
-        return []
-    
-    def fetch_assets(self):
-        
-        res = []
-        for entity in sgfs.session.find('Asset', [('project', 'is', self.state['Project'])]):
-            key, view_data, new_state = self._child_tuple_from_entity(entity)
-            view_data['groups'] = [(
-                'Asset group',
-                {
-                    'header': 'Asset Type',
-                    Qt.DisplayRole: 'Assets',
-                }, {
-                    'entity_type': 'Asset',
-                }
-            ), (
-                entity['sg_asset_type'],
-                {
-                    'header': entity['sg_asset_type'],
-                    Qt.DisplayRole: entity['sg_asset_type'],
-                }, {
-                    'asset_type': entity['sg_asset_type'],
-                }
-            )]
-            view_data[Qt.DisplayRole] = entity['code']
-            res.append((key, view_data, new_state))
-        
-        # Sort by label.
-        res.sort(key=lambda x: x[1][Qt.DisplayRole])
-        
-        return res
-        
-    def fetch_sequences(self):
-                
-        res = []
-        for entity in sgfs.session.find('Sequence', [('project', 'is', self.state['Project'])]):
-            key, view_data, new_state = self._child_tuple_from_entity(entity)
-            view_data['groups'] = [(
-                'Sequence group',
-                {
-                    'header': 'Sequences',
-                    Qt.DisplayRole: 'SEQ',
-                }, {
-                    'entity_type': 'Sequence',
-                }
-            )]
-            view_data[Qt.DisplayRole] = entity['code']
-            view_data['header'] = entity['code']
-            res.append((key, view_data, new_state))
-        
-        # Sort by label.
-        res.sort(key=lambda x: x[1][Qt.DisplayRole])
-        
-        return res
-     
-        
     
 if __name__ == '__main__':
 
@@ -822,20 +768,21 @@ if __name__ == '__main__':
         model = Model()
     
     model.node_types.append(SGFSRoots)
-    model.node_types.append(ShotgunProjectTopLevel)
-
-    if False:
-        model.node_types.append(ShotgunSteps) # Must be before ShotgunTasks
+    # model.node_types.append(ShotgunProjectTopLevel)
+    # 
+    # if False:
+    #     model.node_types.append(ShotgunSteps) # Must be before ShotgunTasks
+    # 
+    # model.node_types.append(ShotgunTasks)
     
-    model.node_types.append(ShotgunTasks)
-    
+    model.node_types.append(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent')))
 
     # model.node_types.append(ShotgunQuery.for_entity_type('Tool'        , ('Project', 'project'), '{code}', fields=['code']))
     # model.node_types.append(ShotgunQuery.for_entity_type('Ticket'        , ('Tool', 'sg_tool'), '{title}', fields=['title']))
     
     # model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}', group_format='Sequence'))
     # model.node_types.append(ShotgunQuery.for_entity_type('Asset'       , ('Project' , 'project'    ), '{code}', group_format=('Asset', '{Asset[sg_asset_type]}')))
-    model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
+    # model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
     #model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), 'v{sg_version:04d}', group_format=('{PublishEvent[sg_type]}', '{PublishEvent[code]}')))
 
 
@@ -880,7 +827,7 @@ if __name__ == '__main__':
     
     # view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     view.setFixedWidth(800)
-    view.setColumnWidths([200, 200, 398]) # To be sure that the width is 2 more.
+    view.setColumnWidths([200] * 10) # To be sure that the width is 2 more.
     # view.setResizeGripsVisible(False)
 
     view.setPreviewVisible(False)
