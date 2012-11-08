@@ -118,7 +118,6 @@ class Node(object):
         
         signal = self.index is not None and self._children is not None
         if signal:
-            # debug('    layoutAboutToBeChanged')
             self.model.layoutAboutToBeChanged.emit()
         
         # Initialize the child list if we haven't already.

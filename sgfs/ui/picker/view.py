@@ -30,6 +30,17 @@ class Header(QtGui.QHeaderView):
         super(Header, self).paintEvent(e)
 
 
+class Delegate(QtGui.QItemDelegate):
+    
+    def sizeHint(self, *args):
+        size = super(Delegate, self).sizeHint(*args)
+        return size.expandedTo(QtCore.QSize(1, 24))
+    
+    def paint(self, painter, options, role):
+        options.rect = options.rect.expandedTo(QtCore.QSize(1, 24))
+        super(Delegate, self).paint(painter, options, role)
+
+
 class HeaderedListView(QtGui.QTreeView):
     
     # This needs to be a signal so that it runs in the main thread.
@@ -38,7 +49,7 @@ class HeaderedListView(QtGui.QTreeView):
     def __init__(self, model, index, node):
         super(HeaderedListView, self).__init__()
         
-        self.node = node
+        self._node = node
         
         # Take control over what is displayed in the header.
         self._header = Header(node)
@@ -48,6 +59,9 @@ class HeaderedListView(QtGui.QTreeView):
         # right arrow to select.
         self.setRootIsDecorated(False)
         self.setItemsExpandable(False)
+        
+        self._delegate = Delegate()
+        # self.setItemDelegate(self._delegate)
         
         self.setModel(model)
         self.setRootIndex(index)
@@ -61,7 +75,7 @@ class HeaderedListView(QtGui.QTreeView):
         node = self.model().node_from_index(self.selectionModel().currentIndex())
         while node.parent:
             debug(repr(node))
-            if getattr(node.parent, 'view', None) is self:
+            if node.parent is self._node:
                 self.scrollTo(node.index)
                 return
             node = node.parent

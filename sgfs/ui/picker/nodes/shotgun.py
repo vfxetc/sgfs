@@ -44,7 +44,6 @@ class ShotgunQuery(Node):
     icons = {
         'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
         'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
-        'Task': '/home/mboers/Documents/icons/fatcow/16x16/to_do_list.png',
         'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
         'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
         'Version': '/home/mboers/Documents/icons/fatcow/16x16/images.png',
