@@ -14,9 +14,10 @@ class SGFSRoots(Node):
     def is_next_node(state):
         return 'Project' not in state
     
-    def child_matches_initial_state(self, state, init_state):
-        return 'Project' in state and state['Project'] == init_state.get('Project')
+    def child_matches_initial_state(self, child, init_state):
+        return 'Project' in init_state and init_state['Project'] == child.state['Project']
     
+    # We override the master here since we can return children very quickly.
     def fetch_children(self, init_state):
         for project, path in sorted(self.model.sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
             yield (
@@ -26,5 +27,6 @@ class SGFSRoots(Node):
                     Qt.DecorationRole: '/home/mboers/Documents/icons/fatcow/16x16/newspaper.png',
                 }, {
                     'Project': project,
+                    'self': project,
                 },
             )

@@ -19,14 +19,18 @@ class Model(QtCore.QAbstractItemModel):
     def __init__(self, root_state=None, sgfs=None, shotgun=None, session=None):
         super(Model, self).__init__()
         
-        self.root_state = root_state or {}
+        self._root_state = root_state or {}
         self._root = None
         
         self.sgfs = sgfs or SGFS(shotgun=shotgun, session=session)
         
-        self.node_types = []
+        self._node_types = []
+    
+    def register_node_type(self, node_type):
+        self._node_types.append(node_type)
     
     def set_initial_state(self, init_state):
+        
         if self._root is not None:
             raise ValueError('cannot set initial state with existing root')
         
@@ -38,25 +42,31 @@ class Model(QtCore.QAbstractItemModel):
                 break
             
             node = nodes.pop(0)
+            
+            # Skip over groups. It would be nice if the group class would be
+            # able to property handle this logic, but we don't want a "positive
+            # match" (for the purposes of traversing the group) to result in
+            # not selecting something real (because it is at a lower level than
+            # the last group).
             if isinstance(node, Group):
-                debug('skipping group')
+                # debug('skipping group')
                 nodes.extend(node.children())
                 continue
             
-            debug('matches via %r:\n\t\t\t\t%r', node.parent, sorted(node.state))
-            if node.parent is None or node.parent.child_matches_init_state(node.state, init_state):
-                debug('!! YES !!')
+            # debug('matches via %r:\n\t\t\t\t%r', node.parent, sorted(node.state))
+            if node.parent is None or node.parent.child_matches_init_state(node, init_state):
+                # debug('!! YES !!')
                 nodes.extend(node.children(init_state))
                 last_match = node
 
         if last_match:
-            debug('last_match: %r', last_match)
-            debug('last_match.index: %r', last_match.index)
-            debug('last_match.state: %r', last_match.state)
+            # debug('last_match: %r', last_match)
+            # debug('last_match.index: %r', last_match.index)
+            # debug('last_match.state: %r', last_match.state)
             return last_match.index
     
     def construct_node(self, key, view_data, state):
-        for node_type in self.node_types:
+        for node_type in self._node_types:
             try:
                 return node_type(self, key, view_data, state)
             except TypeError:
@@ -71,7 +81,7 @@ class Model(QtCore.QAbstractItemModel):
     
     def root(self):
         if self._root is None:
-            self._root = self.construct_node(None, {}, self.root_state)
+            self._root = self.construct_node(None, {}, self._root_state)
             self._root.index = QtCore.QModelIndex()
             self._root.parent = None
         return self._root

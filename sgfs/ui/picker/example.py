@@ -10,31 +10,16 @@ from .nodes.shotgun import *
 
 app = QtGui.QApplication(sys.argv)
     
-view_class = ColumnView
     
 if False:
     model = Model(state_from_entity(sgfs.session.get('Project', 74)))
 else:
     model = Model()
-    
-model.node_types.append(SGFSRoots)
-# model.node_types.append(ShotgunProjectTopLevel)
-# 
-# if False:
-#     model.node_types.append(ShotgunSteps) # Must be before ShotgunTasks
-# 
-# model.node_types.append(ShotgunTasks)
-    
-model.node_types.append(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent')))
 
-# model.node_types.append(ShotgunQuery.for_entity_type('Tool'        , ('Project', 'project'), '{code}', fields=['code']))
-# model.node_types.append(ShotgunQuery.for_entity_type('Ticket'        , ('Tool', 'sg_tool'), '{title}', fields=['title']))
-    
-# model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}', group_format='Sequence'))
-# model.node_types.append(ShotgunQuery.for_entity_type('Asset'       , ('Project' , 'project'    ), '{code}', group_format=('Asset', '{Asset[sg_asset_type]}')))
-# model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
-#model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), 'v{sg_version:04d}', group_format=('{PublishEvent[sg_type]}', '{PublishEvent[code]}')))
-
+model.register_node_type(SGFSRoots)
+model.register_node_type(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent', 'Tool')))
+        
+view = ColumnView()
 
 type_ = None
 id_ = None
@@ -57,22 +42,22 @@ if type_ and id_:
         init_state[entity['type']] = entity
         entity = entity.parent()
 
-    print 'init_state', init_state
+    print 'Initial state:'
+    pprint.pprint(init_state)
     print
     
     index = model.set_initial_state(init_state)
-
-    view = view_class()
+    if not index:
+        print 'Could not get index for initial state!'
+    
     view.setModel(model)
     if index:
-        # debug('selecting %r -> %r', index, model.node_from_index(index))
         view.setCurrentIndex(index)
 
 else:
         
     print 'no entity specified'
         
-    view = view_class()
     view.setModel(model)
     
 # view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)

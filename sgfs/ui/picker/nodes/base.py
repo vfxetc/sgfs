@@ -30,8 +30,8 @@ class Node(object):
         self.parent = None
         
         self._child_lock = threading.RLock()
-        self._created_children = None
-        self._direct_children = None
+        self._flat_children = None
+        self._children = None
         self.is_loading = 0
     
     def __repr__(self):
@@ -44,9 +44,9 @@ class Node(object):
     def is_leaf(self):
         return False
     
-    def child_matches_init_state(self, state, init_state):
+    def child_matches_init_state(self, child, init_state):
         try:
-            return all(init_state[k] == v for k, v in state.iteritems())
+            return all(init_state[k] == v for k, v in child.state.iteritems())
         except KeyError:
             pass
     
@@ -76,8 +76,9 @@ class Node(object):
         
             # debug('2nd fetch_children (async) is done')
         
-            # This forces the update to wait until after the first (static) children
-            # have been put into place, even if this function runs very quickly.
+            # This forces the update to wait until after the first (static)
+            # children have been put into place, even if this function runs
+            # very quickly.
             with self._child_lock:
                 # debug('2nd replace_children (async)')
                 self.is_loading -= 1
@@ -103,18 +104,18 @@ class Node(object):
         """See groups_for_child. Defaults to pulling groups out of view_data."""
         return self.view_data.get('groups') or []
     
-    def _update_children(self, updated):
+    def _update_children(self, raw_children):
         
-        signal = self.index is not None and self._direct_children is not None
+        signal = self.index is not None and self._children is not None
         if signal:
             # debug('    layoutAboutToBeChanged')
             self.model.layoutAboutToBeChanged.emit()
         
         # Initialize the child list if we haven't already.
-        self._created_children = flat_children = self._created_children or ChildList()
+        self._flat_children = flat_children = self._flat_children or ChildList()
         
         # Create the children in a flat list.
-        for key, view_data, new_state in updated:
+        for key, view_data, new_state in raw_children:
             
             full_state = dict(self.state)
             full_state.update(new_state)
@@ -129,7 +130,7 @@ class Node(object):
             flat_children.append(node)
         
         # This will hold the heirarchical children.
-        self._direct_children = self._direct_children or ChildList()
+        self._children = self._children or ChildList()
         
         for node in flat_children:
             
@@ -185,12 +186,12 @@ class Node(object):
     
     def children(self, init_state=None):
         with self._child_lock:
-            if self._direct_children is None:
+            if self._children is None:
                 # debug('1st fetch_children')
                 initial_children = list(self.fetch_children(init_state))
                 # debug('1st replace_children')
                 self._update_children(initial_children)
-            return self._direct_children
+            return self._children
 
 
 class Group(Node):
@@ -199,8 +200,9 @@ class Group(Node):
     def is_next_node(state):
         return True
     
-    def child_matches_init_state(self, state, init_state):
-        return self.parent.child_matches_init_state(state, init_state)
+    def child_matches_init_state(self, child, init_state):
+        # Dispatch to the first real parent.
+        return self.parent.child_matches_init_state(child, init_state)
     
     def __init__(self, model, key, view_data, state):
         super(Group, self).__init__(model, key, view_data, state)

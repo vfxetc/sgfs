@@ -3,6 +3,7 @@ import functools
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
+from ..utils import debug
 from .base import Node
 
 
@@ -65,18 +66,17 @@ class ShotgunQuery(Node):
         # If any types have a backref that isn't satisfied.
         self.active_types = []
         for type_ in self.entity_types:
-            if type_ in state or state.get('ignore_%s' % type_):
-                continue
             for backref in self.backrefs[type_]:
-                if backref is None or backref[0] in state:
+                if backref is None or backref[0] == state.get('self', {}).get('type'):
                     self.active_types.append(type_)
                     continue
-        # debug('is_next_node: %r -> %r', sorted(state.iterkeys()), self.active_types)
+                        
+        debug('is_next_node: %r -> %r', sorted(state.iterkeys()), self.active_types)
         return bool(self.active_types)
     
-    def child_matches_init_state(self, state, init_state):
+    def child_matches_init_state(self, child, init_state):
         
-        last_entity = state.get('self')
+        last_entity = child.state.get('self')
         
         if not last_entity:
             return
@@ -110,9 +110,10 @@ class ShotgunQuery(Node):
         groups = []
         if len(self.active_types) > 1:
             groups.append((
-                '%s group' % entity['type'],
+                ('group', entity['type']),
                 {
                     Qt.DisplayRole: entity['type'] + 's',
+                    Qt.DecorationRole: self.icons.get(entity['type']),
                 },
                 {
                     'entity_type': entity['type'],
@@ -121,7 +122,7 @@ class ShotgunQuery(Node):
         
         for i, label in enumerate(labels[:-1]):
             groups.append((
-                '%s group' % label,
+                ('group', entity['type'], label),
                 {
                     Qt.DisplayRole: label
                 }, {
@@ -144,9 +145,10 @@ class ShotgunQuery(Node):
         if entity['type'] in self.icons:
             view_data[Qt.DecorationRole] = self.icons[entity['type']]
         
-        new_state = dict(('ignore_%s' % other, True) for other in self.active_types)
-        new_state[entity['type']] = entity
-        new_state['self'] = entity
+        new_state = {
+            entity['type']: entity,
+            'self': entity,
+        }
         
         return entity.cache_key, view_data, new_state
     
