@@ -109,8 +109,8 @@ class Node(object):
         self.view_data = view_data
         self.state = state
     
-    def has_children(self):
-        return True
+    def is_leaf(self):
+        return False
     
     def matches_init_state(self, init_state):
         try:
@@ -282,8 +282,8 @@ class Leaf(Node):
     def is_next_node(state):
         return True
     
-    def has_children(self):
-        return False
+    def is_leaf(self):
+        return True
     
     def fetch_children(self, init_state):
         return []
@@ -459,7 +459,7 @@ class Model(QtCore.QAbstractItemModel):
         
     def hasChildren(self, index):
         node = self.node_from_index(index)
-        res = node.has_children()
+        res = not node.is_leaf()
         # debug('%r.hasChildren: %r', node, res)
         return res
     
@@ -817,7 +817,7 @@ if __name__ == '__main__':
     view_class = ColumnView
     
     if False:
-        model = Model(state_from_entity(sgfs.session.get('Sequence', 113)))
+        model = Model(state_from_entity(sgfs.session.get('Project', 74)))
     else:
         model = Model()
     
@@ -829,7 +829,9 @@ if __name__ == '__main__':
     
     model.node_types.append(ShotgunTasks)
     
-    
+
+    # model.node_types.append(ShotgunQuery.for_entity_type('Tool'        , ('Project', 'project'), '{code}', fields=['code']))
+    # model.node_types.append(ShotgunQuery.for_entity_type('Ticket'        , ('Tool', 'sg_tool'), '{title}', fields=['title']))
     
     # model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}', group_format='Sequence'))
     # model.node_types.append(ShotgunQuery.for_entity_type('Asset'       , ('Project' , 'project'    ), '{code}', group_format=('Asset', '{Asset[sg_asset_type]}')))
