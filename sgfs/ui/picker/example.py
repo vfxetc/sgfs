@@ -1,6 +1,8 @@
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
+from sgfs import SGFS
+
 from .model import *
 from .view import *
 from .utils import *
@@ -10,11 +12,11 @@ from .nodes.shotgun import *
 
 app = QtGui.QApplication(sys.argv)
     
-    
+sgfs = SGFS()
 if False:
-    model = Model(state_from_entity(sgfs.session.get('Project', 74)))
+    model = Model(state_from_entity(sgfs.session.get('Project', 74)), sgfs=sgfs)
 else:
-    model = Model()
+    model = Model(sgfs=sgfs)
 
 model.register_node_type(SGFSRoots)
 model.register_node_type(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent')))

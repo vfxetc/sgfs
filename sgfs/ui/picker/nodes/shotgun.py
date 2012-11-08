@@ -19,9 +19,10 @@ class ShotgunQuery(Node):
         'Task': [('Shot', 'entity'), ('Asset', 'entity')],
         'Ticket': [('Tool', 'sg_tool')],
         'Tool': [('Project', 'project')],
+        'Version': [('Shot', 'entity'), ('Task', 'sg_task')],
     }
     
-    formats = {
+    labels = {
         'Project': ['{Project[name]}'],
         'HumanUser': ['{HumanUser[email]}'],
         'Sequence': ['{Sequence[code]}'],
@@ -31,6 +32,13 @@ class ShotgunQuery(Node):
         'PublishEvent': ['{PublishEvent[sg_type]}', '{PublishEvent[code]}', 'v{PublishEvent[sg_version]:04d}'],
         'Tool': ['{Tool[code]}'],
         'Ticket': ['{Ticket[title]}'],
+        'Version': ['{Version[code]}'],
+    }
+    
+    headers = {
+        'Asset': ['Asset Type'],
+        'PublishEvent': ['Publish Type', 'Publish Name', 'Publish Version'],
+        'Task': ['Step'],
     }
     
     icons = {
@@ -39,6 +47,7 @@ class ShotgunQuery(Node):
         'Task': '/home/mboers/Documents/icons/fatcow/16x16/to_do_list.png',
         'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
         'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
+        'Version': '/home/mboers/Documents/icons/fatcow/16x16/images.png',
     }
     
     fields = {
@@ -46,6 +55,7 @@ class ShotgunQuery(Node):
         'Tool': ['code'],
         'Ticket': ['title'],
         'HumanUser': ['firstname', 'lastname', 'email'],
+        'Version': ['code'],
     }
     
     @classmethod
@@ -88,7 +98,11 @@ class ShotgunQuery(Node):
     
     def update(self, *args):
         super(ShotgunQuery, self).update(*args)
-        self.view_data['header'] = ' or '.join(self.active_types)
+        if len(self.active_types) > 1:
+            self.view_data['header'] = ' or '.join(self.active_types)
+        else:
+            headers = self.headers.get(self.active_types[0])
+            self.view_data['header'] = headers[0] if headers else self.active_types[0]
     
     def get_initial_children(self, init_state):
         for type_ in self.active_types:
@@ -98,34 +112,52 @@ class ShotgunQuery(Node):
     
     def _child_tuple_from_entity(self, entity):
         
+        type_ = entity['type']
+        
         labels = []
-        for format_ in self.formats[entity['type']]:
+        for format_string in self.labels[type_]:
             state = dict(self.state)
-            state[entity['type']] = entity
+            state[type_] = entity
             try:
-                labels.append(format_.format(**state))
+                labels.append(format_string.format(**state))
             except KeyError:
-                labels.append('%r %% %r' % (format_, entity))
+                labels.append('%r %% %r' % (label_format, entity))
+        
+        headers = []
+        for format_string in self.headers.get(type_, []):
+            state = dict(self.state)
+            state[type_] = entity
+            try:
+                headers.append(format_string.format(**state))
+            except KeyError:
+                headers.append('%r %% %r' % (label_format, entity))
+        
+        # Add some default headers.
+        headers.extend(labels[len(headers):-1])
+        headers.append(type_)
         
         groups = []
+        
+        # Entity type group.
         if len(self.active_types) > 1:
             groups.append((
-                ('group', entity['type']),
+                ('group', type_),
                 {
-                    Qt.DisplayRole: entity['type'] + 's',
-                    Qt.DecorationRole: self.icons.get(entity['type']),
-                    'header': entity['type'],
+                    Qt.DisplayRole: type_ + 's',
+                    Qt.DecorationRole: self.icons.get(type_),
+                    'header': headers[0],
                 },
-                {
-                    'entity_type': entity['type'],
-                }
+                {}
             ))
         
+        # All but the last label is a group.
         for i, label in enumerate(labels[:-1]):
             groups.append((
                 ('group', entity['type'], label),
                 {
-                    Qt.DisplayRole: label
+                    Qt.DisplayRole: label,
+                    Qt.DecorationRole: self.icons.get(type_),
+                    'header': headers[i + 1],
                 }, {
                     '%s.groups[%d]' % (entity['type'], i): label
                 }
@@ -133,8 +165,8 @@ class ShotgunQuery(Node):
         
         view_data = {
             Qt.DisplayRole: labels[-1],
+            'header': headers[-1],
             'groups': groups,
-            'header': labels[-1]
         }
         
         if entity.get('step') and entity['step'].get('color'):
