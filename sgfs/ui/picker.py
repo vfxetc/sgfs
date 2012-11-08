@@ -10,6 +10,7 @@ import functools
 import time
 import thread
 import traceback
+import pprint
 
 import concurrent.futures
 
@@ -74,17 +75,8 @@ class ChildList(list):
         return super(ChildList, self).__getitem__(key)
 
 
-class DummyLock(object):
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, *args):
-        pass
-
-
 class Node(object):
-    
+
     @staticmethod
     def is_next_node(state):
         raise NotImplementedError()
@@ -105,10 +97,10 @@ class Node(object):
         self.index = None
         self.parent = None
         
-        self._child_lock = DummyLock() if False else threading.RLock()
+        self._child_lock = threading.RLock()
         self._created_children = None
         self._direct_children = None
-        self.is_loading = False
+        self.is_loading = 0
     
     def __repr__(self):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
@@ -131,9 +123,7 @@ class Node(object):
         # debug('fetch_children')
         
         if hasattr(self, 'fetch_async_children'):
-            self.is_loading = True
-            threadpool.submit(self._fetch_async_children)
-            # threading.Thread(target=self._fetch_async_children).start()
+            self.schedule_async_fetch(self.fetch_async_children)
         
         # Return any children we can figure out from the init_state.
         if init_state is not None and self.matches_init_state(init_state):
@@ -141,13 +131,16 @@ class Node(object):
         
         return []
         
-    def _fetch_async_children(self):
+    def schedule_async_fetch(self, callback, *args, **kwargs):
+        self.is_loading += 1
+        threadpool.submit(self._process_async, callback, *args, **kwargs)
         
+    def _process_async(self, callback, *args, **kwargs):
         try:
             
-            # Since async may be a generator, for it to completion before we grab
-            # the update lock.
-            children = list(self.fetch_async_children())
+            # Since callback may be a generator, for it to completion before we
+            # grab the update lock.
+            children = list(callback(*args, **kwargs))
         
             # debug('2nd fetch_children (async) is done')
         
@@ -155,7 +148,7 @@ class Node(object):
             # have been put into place, even if this function runs very quickly.
             with self._child_lock:
                 # debug('2nd replace_children (async)')
-                self.is_loading = False
+                self.is_loading -= 1
                 self._update_children(children)
         
         except Exception as e:
@@ -168,10 +161,15 @@ class Node(object):
         return []
     
     def groups_for_child(self, node):
+        """Return raw tuples for all of the groups that the given node should
+        lie under.
+        
+        Defaults to asking the node itself for the groups."""
         return node.groups()
     
     def groups(self):
-        return []
+        """See groups_for_child. Defaults to pulling groups out of view_data."""
+        return self.view_data.get('groups') or []
     
     def _update_children(self, updated):
         
@@ -180,74 +178,77 @@ class Node(object):
             # debug('    layoutAboutToBeChanged')
             self.model.layoutAboutToBeChanged.emit()
         
-        children = self._created_children or ChildList()
+        # Initialize the child list if we haven't already.
+        self._created_children = flat_children = self._created_children or ChildList()
         
+        # Create the children in a flat list.
         for key, view_data, new_state in updated:
             
             full_state = dict(self.state)
             full_state.update(new_state)
             
-            # Update old nodes if we have them.
-            node = children.pop(key, None)
+            # Update old nodes if we have them, otherwise create a new one.
+            node = flat_children.pop(key, None)
             if node is not None:
                 node.update(view_data, full_state)
             else:
                 node = self.model.construct_node(key, view_data, full_state)
-                node.parent = self
-                
-            children.append(node)
-        
-        self._created_children = children
-        
-        # Slot them into groups
-        self._direct_children = ChildList()
-        old_indexes = []
-        new_indexes = []
-        for node in children:
             
-            # debug('groups on %r: %r', node, node.state)
+            flat_children.append(node)
+        
+        # This will hold the heirarchical children.
+        self._direct_children = self._direct_children or ChildList()
+        
+        for node in flat_children:
+            
             groups = list(self.groups_for_child(node))
-            if groups:
-                pass
-                # debug('groups for %r: %r', self, groups)
             
+            # Find the parent for the new node. If there are no groups, then it
+            # will be self.
             parent = self
             for key, view_data, new_state in groups:
-                group = parent.children().get(key)
+                
+                # Create the new group if it doesn't already exist.
+                group = parent.children().pop(key, None)
                 if group is None:
-                    
-                    # debug('Creating new group %r: %r %r', key, view_data, new_state)
-                    group = Group(self, key, view_data, new_state)
-                    group.index = self.model.createIndex(len(parent.children()), 0, group)
-                    group.parent = parent
-                    
-                    parent.children().append(group)
-                # debug('Switching "parent" to %r', group)
+                    state = dict(self.state)
+                    state.update(new_state)
+                    group = Group(self.model, key, view_data, state)
+                parent.children().append(group)
+                
+                # Look here next.
                 parent = group
-
-            # debug('Adding new node to %r', parent)
             
-            new_index = self.model.createIndex(len(parent.children()), 0, node)
-            
-            # Calculate a new index.
-            if node.index:
-                old_indexes.append(node.index)
-                new_indexes.append(new_index)
-            node.index = new_index
-            
+            # Attach the node to its parent at the end of the list.
+            parent.children().pop(node.key, None)
             parent.children().append(node)
-            node.parent = parent
         
-        # debug('num of children: %d', len(self._direct_children))
-        
-        if old_indexes:
-            self.model.changePersistentIndexList(old_indexes, new_indexes)
+        # Rebuild all indexes and lineage.
+        self._repair_heirarchy()
         
         if signal:
             # debug('    layoutChanged')
             self.model.layoutChanged.emit()
-        
-        
+    
+    def _repair_heirarchy(self):
+        old = []
+        new = []
+        for o, n in self._repair_heirarchy_recurse():
+            old.append(o)
+            new.append(n)
+        if old:
+            self.model.changePersistentIndexList(old, new)
+            
+    def _repair_heirarchy_recurse(self):
+        for i, child in enumerate(self.children()):
+            if not child.index or (child.index and child.index.row() != i):
+                new = self.model.createIndex(i, 0, child)
+                if child.index:
+                    yield child.index, new
+                child.index = new
+            child.parent = self
+            child._repair_heirarchy_recurse()
+            
         
     
     def children(self, init_state=None):
@@ -326,7 +327,7 @@ class ShotgunQuery(Node):
     def __init__(self, *args, **kwargs):
         self._entity_type = kwargs.pop('entity_type', 'Project')
         self._backref = kwargs.pop('backref', None)
-        self.display_format = kwargs.pop('display_format') or '{type} {id}'
+        self.display_format = kwargs.pop('display_format', None) or '{type} {id}'
         self._filters = list(kwargs.pop('filters', []))
         self._fields = list(kwargs.pop('fields', []))
         self._group_format = kwargs.pop('group_format', None)
@@ -375,10 +376,12 @@ class ShotgunQuery(Node):
         if formats is None:
             return
         formats = [formats] if isinstance(formats, basestring) else formats
+        header = self.view_data[Qt.DisplayRole]
         for format_ in formats:
             # debug('about to format %r (from %r) with %r', format_, node, node.state)
             label = format_.format(**node.state)
-            yield ('group', label), {Qt.DisplayRole: label}, {'group': label}
+            yield ('group', label), {Qt.DisplayRole: label, 'header': header}, {'group': label}
+            header = label
     
     def filters(self):
         if self._backref is not None:
@@ -473,7 +476,7 @@ class Model(QtCore.QAbstractItemModel):
     def headerData(self, section, orientation, role):
         
         if role == Qt.DisplayRole:
-            # This is set by the TreeView widgets as they are being painted.
+            # This is set by the HeaderedListView widgets as they are being painted.
             # I.e.: This is a huge hack.
             return self._header
         
@@ -557,16 +560,12 @@ class Header(QtGui.QHeaderView):
         self.setResizeMode(0, QtGui.QHeaderView.Fixed)
         self.setStretchLastSection(True)
         
-        # self._timer = QtCore.QTimer()
-        # self._timer.singleShot(1000, self._upper_header)
-    
-    def _upper_header(self, *args):
-        self._name = self._name.upper()
-        self.model().headerDataChanged.emit(Qt.Horizontal, 0, 0)
-        
     def paintEvent(self, e):
-
-        # Such a horrible hack.
+            
+        # We need a horrible hack to get different headers in different columns.
+        # Before every paint event we update the data that the model will
+        # provide when requested in real painting implementation.
+        
         if self._node.is_loading:
             header = 'Loading...'
         else:
@@ -576,21 +575,22 @@ class Header(QtGui.QHeaderView):
         super(Header, self).paintEvent(e)
 
 
-class TreeView(QtGui.QTreeView):
+class HeaderedListView(QtGui.QTreeView):
     
     def __init__(self, model, index, node):
-        super(TreeView, self).__init__()
+        super(HeaderedListView, self).__init__()
         
+        # Take control over what is displayed in the header.
         self._header = Header(node)
         self.setHeader(self._header)
-        
-        self.setModel(model)
-        self.setRootIndex(index)
         
         # Make this behave like a fancier QListView. This also allows for the
         # right arrow to select.
         self.setRootIsDecorated(False)
         self.setItemsExpandable(False)
+        
+        self.setModel(model)
+        self.setRootIndex(index)
 
 
 class ColumnView(QtGui.QColumnView):
@@ -598,10 +598,10 @@ class ColumnView(QtGui.QColumnView):
     def __init__(self):
         super(ColumnView, self).__init__()
         
-        # self.setMinimumWidth(800)
-        # self.setColumnWidths([200, 150, 150, 170, 200, 400] + [150] * 20)
+        # A sensible default for Shotgun entities.
         self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         
+        # State for setting preview visibility.
         self._widgetsize_max = None
         self._preview_visible = True
     
@@ -611,21 +611,18 @@ class ColumnView(QtGui.QColumnView):
     def setPreviewVisible(self, flag):
         
         flag = bool(flag)
-        
-        # debug('setPreviewVisible: %r', flag)
-        
-        # No-op.
         if flag == self._preview_visible:
+            # No-Op.
             return
         
-        # Hide it.
+        self._preview_visible = flag
+        
         if not flag:
             
-            # We need there to be some preview widget.
+            # We need there to be some preview widget to latch on to.
             widget = self.previewWidget()
             if not widget:
                 widget = self._preview_sentinel = QtGui.QWidget()
-                # widget.setFixedSize(0, 0)
                 self.setPreviewWidget(widget)
                 
             # The protected preview column owns the preview widget.
@@ -639,20 +636,21 @@ class ColumnView(QtGui.QColumnView):
             # The actual hiding.
             column.setFixedWidth(0)
         
-        # Show it.
         else:
             widget = self.previewWidget()
             column = widget.parent().parent()
             column.setFixedWidth(self._widgetsize_max)
         
-        self._preview_visible = flag
     
     def createColumn(self, index):
         
-        node = self.model().node_from_index(index)        
-        view = TreeView(self.model(), index, node)
+        # This method exists solely because we want headers in our list views,
+        # and this was the only way I found to do it.
         
-        # Transfer behaviour and options to the new column.
+        node = self.model().node_from_index(index)
+        view = HeaderedListView(self.model(), index, node)
+        
+        # Transfer standard behaviour and our options to the new column.
         self.initializeColumn(view)
         
         # We must hold a reference to this somewhere so that it isn't
@@ -663,19 +661,22 @@ class ColumnView(QtGui.QColumnView):
     
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
-        x = self.model().node_from_index(self.selectionModel().currentIndex())
-        # debug('currentChanged to %r', x)
+        node = self.model().node_from_index(self.selectionModel().currentIndex())
+        self.nodeChanged(node)
 
-
-
-
-
-
-        
-
-
-
+    def nodeChanged(self, node):
+        self.stateChanged(node.state)
     
+    def stateChanged(self, state):
+        debug('stateChanged:\n%s\n', pprint.pformat(state))
+
+
+
+
+
+
+
+
 
 class ShotgunTasks(ShotgunQuery):
     
@@ -724,7 +725,91 @@ def state_from_entity(entity):
         entity = entity.parent()
     return state
         
+
+class ShotgunProjectTopLevel(ShotgunQuery):
+
+
+    @classmethod
+    def is_next_node(cls, state):
+        if 'Project' not in state:
+            return
+        if 'Asset' in state or 'Sequence' in state:
+            return
+        return True
+    
+    def __init__(self, *args):
+        super(ShotgunProjectTopLevel, self).__init__(*args)
+    
+    def update(self, view_data, state):
+        super(ShotgunProjectTopLevel, self).update(view_data, state)
+        view_data['header'] = 'Entity Type'
+    
+    def groups_for_child(self, node):
+        return node.groups()
+    
+    def fetch_children(self, init_state):
+        self.schedule_async_fetch(self.fetch_assets)
+        self.schedule_async_fetch(self.fetch_sequences)
+        return super(ShotgunProjectTopLevel, self).fetch_children(init_state)
+    
+    def fetch_async_children(self):
+        return []
+    
+    def fetch_assets(self):
         
+        res = []
+        for entity in sgfs.session.find('Asset', [('project', 'is', self.state['Project'])]):
+            key, view_data, new_state = self._child_tuple_from_entity(entity)
+            view_data['groups'] = [(
+                'Asset group',
+                {
+                    'header': 'Asset Type',
+                    Qt.DisplayRole: 'Assets',
+                }, {
+                    'entity_type': 'Asset',
+                }
+            ), (
+                entity['sg_asset_type'],
+                {
+                    'header': entity['sg_asset_type'],
+                    Qt.DisplayRole: entity['sg_asset_type'],
+                }, {
+                    'asset_type': entity['sg_asset_type'],
+                }
+            )]
+            view_data[Qt.DisplayRole] = entity['code']
+            res.append((key, view_data, new_state))
+        
+        # Sort by label.
+        res.sort(key=lambda x: x[1][Qt.DisplayRole])
+        
+        return res
+        
+    def fetch_sequences(self):
+                
+        res = []
+        for entity in sgfs.session.find('Sequence', [('project', 'is', self.state['Project'])]):
+            key, view_data, new_state = self._child_tuple_from_entity(entity)
+            view_data['groups'] = [(
+                'Sequence group',
+                {
+                    'header': 'Sequences',
+                    Qt.DisplayRole: 'SEQ',
+                }, {
+                    'entity_type': 'Sequence',
+                }
+            )]
+            view_data[Qt.DisplayRole] = entity['code']
+            view_data['header'] = entity['code']
+            res.append((key, view_data, new_state))
+        
+        # Sort by label.
+        res.sort(key=lambda x: x[1][Qt.DisplayRole])
+        
+        return res
+     
+        
+    
 if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
@@ -737,7 +822,7 @@ if __name__ == '__main__':
         model = Model()
     
     model.node_types.append(SGFSRoots)
-    
+    model.node_types.append(ShotgunProjectTopLevel)
 
     if False:
         model.node_types.append(ShotgunSteps) # Must be before ShotgunTasks
@@ -746,9 +831,10 @@ if __name__ == '__main__':
     
     
     
-    model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}'))
+    # model.node_types.append(ShotgunQuery.for_entity_type('Sequence'    , ('Project' , 'project'    ), '{code}', group_format='Sequence'))
+    # model.node_types.append(ShotgunQuery.for_entity_type('Asset'       , ('Project' , 'project'    ), '{code}', group_format=('Asset', '{Asset[sg_asset_type]}')))
     model.node_types.append(ShotgunQuery.for_entity_type('Shot'        , ('Sequence', 'sg_sequence'), '{code}'))
-    model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), 'v{sg_version:04d}', group_format='{PublishEvent[code]} ({PublishEvent[sg_type]})'))
+    #model.node_types.append(ShotgunQuery.for_entity_type('PublishEvent', ('Task'    , 'sg_link'    ), 'v{sg_version:04d}', group_format=('{PublishEvent[sg_type]}', '{PublishEvent[code]}')))
 
 
     type_ = None
