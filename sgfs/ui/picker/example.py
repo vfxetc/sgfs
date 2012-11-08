@@ -17,7 +17,7 @@ else:
     model = Model()
 
 model.register_node_type(SGFSRoots)
-model.register_node_type(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent', 'Tool')))
+model.register_node_type(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent')))
         
 view = ColumnView()
 

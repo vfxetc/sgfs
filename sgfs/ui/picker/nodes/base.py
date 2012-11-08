@@ -1,8 +1,10 @@
 import threading
+import traceback
 
 import concurrent.futures
 
 from ..childlist import ChildList
+from ..utils import debug
 
 threadpool = concurrent.futures.ThreadPoolExecutor(1)
 
@@ -21,13 +23,14 @@ class Node(object):
         self.model = model
         self.key = key
         
+        # These are set by the model.
+        self.index = None
+        self.parent = None
+        
         self.view_data = None
         self.state = None
         self.update(view_data or {}, state or {})
         
-        # These are set by the model.
-        self.index = None
-        self.parent = None
         
         self._child_lock = threading.RLock()
         self._flat_children = None
@@ -38,8 +41,11 @@ class Node(object):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
     def update(self, view_data, state):
+        is_different = self.view_data != view_data
         self.view_data = view_data
         self.state = state
+        if is_different and self.index:
+            self.model.dataChanged.emit(self.index, self.index)
     
     def is_leaf(self):
         return False
@@ -74,7 +80,7 @@ class Node(object):
             # grab the update lock.
             children = list(callback(*args, **kwargs))
         
-            # debug('2nd fetch_children (async) is done')
+            debug('2nd fetch_children (async) is done')
         
             # This forces the update to wait until after the first (static)
             # children have been put into place, even if this function runs
@@ -145,9 +151,9 @@ class Node(object):
                 group = parent.children().pop(key, None)
                 if group is None:
                     node.state.update(new_state)
-                    state = dict(parent.state)
-                    state.update(new_state)
-                    group = Group(self.model, key, view_data, state)
+                    group_state = dict(parent.state)
+                    group_state.update(new_state)
+                    group = Group(self.model, key, view_data, group_state)
                 parent.children().append(group)
                 
                 # Look here next.

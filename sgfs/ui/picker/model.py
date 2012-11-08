@@ -56,7 +56,7 @@ class Model(QtCore.QAbstractItemModel):
             # not selecting something real (because it is at a lower level than
             # the last group).
             if isinstance(node, Group):
-                debug('skipping group')
+                # debug('skipping group')
                 nodes.extend(node.children())
                 continue
             
@@ -72,8 +72,7 @@ class Model(QtCore.QAbstractItemModel):
             # debug('last_match.state: %r', last_match.state)
             return last_match.index
         else:
-            pass
-            # debug('Did not find a match.')
+            pass# debug('Did not find a match.')
     
     def construct_node(self, key, view_data, state):
         for node_type in self._node_types:

@@ -4,7 +4,7 @@ from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
 from ..utils import debug
-from .base import Node
+from .base import Node, Group
 
 
 class ShotgunQuery(Node):
@@ -88,18 +88,10 @@ class ShotgunQuery(Node):
     
     def update(self, *args):
         super(ShotgunQuery, self).update(*args)
-        self.view_data['header'] = self.view_data[Qt.DisplayRole]
+        self.view_data['header'] = ' or '.join(self.active_types)
     
     def get_initial_children(self, init_state):
         for type_ in self.active_types:
-            # yield Group(model,
-            #     ('group', type_),
-            #     {
-            #         Qt.DisplayRole: entity['type'] + 's',
-            #         Qt.DecorationRole: self.icons.get(entity['type']),
-            #     },
-            #     {}
-            # )
             if type_ in init_state:
                 entity = init_state[type_]
                 yield self._child_tuple_from_entity(entity)
@@ -122,6 +114,7 @@ class ShotgunQuery(Node):
                 {
                     Qt.DisplayRole: entity['type'] + 's',
                     Qt.DecorationRole: self.icons.get(entity['type']),
+                    'header': entity['type'],
                 },
                 {
                     'entity_type': entity['type'],
