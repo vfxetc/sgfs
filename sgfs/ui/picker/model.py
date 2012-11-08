@@ -31,6 +31,8 @@ class Model(QtCore.QAbstractItemModel):
     
     def set_initial_state(self, init_state):
         
+        # debug('set_initial_state')
+        
         if self._root is not None:
             raise ValueError('cannot set initial state with existing root')
         
@@ -43,27 +45,35 @@ class Model(QtCore.QAbstractItemModel):
             
             node = nodes.pop(0)
             
+            # Skip the root.
+            if node.parent is None:
+                nodes.extend(node.children())
+                continue
+            
             # Skip over groups. It would be nice if the group class would be
             # able to property handle this logic, but we don't want a "positive
             # match" (for the purposes of traversing the group) to result in
             # not selecting something real (because it is at a lower level than
             # the last group).
             if isinstance(node, Group):
-                # debug('skipping group')
+                debug('skipping group')
                 nodes.extend(node.children())
                 continue
             
             # debug('matches via %r:\n\t\t\t\t%r', node.parent, sorted(node.state))
-            if node.parent is None or node.parent.child_matches_init_state(node, init_state):
+            if node.parent.child_matches_initial_state(node, init_state):
                 # debug('!! YES !!')
                 nodes.extend(node.children(init_state))
                 last_match = node
-
+        
         if last_match:
             # debug('last_match: %r', last_match)
             # debug('last_match.index: %r', last_match.index)
             # debug('last_match.state: %r', last_match.state)
             return last_match.index
+        else:
+            pass
+            # debug('Did not find a match.')
     
     def construct_node(self, key, view_data, state):
         for node_type in self._node_types:
@@ -119,10 +129,10 @@ class Model(QtCore.QAbstractItemModel):
             return QtCore.QModelIndex()
         
         if child.index is None:
-            # debug('child.index is None: %r', child)
+            debug('child.index is None: %r', child)
             child.index = self.createIndex(row, col, child)
             if child.parent is None:
-                # debug('\tchild.parent is also None')
+                debug('\tchild.parent is also None')
                 child.parent = node
         
         # debug('index %d of %r -> %r', row, node, child)

@@ -12,7 +12,7 @@ def debug(msg, *args):
         msg = msg % args
     ident = _debug_thread_ids.setdefault(thread.get_ident(), len(_debug_thread_ids))
     current_time = time.time()
-    sys.stdout.write('%8.3f (%8.3f) %3d %s\n' % ((current_time - _debug_start) * 1000, (current_time - _debug_last) * 1000, ident, msg))
+    sys.stdout.write('# %8.3f (%8.3f) %3d %s\n' % ((current_time - _debug_start) * 1000, (current_time - _debug_last) * 1000, ident, msg))
     sys.stdout.flush()
     _debug_last = current_time
 

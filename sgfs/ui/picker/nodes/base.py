@@ -44,7 +44,7 @@ class Node(object):
     def is_leaf(self):
         return False
     
-    def child_matches_init_state(self, child, init_state):
+    def child_matches_initial_state(self, child, init_state):
         try:
             return all(init_state[k] == v for k, v in child.state.iteritems())
         except KeyError:
@@ -200,9 +200,9 @@ class Group(Node):
     def is_next_node(state):
         return True
     
-    def child_matches_init_state(self, child, init_state):
+    def child_matches_initial_state(self, child, init_state):
         # Dispatch to the first real parent.
-        return self.parent.child_matches_init_state(child, init_state)
+        return self.parent.child_matches_initial_state(child, init_state)
     
     def __init__(self, model, key, view_data, state):
         super(Group, self).__init__(model, key, view_data, state)

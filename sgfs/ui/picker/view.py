@@ -122,4 +122,5 @@ class ColumnView(QtGui.QColumnView):
         self.stateChanged(node.state)
     
     def stateChanged(self, state):
-        debug('stateChanged:\n%s\n', pprint.pformat(state))
+        pass
+        # debug('stateChanged:\n%s\n', pprint.pformat(state))

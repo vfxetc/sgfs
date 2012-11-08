@@ -10,15 +10,15 @@ from .base import Node
 class ShotgunQuery(Node):
     
     backrefs = {
-        'Project': [None],
-        'HumanUser': [None],
         'Asset': [('Project', 'project')],
+        'HumanUser': [None],
+        'Project': [None],
+        'PublishEvent': [('Task', 'sg_link')],
         'Sequence': [('Project', 'project')],
         'Shot': [('Sequence', 'sg_sequence')],
         'Task': [('Shot', 'entity'), ('Asset', 'entity')],
-        'PublishEvent': [('Task', 'sg_link')],
-        'Tool': [('Project', 'project')],
         'Ticket': [('Tool', 'sg_tool')],
+        'Tool': [('Project', 'project')],
     }
     
     formats = {
@@ -60,9 +60,10 @@ class ShotgunQuery(Node):
         super(ShotgunQuery, self).__init__(*args, **kwargs)
     
     def __repr__(self):
-        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.entity_types, id(self))
+        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.active_types, id(self))
     
     def is_next_node(self, state):
+        
         # If any types have a backref that isn't satisfied.
         self.active_types = []
         for type_ in self.entity_types:
@@ -70,11 +71,10 @@ class ShotgunQuery(Node):
                 if backref is None or backref[0] == state.get('self', {}).get('type'):
                     self.active_types.append(type_)
                     continue
-                        
-        debug('is_next_node: %r -> %r', sorted(state.iterkeys()), self.active_types)
+        
         return bool(self.active_types)
     
-    def child_matches_init_state(self, child, init_state):
+    def child_matches_initial_state(self, child, init_state):
         
         last_entity = child.state.get('self')
         
@@ -92,6 +92,14 @@ class ShotgunQuery(Node):
     
     def get_initial_children(self, init_state):
         for type_ in self.active_types:
+            # yield Group(model,
+            #     ('group', type_),
+            #     {
+            #         Qt.DisplayRole: entity['type'] + 's',
+            #         Qt.DecorationRole: self.icons.get(entity['type']),
+            #     },
+            #     {}
+            # )
             if type_ in init_state:
                 entity = init_state[type_]
                 yield self._child_tuple_from_entity(entity)
