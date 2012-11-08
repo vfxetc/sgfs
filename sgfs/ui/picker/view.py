@@ -24,6 +24,7 @@ class Header(QtGui.QHeaderView):
             header = 'Loading...'
         else:
             header = self._node.view_data.get('header', '')
+        header += ' (%d)' % len(self._node.children())
         self.model()._header = header
         
         super(Header, self).paintEvent(e)
@@ -31,8 +32,13 @@ class Header(QtGui.QHeaderView):
 
 class HeaderedListView(QtGui.QTreeView):
     
+    # This needs to be a signal so that it runs in the main thread.
+    layoutChanged = QtCore.pyqtSignal()
+    
     def __init__(self, model, index, node):
         super(HeaderedListView, self).__init__()
+        
+        self.node = node
         
         # Take control over what is displayed in the header.
         self._header = Header(node)
@@ -45,6 +51,20 @@ class HeaderedListView(QtGui.QTreeView):
         
         self.setModel(model)
         self.setRootIndex(index)
+        
+        self.layoutChanged.connect(self.fix_scroll_for_selection)
+    
+    def __repr__(self):
+        return '<HeaderedListView %r at 0x%x>' % (self.node.view_data.get('header'), id(self))
+    
+    def fix_scroll_for_selection(self):
+        node = self.model().node_from_index(self.selectionModel().currentIndex())
+        while node.parent:
+            debug(repr(node))
+            if getattr(node.parent, 'view', None) is self:
+                self.scrollTo(node.index)
+                return
+            node = node.parent
 
 
 class ColumnView(QtGui.QColumnView):
@@ -109,7 +129,7 @@ class ColumnView(QtGui.QColumnView):
         
         # We must hold a reference to this somewhere so that it isn't
         # garbage collected on us.
-        node.__view = view
+        node.view = view
                 
         return view
     
@@ -124,3 +144,4 @@ class ColumnView(QtGui.QColumnView):
     def stateChanged(self, state):
         pass
         # debug('stateChanged:\n%s\n', pprint.pformat(state))
+        

@@ -29,6 +29,7 @@ class Node(object):
         # These are set by the model.
         self.index = None
         self.parent = None
+        self.view = None
         
         self.view_data = None
         self.state = None
@@ -83,7 +84,7 @@ class Node(object):
             # grab the update lock.
             children = list(callback(*args, **kwargs))
         
-            debug('2nd fetch_children (async) is done')
+            # debug('2nd fetch_children (async) is done; %r', self)
         
             # This forces the update to wait until after the first (static)
             # children have been put into place, even if this function runs
@@ -170,8 +171,8 @@ class Node(object):
         self._repair_heirarchy()
         
         if signal:
-            # debug('    layoutChanged')
             self.model.layoutChanged.emit()
+            self.view.layoutChanged.emit()
     
     def _repair_heirarchy(self):
         changes = list(self._repair_heirarchy_recurse())
