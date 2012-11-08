@@ -112,9 +112,9 @@ class Node(object):
     def is_leaf(self):
         return False
     
-    def matches_init_state(self, init_state):
+    def child_matches_init_state(self, state, init_state):
         try:
-            return all(init_state[k] == v for k, v in self.state.iteritems())
+            return all(init_state[k] == v for k, v in state.iteritems())
         except KeyError:
             pass
     
@@ -126,7 +126,7 @@ class Node(object):
             self.schedule_async_fetch(self.fetch_async_children)
         
         # Return any children we can figure out from the init_state.
-        if init_state is not None and self.matches_init_state(init_state):
+        if init_state is not None:
             return self.get_initial_children(init_state) or []
         
         return []
@@ -232,13 +232,12 @@ class Node(object):
             self.model.layoutChanged.emit()
     
     def _repair_heirarchy(self):
-        old = []
-        new = []
-        for o, n in self._repair_heirarchy_recurse():
-            old.append(o)
-            new.append(n)
-        if old:
-            self.model.changePersistentIndexList(old, new)
+        changes = list(self._repair_heirarchy_recurse())
+        if changes:
+            self.model.changePersistentIndexList(
+                [x[0] for x in changes],
+                [x[1] for x in changes],
+            )
             
     def _repair_heirarchy_recurse(self):
         for i, child in enumerate(self.children()):
@@ -248,9 +247,9 @@ class Node(object):
                     yield child.index, new
                 child.index = new
             child.parent = self
-            child._repair_heirarchy_recurse()
-            
-        
+            if isinstance(child, Group):
+                for x in child._repair_heirarchy_recurse():
+                    yield x
     
     def children(self, init_state=None):
         with self._child_lock:
@@ -268,8 +267,8 @@ class Group(Node):
     def is_next_node(state):
         return True
     
-    def matches_init_state(self, init_state):
-        return True
+    def child_matches_init_state(self, state, init_state):
+        return self.parent.child_matches_init_state(state, init_state)
     
     def __init__(self, model, key, view_data, state):
         super(Group, self).__init__(model, key, view_data, state)
@@ -302,6 +301,9 @@ class SGFSRoots(Node):
     @staticmethod
     def is_next_node(state):
         return 'Project' not in state
+    
+    def child_matches_initial_state(self, state, init_state):
+        return 'Project' in state and state['Project'] == init_state.get('Project')
     
     def fetch_children(self, init_state):
         for project, path in sorted(sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
@@ -385,13 +387,17 @@ class ShotgunQuery(Node):
         # debug('is_next_node: %r -> %r', sorted(state.iterkeys()), self.active_types)
         return bool(self.active_types)
     
-    def matches_init_state(self, init_state):
-        for type_ in self.active_types:
-            a = init_state.get(type_)
-            b = self.state.get(type_)
-            debug('xxx %r %r %r', type_, a, b)
-            if a and b and a == b:
-                return True
+    def child_matches_init_state(self, state, init_state):
+        
+        last_entity = state.get('last_entity')
+        
+        if not last_entity:
+            return
+        
+        if last_entity['type'] not in self.active_types:
+            return
+        
+        return last_entity == init_state.get(last_entity['type'])
     
     def update(self, *args):
         super(ShotgunQuery, self).update(*args)
@@ -432,7 +438,7 @@ class ShotgunQuery(Node):
                 {
                     Qt.DisplayRole: label
                 }, {
-                    '%s.%d' % (entity['type'], i): label
+                    '%s.groups[%d]' % (entity['type'], i): label
                 }
             ))
         
@@ -453,6 +459,7 @@ class ShotgunQuery(Node):
         
         new_state = dict(('ignore_%s' % other, True) for other in self.active_types)
         new_state[entity['type']] = entity
+        new_state['last_entity'] = entity
         
         return entity.cache_key, view_data, new_state
     
@@ -503,20 +510,21 @@ class Model(QtCore.QAbstractItemModel):
                 break
             
             node = nodes.pop(0)
-            debug('node.matches_init_state: %s', repr(node))
-            if node.matches_init_state(init_state):
-                debug('matches: %r', node.state)
-                last_match = node
-            else:
+            if isinstance(node, Group):
+                debug('skipping group')
+                nodes.extend(node.children())
                 continue
             
-            nodes.extend(node.children(init_state))
+            debug('matches via %r:\n\t\t\t\t%r', node.parent, sorted(node.state))
+            if node.parent is None or node.parent.child_matches_init_state(node.state, init_state):
+                debug('!! YES !!')
+                nodes.extend(node.children(init_state))
+                last_match = node
 
         if last_match:
-            debug('last_match.state: %r', last_match.state)
+            debug('last_match: %r', last_match)
             debug('last_match.index: %r', last_match.index)
-            # for k, v in sorted(last_match.state.iteritems()):
-            #    # debug('\t%s: %r', k, v)
+            debug('last_match.state: %r', last_match.state)
             return last_match.index
     
     def construct_node(self, key, view_data, state):
@@ -537,7 +545,7 @@ class Model(QtCore.QAbstractItemModel):
         if self._root is None:
             self._root = self.construct_node(None, {}, self.root_state)
             self._root.index = QtCore.QModelIndex()
-            self._root.parent = QtCore.QModelIndex()
+            self._root.parent = None
         return self._root
     
     def node_from_index(self, index):
