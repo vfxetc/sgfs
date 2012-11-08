@@ -197,11 +197,6 @@ class ShotgunQuery(Node):
             if backref and backref[0] in self.state:
                 filters.append((backref[1], 'is', self.state[backref[0]]))
         
-        res = []
         for entity in self.model.sgfs.session.find(type_, filters, self.fields.get(type_) or []):
-            res.append(self._child_tuple_from_entity(entity))
-        
-        # Sort by label.
-        res.sort(key=lambda x: x[1][Qt.DisplayRole])
-        
-        return res
+            yield self._child_tuple_from_entity(entity)
+

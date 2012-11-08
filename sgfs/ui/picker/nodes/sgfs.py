@@ -20,7 +20,7 @@ class SGFSRoots(Node):
     
     # We override the master here since we can return children very quickly.
     def fetch_children(self, init_state):
-        for project, path in sorted(self.model.sgfs.project_roots.iteritems(), key=lambda x: x[0]['name']):
+        for project, path in self.model.sgfs.project_roots.iteritems():
             yield (
                 project.cache_key,
                 {

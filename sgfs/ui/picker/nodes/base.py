@@ -3,6 +3,9 @@ import traceback
 
 import concurrent.futures
 
+from PyQt4 import QtCore
+Qt = QtCore.Qt
+
 from ..childlist import ChildList
 from ..utils import debug
 
@@ -179,6 +182,7 @@ class Node(object):
             )
             
     def _repair_heirarchy_recurse(self):
+        self.children().sort(key=lambda n: n.view_data[Qt.DisplayRole])
         for i, child in enumerate(self.children()):
             if not child.index or (child.index and child.index.row() != i):
                 new = self.model.createIndex(i, 0, child)
