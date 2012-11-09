@@ -25,7 +25,7 @@ class SGFSRoots(Node):
                 project.cache_key,
                 {
                     Qt.DisplayRole: project['name'],
-                    Qt.DecorationRole: '/home/mboers/Documents/icons/fatcow/16x16/newspaper.png',
+                    Qt.DecorationRole: 'fatcow/newspaper',
                 }, {
                     'Project': project,
                     'self': project,

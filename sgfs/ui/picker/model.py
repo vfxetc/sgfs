@@ -13,7 +13,7 @@ Qt = QtCore.Qt
 from sgfs import SGFS
 
 from .nodes.base import Node, Group, Leaf
-from .utils import debug
+from .utils import debug, icon
 
 
 class Model(QtCore.QAbstractItemModel):
@@ -31,6 +31,11 @@ class Model(QtCore.QAbstractItemModel):
         self.threadpool = concurrent.futures.ThreadPoolExecutor(4)
         
         self._node_types = []
+        
+        self.dataChanged.connect(self._on_data_changed)
+    
+    def _on_data_changed(self, *args):
+        self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
     
     def register_node_type(self, node_type):
         self._node_types.append(node_type)
@@ -60,9 +65,9 @@ class Model(QtCore.QAbstractItemModel):
                 nodes.extend(node.children())
                 continue
             
-            debug('match?: %r', node)
+            # debug('match?: %r', node)
             if node.parent.child_matches_initial_state(node, state):
-                debug('YES!!')
+                # debug('YES!!')
             
                 # Trigger initial async.
                 node.children()
@@ -103,6 +108,8 @@ class Model(QtCore.QAbstractItemModel):
             # I.e.: This is a huge hack.
             return self._header
         
+        if role == Qt.DecorationRole:
+            return QtGui.QColor.fromRgb(255, 0, 0)
         return QtCore.QVariant()
     
     def rowCount(self, parent):
@@ -151,6 +158,9 @@ class Model(QtCore.QAbstractItemModel):
         
         if role == Qt.DecorationRole:
             
+            if node.error_count:
+                return icon('fatcow/cross')
+            
             node = self.node_from_index(index)
             data = node.view_data.get(Qt.DecorationRole)
             
@@ -172,11 +182,18 @@ class Model(QtCore.QAbstractItemModel):
                 return self._pixmaps[key]
             
             if isinstance(data, basestring):
-                if data not in self._pixmaps:
-                    self._pixmaps[data] = QtGui.QPixmap(data)
-                return self._pixmaps[data]
+                try:
+                    return self._pixmaps[data]
+                except KeyError:
+                    pass
+                self._pixmaps[data] = pixmap = icon(data) or QtGui.QPixmap(data)
+                return pixmap
             
             return data
+        
+        if role == Qt.ForegroundRole:
+            if node.error_count:
+                return QtGui.QColor.fromRgb(128, 0, 0)
         
         # Passthrough other roles.
         try:

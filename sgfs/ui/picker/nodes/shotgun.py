@@ -43,12 +43,12 @@ class ShotgunBase(Node):
     }
     
     icons = {
-        'Sequence': '/home/mboers/Documents/icons/fatcow/16x16/film_link.png',
-        'Shot': '/home/mboers/Documents/icons/fatcow/16x16/film.png',
-        'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
-        'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
-        'Version': '/home/mboers/Documents/icons/fatcow/16x16/images.png',
-        'Project': '/home/mboers/Documents/icons/fatcow/16x16/newspaper.png',
+        'Sequence': 'fatcow/film_link',
+        'Shot': 'fatcow/film',
+        'PublishEvent': 'fatcow/brick',
+        'Asset': 'fatcow/box_closed',
+        'Version': 'fatcow/images',
+        'Project': 'fatcow/newspaper',
     }
     
     fields = {

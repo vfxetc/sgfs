@@ -36,6 +36,7 @@ class Node(object):
         self._child_lock = threading.RLock()
         self._flat_children = None
         self._children = None
+        self.error_count = 0
         self.is_loading = 0
     
     def __repr__(self):
@@ -82,6 +83,9 @@ class Node(object):
         
         except Exception as e:
             traceback.print_exc()
+            self.error_count += 1
+            self.is_loading -= 1
+            self.model.dataChanged.emit(self.index, self.index)
             raise
         
     def get_temp_children_from_state(self, init_state):

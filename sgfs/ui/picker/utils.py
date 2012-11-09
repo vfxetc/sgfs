@@ -1,6 +1,9 @@
+import os
 import sys
 import time
 import thread
+
+from PyQt4 import QtGui
 
 
 _debug_start = time.time()
@@ -26,3 +29,25 @@ def state_from_entity(entity):
         entity = entity.parent()
     return state
 
+
+_icons_by_name = {}
+def icon(name):
+    
+    try:
+        return _icons_by_name[name]
+    except KeyError:
+        pass
+    
+    path = os.path.abspath(os.path.join(__file__, 
+        '..', '..', '..', '..',
+        'icons', name + '.png'
+    ))
+    if os.path.exists(path):
+        icon = QtGui.QPixmap(path)
+    else:
+        icon = None
+    
+    _icons_by_name[name] = icon
+    return icon
+
+    

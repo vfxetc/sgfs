@@ -24,7 +24,12 @@ class Header(QtGui.QHeaderView):
             header = 'Loading...'
         else:
             header = self._node.view_data.get('header', '')
+                
         header += ' (%d)' % len(self._node.children())
+        
+        if self._node.error_count:
+            header = 'Loading Error'
+        
         self.model()._header = header
         
         super(Header, self).paintEvent(e)

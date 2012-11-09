@@ -1,6 +1,7 @@
 Picker
 =======
 
+- Move icons out of home
 - Fix sizeHint on columns, since they are far too tall.
 - Fix segfault on SSL_read on OS X.
 - Filesystem nodes.
