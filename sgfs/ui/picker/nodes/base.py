@@ -2,40 +2,12 @@ import threading
 import traceback
 import multiprocessing.pool
 import Queue as queue
-import platform
-import time
-
-import concurrent.futures
 
 from PyQt4 import QtCore
 Qt = QtCore.Qt
 
 from ..childlist import ChildList
 from ..utils import debug
-
-
-# Concurrent shotgun requests fail on OS X at somepoint surrounding SSL and
-# default. So we need to monkey patch a lock around it, or something.
-if False and platform.system() == 'Darwin':
-    
-    from sitecustomize import patch
-    import ssl
-    
-    ssl_lock = threading.RLock()
-        
-    @patch(ssl.SSLSocket)
-    def read(old, self, len=1024):
-        while not ssl_lock.acquire(False):
-            # debug('ssl read %r: blocked', len)
-            time.sleep(0.1)
-        try:
-            # debug('ssl read %r', len)
-            return old(self, len)
-        finally:
-            ssl_lock.release()
-
-
-threadpool = concurrent.futures.ThreadPoolExecutor(1 if platform.system() == 'Darwin' else 4)
 
 
 class Node(object):
@@ -92,7 +64,7 @@ class Node(object):
         
     def schedule_async_fetch(self, callback, *args, **kwargs):
         self.is_loading += 1
-        threadpool.submit(self._process_async, callback, *args, **kwargs)
+        self.model.threadpool.submit(self._process_async, callback, *args, **kwargs)
         
     def _process_async(self, callback, *args, **kwargs):
         try:

@@ -239,18 +239,19 @@ class ShotgunQuery(ShotgunBase):
         for entity in self.fetch_entities(type_):
             yield self._child_tuple_from_entity(entity)
 
-    def fetch_entities(self, entity_type):
+    def fetch_entities(self, entity_type, timeout=5):
         return self.model.sgfs.session.find(
             entity_type,
             self.filters(entity_type),
-            self.fields.get(entity_type) or []
+            self.fields.get(entity_type) or [],
+            timeout=timeout
         )
 
 
 class ShotgunPublishStream(ShotgunQuery):
 
-    labels = {'PublishEvent': ['{self[code]} (v{self[sg_version]:04d})']}
-    headers = {'PublishEvent': ['Publish Stream']}
+    labels = {'PublishEvent': ['{self[code]}', 'v{self[sg_version]:04d}']}
+    headers = {'PublishEvent': ['Publish Stream', 'Version']}
     
     def __init__(self, *args, **kwargs):
         self.publish_type = kwargs.pop('publish_type', 'maya_scene')
@@ -265,8 +266,9 @@ class ShotgunPublishStream(ShotgunQuery):
     def fetch_entities(self, entity_type):
         entities = super(ShotgunPublishStream, self).fetch_entities(entity_type)
         entities = sorted(entities, key=lambda e: e['code'])
-        for name, stream in itertools.groupby(entities, key=lambda e: e['sg_type']):
-            yield max(stream, key=lambda e: int(e['sg_version']))
+        return entities
+        # for name, stream in itertools.groupby(entities, key=lambda e: e['code']):
+        #     yield max(stream, key=lambda e: int(e['sg_version']))
 
 
 class ShotgunEntities(ShotgunBase):

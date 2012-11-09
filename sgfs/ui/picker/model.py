@@ -2,6 +2,10 @@ import sys
 import os
 import threading
 import traceback
+import platform
+
+import concurrent.futures
+
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -24,6 +28,7 @@ class Model(QtCore.QAbstractItemModel):
         self._root = None
         
         self.sgfs = sgfs or SGFS(shotgun=shotgun, session=session)
+        self.threadpool = concurrent.futures.ThreadPoolExecutor(4)
         
         self._node_types = []
     
@@ -55,8 +60,10 @@ class Model(QtCore.QAbstractItemModel):
                 nodes.extend(node.children())
                 continue
             
+            debug('match?: %r', node)
             if node.parent.child_matches_initial_state(node, state):
-                
+                debug('YES!!')
+            
                 # Trigger initial async.
                 node.children()
                 

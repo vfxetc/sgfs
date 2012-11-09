@@ -51,8 +51,8 @@ def publishes_from_path(path, sgfs=None):
     initial_index = model.index_from_state(state_from_entity(entities[0]))
         
     view = ColumnView()
-    view.setColumnWidths([150, 150, 150, 150, 200, 300])
-    view.setMaximumWidth(sum([150, 150, 150, 150, 200, 300]) + 6)
+    view.setColumnWidths([150, 150, 150, 150, 200, 200, 100])
+    view.setMaximumWidth(sum([150, 150, 150, 150, 200, 200, 100]) + 7)
     view.setPreviewVisible(False)
     view.setModel(model)
         
