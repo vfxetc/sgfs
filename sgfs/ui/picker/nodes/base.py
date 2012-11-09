@@ -193,7 +193,7 @@ class Node(object):
         with self._child_lock:
             if self._children is None:
                 # debug('1st fetch_children')
-                initial_children = list(self.fetch_children())
+                initial_children = list(self.fetch_children() or ())
                 # debug('1st replace_children')
                 self.add_raw_children(initial_children)
             return self._children

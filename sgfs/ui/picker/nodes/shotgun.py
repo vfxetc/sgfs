@@ -210,10 +210,11 @@ class ShotgunQuery(ShotgunBase):
             self.fields.get(entity_type) or []
         )
     
-    def fetch_async_children(self, type_i=0):
-        if type_i + 1 < len(self.active_types):
-            self.schedule_async_fetch(self.fetch_async_children, type_i + 1)
-        type_ = self.active_types[type_i]
+    def fetch_children(self):
+        for type_ in self.active_types:
+            self.schedule_async_fetch(self.fetch_async_children, type_)
+            
+    def fetch_async_children(self, type_):
         for entity in self.fetch_entities(type_):
             yield self._child_tuple_from_entity(entity)
 
