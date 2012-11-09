@@ -1,5 +1,9 @@
 import threading
 import traceback
+import multiprocessing.pool
+import Queue as queue
+import platform
+import time
 
 import concurrent.futures
 
@@ -9,7 +13,29 @@ Qt = QtCore.Qt
 from ..childlist import ChildList
 from ..utils import debug
 
-threadpool = concurrent.futures.ThreadPoolExecutor(1)
+
+# Concurrent shotgun requests fail on OS X at somepoint surrounding SSL and
+# default. So we need to monkey patch a lock around it, or something.
+if False and platform.system() == 'Darwin':
+    
+    from sitecustomize import patch
+    import ssl
+    
+    ssl_lock = threading.RLock()
+        
+    @patch(ssl.SSLSocket)
+    def read(old, self, len=1024):
+        while not ssl_lock.acquire(False):
+            # debug('ssl read %r: blocked', len)
+            time.sleep(0.1)
+        try:
+            # debug('ssl read %r', len)
+            return old(self, len)
+        finally:
+            ssl_lock.release()
+
+
+threadpool = concurrent.futures.ThreadPoolExecutor(1 if platform.system() == 'Darwin' else 4)
 
 
 class Node(object):
@@ -75,13 +101,10 @@ class Node(object):
             # grab the update lock.
             children = list(callback(*args, **kwargs))
         
-            # debug('2nd fetch_children (async) is done; %r', self)
-        
             # This forces the update to wait until after the first (static)
             # children have been put into place, even if this function runs
             # very quickly.
             with self._child_lock:
-                # debug('2nd replace_children (async)')
                 self.is_loading -= 1
                 self.add_raw_children(children)
         
@@ -192,9 +215,7 @@ class Node(object):
     def children(self):
         with self._child_lock:
             if self._children is None:
-                # debug('1st fetch_children')
                 initial_children = list(self.fetch_children() or ())
-                # debug('1st replace_children')
                 self.add_raw_children(initial_children)
             return self._children
 

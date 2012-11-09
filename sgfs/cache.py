@@ -79,8 +79,14 @@ class PathCache(collections.MutableMapping):
     
     def walk_directory(self, path, entity_type=None):
         relative = os.path.relpath(path, self.project_root)
+        
+        # Special case the Projects.
+        if relative == '.':
+            relative = ''
+            
         if relative.startswith('.'):
-            raise ValueError('path not in project')
+            raise ValueError('path not in project; %r' % path)
+        
         with self.conn:
             c = self.conn.cursor()
             if entity_type is not None:

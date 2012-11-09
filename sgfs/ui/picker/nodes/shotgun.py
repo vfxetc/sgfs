@@ -59,7 +59,7 @@ class ShotgunBase(Node):
         'Version': ['code'],
     }
     
-    def _child_tuple_from_entity(self, entity):
+    def _child_tuple_from_entity(self, entity, strict_format=False):
         
         type_ = entity['type']
         
@@ -70,7 +70,10 @@ class ShotgunBase(Node):
             state['self'] = entity
             try:
                 labels.append(format_string.format(**state))
-            except KeyError:
+            except KeyError as e:
+                if strict_format:
+                    raise
+                debug('formatting error: %s', e)
                 labels.append('%r %% %r' % (format_string, entity))
         
         headers = []
@@ -79,7 +82,10 @@ class ShotgunBase(Node):
             state[type_] = entity
             try:
                 headers.append(format_string.format(**state))
-            except KeyError:
+            except KeyError as e:
+                if strict_format:
+                    raise
+                debug('formatting error: %s', e)
                 headers.append('%r %% %r' % (label_format, entity))
         
         # Add some default headers.
@@ -103,13 +109,13 @@ class ShotgunBase(Node):
         # All but the last label is a group.
         for i, label in enumerate(labels[:-1]):
             groups.append((
-                ('group', entity['type'], label),
+                ('group', type_, label),
                 {
                     Qt.DisplayRole: label,
                     Qt.DecorationRole: self.icons.get(type_),
                     'header': headers[i + 1],
                 }, {
-                    '%s.groups[%d]' % (entity['type'], i): label
+                    '%s.groups[%d]' % (type_, i): label
                 }
             ))
         
@@ -203,20 +209,42 @@ class ShotgunQuery(ShotgunBase):
                 entity = init_state[type_]
                 yield self._child_tuple_from_entity(entity)
                     
+
+    
+    def fetch_children(self):
+        # for type_ in self.active_types:
+        #    self.schedule_async_fetch(self.fetch_local_children, type_)
+        for type_ in self.active_types:
+            self.schedule_async_fetch(self.fetch_remote_children, type_)
+    
+    def fetch_local_children(self, type_):
+        for backref in self.backrefs[type_]:
+            if not backref or backref[0] not in self.state:
+                continue
+            parent_directory = (
+                self.state.get('%s.path' % backref[0]) or
+                self.model.sgfs.path_for_entity(self.state[backref[0]])
+            )
+            if not parent_directory:
+                return
+            for path, entity in self.model.sgfs.entities_in_directory(parent_directory, type_, load_tags=True):
+                try:
+                    key, view, state = self._child_tuple_from_entity(entity, strict_format=True)
+                except KeyError:
+                    continue
+                state['%s.path' % type_] = path
+                yield key, view, state
+        
+    def fetch_remote_children(self, type_):
+        for entity in self.fetch_entities(type_):
+            yield self._child_tuple_from_entity(entity)
+
     def fetch_entities(self, entity_type):
         return self.model.sgfs.session.find(
             entity_type,
             self.filters(entity_type),
             self.fields.get(entity_type) or []
         )
-    
-    def fetch_children(self):
-        for type_ in self.active_types:
-            self.schedule_async_fetch(self.fetch_async_children, type_)
-            
-    def fetch_async_children(self, type_):
-        for entity in self.fetch_entities(type_):
-            yield self._child_tuple_from_entity(entity)
 
 
 class ShotgunPublishStream(ShotgunQuery):
@@ -256,7 +284,6 @@ class ShotgunEntities(ShotgunBase):
         super(ShotgunEntities, self).update(view_data, state)
         
     def child_matches_initial_state(self, child, init_state):
-        debug('child_matches_initial_state %r %r', child.state, init_state)
         entity = child.state['self']
         return init_state.get(entity['type']) == entity
     

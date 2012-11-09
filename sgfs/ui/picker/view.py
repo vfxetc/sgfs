@@ -76,7 +76,6 @@ class HeaderedListView(QtGui.QTreeView):
     def fix_scroll_for_selection(self):
         node = self.model().node_from_index(self.selectionModel().currentIndex())
         while node.parent:
-            debug(repr(node))
             if node.parent is self._node:
                 self.scrollTo(node.index)
                 return
@@ -156,9 +155,8 @@ class ColumnView(QtGui.QColumnView):
 
     def nodeChanged(self, node):
         self.stateChanged(node.state)
-        # debug('stateChanged:\n%s\n', pprint.pformat(node.view_data))
     
     def stateChanged(self, state):
         pass
-        debug('stateChanged:\n%s\n', pprint.pformat(state))
+        # debug('stateChanged:\n%s\n', pprint.pformat(state))
         

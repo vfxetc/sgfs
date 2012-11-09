@@ -32,8 +32,6 @@ class Model(QtCore.QAbstractItemModel):
     
     def index_from_state(self, state):
         
-        # debug('set_initial_state')
-        
         last_match = None
         nodes = [self.root()]
         while True:
@@ -54,13 +52,10 @@ class Model(QtCore.QAbstractItemModel):
             # not selecting something real (because it is at a lower level than
             # the last group).
             if isinstance(node, Group):
-                # debug('skipping group')
                 nodes.extend(node.children())
                 continue
             
-            # debug('matches via %r:\n\t\t\t\t%r', node.parent, sorted(node.state))
             if node.parent.child_matches_initial_state(node, state):
-                # debug('!! YES !!')
                 
                 # Trigger initial async.
                 node.children()
@@ -70,12 +65,7 @@ class Model(QtCore.QAbstractItemModel):
                 last_match = node
         
         if last_match:
-            # debug('last_match: %r', last_match)
-            # debug('last_match.index: %r', last_match.index)
-            # debug('last_match.state: %r', last_match.state)
             return last_match.index
-        else:
-            pass# debug('Did not find a match.')
     
     def construct_node(self, key, view_data, state):
         for node_type in self._node_types:
@@ -87,9 +77,7 @@ class Model(QtCore.QAbstractItemModel):
         
     def hasChildren(self, index):
         node = self.node_from_index(index)
-        res = not node.is_leaf()
-        # debug('%r.hasChildren: %r', node, res)
-        return res
+        return not node.is_leaf()
     
     def root(self):
         if self._root is None:
@@ -112,9 +100,7 @@ class Model(QtCore.QAbstractItemModel):
     
     def rowCount(self, parent):
         node = self.node_from_index(parent)
-        res = len(node.children())
-        # debug('%r.rowCount: %d', node, res)
-        return res
+        return len(node.children())
     
     def columnCount(self, parent):
         return 1
@@ -137,7 +123,6 @@ class Model(QtCore.QAbstractItemModel):
                 debug('\tchild.parent is also None')
                 child.parent = node
         
-        # debug('index %d of %r -> %r', row, node, child)
         return child.index
     
     def parent(self, child):
@@ -155,9 +140,7 @@ class Model(QtCore.QAbstractItemModel):
         node = self.node_from_index(index)
         
         if role == Qt.DisplayRole:
-            data = node.view_data.get(Qt.DisplayRole, repr(node))
-            # debug('displayRole for %r -> %r', node, data)
-            return data
+            return node.view_data.get(Qt.DisplayRole, repr(node))
         
         if role == Qt.DecorationRole:
             
@@ -171,8 +154,8 @@ class Model(QtCore.QAbstractItemModel):
                 key = (data.red(), data.green(), data.blue())
                 if key not in self._pixmaps:
                     pixmap = QtGui.QPixmap(16, 16)
+                    pixmap.fill(Qt.transparent)
                     painter = QtGui.QPainter(pixmap)
-                    painter.eraseRect(0, 0, 16, 16)
                     brush = QtGui.QBrush(data)
                     painter.setBrush(brush)
                     painter.setPen(data.darker())
