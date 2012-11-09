@@ -39,6 +39,18 @@ class Node(object):
         self.error_count = 0
         self.is_loading = 0
     
+    def reset(self):
+        signal = self.index and self.children()
+        if signal:
+            self.model.beginRemoveRows(self.index, 0, len(self.children()))
+        self._flat_children = None
+        self._children = None
+        self.error_count = 0
+        self.is_loading = 0
+        self.children()
+        if signal:
+            self.model.endRemoveRows()
+    
     def __repr__(self):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
@@ -208,6 +220,9 @@ class Group(Node):
     
     def fetch_children(self):
         return []
+    
+    def reset(self):
+        self.parent.reset()
 
 
 class Leaf(Node):

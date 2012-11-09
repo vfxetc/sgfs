@@ -109,7 +109,15 @@ class ColumnView(QtGui.QColumnView):
         # State for setting preview visibility.
         self._widgetsize_max = None
         self._preview_visible = True
+        
+        self.doubleClicked.connect(self._on_double_click)
     
+    def _on_double_click(self, index):
+        if QtGui.QApplication.keyboardModifiers() & Qt.AltModifier:
+            node = self.model().node_from_index(index)
+            node.reset()
+            self.model().dataChanged.emit(index, index)
+        
     def previewVisible(self):
         return self._preview_visible
     
