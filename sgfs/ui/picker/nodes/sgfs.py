@@ -13,7 +13,7 @@ class SGFSRoots(Node):
         
     @staticmethod
     def is_next_node(state):
-        return 'Project' not in state
+        return not state
     
     def child_matches_initial_state(self, child, init_state):
         return 'Project' in init_state and init_state['Project'] == child.state['Project']

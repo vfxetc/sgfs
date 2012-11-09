@@ -35,7 +35,6 @@ class Node(object):
         self.state = None
         self.update(view_data or {}, state or {})
         
-        
         self._child_lock = threading.RLock()
         self._flat_children = None
         self._children = None
@@ -84,13 +83,13 @@ class Node(object):
             with self._child_lock:
                 # debug('2nd replace_children (async)')
                 self.is_loading -= 1
-                self._update_children(children)
+                self.add_raw_children(children)
         
         except Exception as e:
             traceback.print_exc()
             raise
         
-    def get_children_from_state(self, init_state):
+    def get_temp_children_from_state(self, init_state):
         """Return temporary children that we can from the given init_state, so
         that there is something there while we load the real children."""
         return []
@@ -106,7 +105,7 @@ class Node(object):
         """See groups_for_child. Defaults to pulling groups out of view_data."""
         return self.view_data.get('groups') or []
     
-    def _update_children(self, raw_children):
+    def add_raw_children(self, raw_children):
         
         signal = self.index is not None and self._children is not None
         if signal:
@@ -173,9 +172,12 @@ class Node(object):
                 [x[0] for x in changes],
                 [x[1] for x in changes],
             )
-            
-    def _repair_heirarchy_recurse(self):
+    
+    def sort_children(self):
         self.children().sort(key=lambda n: n.view_data[Qt.DisplayRole])
+    
+    def _repair_heirarchy_recurse(self):
+        self.sort_children()
         for i, child in enumerate(self.children()):
             if not child.index or (child.index and child.index.row() != i):
                 new = self.model.createIndex(i, 0, child)
@@ -193,7 +195,7 @@ class Node(object):
                 # debug('1st fetch_children')
                 initial_children = list(self.fetch_children())
                 # debug('1st replace_children')
-                self._update_children(initial_children)
+                self.add_raw_children(initial_children)
             return self._children
 
 

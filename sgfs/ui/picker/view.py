@@ -30,15 +30,15 @@ class Header(QtGui.QHeaderView):
         super(Header, self).paintEvent(e)
 
 
-class Delegate(QtGui.QItemDelegate):
+class HeaderedListViewDelegate(QtGui.QStyledItemDelegate):
     
     def sizeHint(self, *args):
-        size = super(Delegate, self).sizeHint(*args)
-        return size.expandedTo(QtCore.QSize(1, 24))
+        size = super(HeaderedListViewDelegate, self).sizeHint(*args)
+        return size.expandedTo(QtCore.QSize(1, 20))
     
-    def paint(self, painter, options, role):
-        options.rect = options.rect.expandedTo(QtCore.QSize(1, 24))
-        super(Delegate, self).paint(painter, options, role)
+    def paint(self, painter, options, index):
+        super(HeaderedListViewDelegate, self).paint(painter, options, index)
+        # QtGui.QApplication.style().drawPrimitive(QtGui.QStyle.PE_IndicatorBranch, options, painter)
 
 
 class HeaderedListView(QtGui.QTreeView):
@@ -60,8 +60,10 @@ class HeaderedListView(QtGui.QTreeView):
         self.setRootIsDecorated(False)
         self.setItemsExpandable(False)
         
-        self._delegate = Delegate()
-        # self.setItemDelegate(self._delegate)
+        # To force a row height, otherwise it snaps smaller when the
+        # "layoutChanged" signal fires.
+        self._delegate = HeaderedListViewDelegate()
+        self.setItemDelegateForColumn(0, self._delegate)
         
         self.setModel(model)
         self.setRootIndex(index)
@@ -154,8 +156,9 @@ class ColumnView(QtGui.QColumnView):
 
     def nodeChanged(self, node):
         self.stateChanged(node.state)
+        # debug('stateChanged:\n%s\n', pprint.pformat(node.view_data))
     
     def stateChanged(self, state):
         pass
-        # debug('stateChanged:\n%s\n', pprint.pformat(state))
+        debug('stateChanged:\n%s\n', pprint.pformat(state))
         

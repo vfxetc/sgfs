@@ -65,7 +65,7 @@ class Model(QtCore.QAbstractItemModel):
                 # Trigger initial async.
                 node.children()
                 
-                node._update_children(node.get_children_from_state(state))
+                node.add_raw_children(node.get_temp_children_from_state(state))
                 nodes.extend(node.children())
                 last_match = node
         

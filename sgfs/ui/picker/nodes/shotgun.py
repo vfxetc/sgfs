@@ -48,6 +48,7 @@ class ShotgunBase(Node):
         'PublishEvent': '/home/mboers/Documents/icons/fatcow/16x16/brick.png',
         'Asset': '/home/mboers/Documents/icons/fatcow/16x16/box_closed.png',
         'Version': '/home/mboers/Documents/icons/fatcow/16x16/images.png',
+        'Project': '/home/mboers/Documents/icons/fatcow/16x16/newspaper.png',
     }
     
     fields = {
@@ -118,15 +119,15 @@ class ShotgunBase(Node):
             'groups': groups,
         }
         
-        if entity.get('step') and entity['step'].get('color'):
+        if entity.get('step') and entity['step'].fetch('color'):
             color = QtGui.QColor.fromRgb(*(int(x) for x in entity['step']['color'].split(',')))
             for group in groups:
                 group[1][Qt.DecorationRole] = color
             view_data[Qt.DecorationRole] = color
-            
+        
         if entity['type'] in self.icons:
             view_data[Qt.DecorationRole] = self.icons[entity['type']]
-        
+
         new_state = {
             entity['type']: entity,
             'self': entity,
@@ -158,10 +159,21 @@ class ShotgunQuery(ShotgunBase):
         # If any types have a backref that isn't satisfied.
         self.active_types = []
         for type_ in self.entity_types:
+            
+            # We don't want to see this state again.
+            if type_ in state:
+                continue
+            
             for backref in self.backrefs[type_]:
-                if backref is None or backref[0] == state.get('self', {}).get('type'):
+                
+                # No backrefs mount on an empty state.
+                if backref is None and not state:
                     self.active_types.append(type_)
                     continue
+                
+                # The last step must have set our backref.
+                if backref and backref[0] == state.get('self', {}).get('type'):
+                    self.active_types.append(type_)
         
         return bool(self.active_types)
     
@@ -185,7 +197,7 @@ class ShotgunQuery(ShotgunBase):
             headers = self.headers.get(self.active_types[0])
             self.view_data['header'] = headers[0] if headers else self.active_types[0]
     
-    def get_children_from_state(self, init_state):
+    def get_temp_children_from_state(self, init_state):
         for type_ in self.active_types:
             if type_ in init_state:
                 entity = init_state[type_]
@@ -232,14 +244,24 @@ class ShotgunEntities(ShotgunBase):
     
     def __init__(self, *args, **kwargs):
         self.entities = kwargs.pop('entities')
+        self.header = kwargs.pop('header', 'Context')
         super(ShotgunEntities, self).__init__(*args, **kwargs)
     
     def is_next_node(self, state):
         return not state
     
+    def update(self, view_data, state):
+        view_data['header'] = self.header
+        super(ShotgunEntities, self).update(view_data, state)
+        
     def child_matches_initial_state(self, child, init_state):
-        return init_state.get('self') and init_state['self'] == child.state['self']
+        debug('child_matches_initial_state %r %r', child.state, init_state)
+        entity = child.state['self']
+        return init_state.get(entity['type']) == entity
     
     def fetch_children(self, *args):
         return [self._child_tuple_from_entity(e) for e in self.entities]
+    
+    def sort_children(self):
+        pass
     
