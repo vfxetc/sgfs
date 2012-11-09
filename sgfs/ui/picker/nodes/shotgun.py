@@ -208,10 +208,9 @@ class ShotgunQuery(ShotgunBase):
             if type_ in init_state:
                 entity = init_state[type_]
                 yield self._child_tuple_from_entity(entity)
-                    
-
     
     def fetch_children(self):
+        # # Fetch from local SGFS caches.
         # for type_ in self.active_types:
         #    self.schedule_async_fetch(self.fetch_local_children, type_)
         for type_ in self.active_types:

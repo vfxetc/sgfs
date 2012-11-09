@@ -37,8 +37,19 @@ class HeaderedListViewDelegate(QtGui.QStyledItemDelegate):
         return size.expandedTo(QtCore.QSize(1, 20))
     
     def paint(self, painter, options, index):
+        
+        style = QtGui.QApplication.style()
+        style.drawPrimitive(QtGui.QStyle.PE_PanelItemViewRow, options, painter)
+        
+        # Shift it left by 2 for padding the icons.
+        options.rect.adjust(2, 0, 0, 0)
+        
         super(HeaderedListViewDelegate, self).paint(painter, options, index)
-        # QtGui.QApplication.style().drawPrimitive(QtGui.QStyle.PE_IndicatorBranch, options, painter)
+        
+        # Triangle.
+        if options.state & QtGui.QStyle.State_Children:
+            options.rect.setLeft(options.rect.right() - 12)
+            style.drawPrimitive(QtGui.QStyle.PE_IndicatorColumnViewArrow, options, painter)
 
 
 class HeaderedListView(QtGui.QTreeView):
