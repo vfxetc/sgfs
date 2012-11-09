@@ -64,13 +64,14 @@ if type_ and id_:
     pprint.pprint(init_state)
     print
     
-    index = model.set_initial_state(init_state)
-    if not index:
-        print 'Could not get index for initial state!'
     
     view.setModel(model)
+    
+    index = model.index_from_state(init_state)
     if index:
         view.setCurrentIndex(index)
+    else:
+        print 'Could not get index for initial state!'
 
 else:
         

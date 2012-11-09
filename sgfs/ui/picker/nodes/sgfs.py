@@ -19,7 +19,7 @@ class SGFSRoots(Node):
         return 'Project' in init_state and init_state['Project'] == child.state['Project']
     
     # We override the master here since we can return children very quickly.
-    def fetch_children(self, init_state):
+    def fetch_children(self):
         for project, path in self.model.sgfs.project_roots.iteritems():
             yield (
                 project.cache_key,

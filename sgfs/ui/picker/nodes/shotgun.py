@@ -185,7 +185,7 @@ class ShotgunQuery(ShotgunBase):
             headers = self.headers.get(self.active_types[0])
             self.view_data['header'] = headers[0] if headers else self.active_types[0]
     
-    def get_initial_children(self, init_state):
+    def get_children_from_state(self, init_state):
         for type_ in self.active_types:
             if type_ in init_state:
                 entity = init_state[type_]

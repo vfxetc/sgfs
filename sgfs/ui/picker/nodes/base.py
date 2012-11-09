@@ -60,17 +60,9 @@ class Node(object):
         except KeyError:
             pass
     
-    def fetch_children(self, init_state):
-        
-        # debug('fetch_children')
-        
+    def fetch_children(self):
         if hasattr(self, 'fetch_async_children'):
             self.schedule_async_fetch(self.fetch_async_children)
-        
-        # Return any children we can figure out from the init_state.
-        if init_state is not None:
-            return self.get_initial_children(init_state) or []
-        
         return []
         
     def schedule_async_fetch(self, callback, *args, **kwargs):
@@ -98,7 +90,7 @@ class Node(object):
             traceback.print_exc()
             raise
         
-    def get_initial_children(self, init_state):
+    def get_children_from_state(self, init_state):
         """Return temporary children that we can from the given init_state, so
         that there is something there while we load the real children."""
         return []
@@ -171,7 +163,8 @@ class Node(object):
         
         if signal:
             self.model.layoutChanged.emit()
-            self.view.layoutChanged.emit()
+            if self.view:
+                self.view.layoutChanged.emit()
     
     def _repair_heirarchy(self):
         changes = list(self._repair_heirarchy_recurse())
@@ -194,11 +187,11 @@ class Node(object):
                 for x in child._repair_heirarchy_recurse():
                     yield x
     
-    def children(self, init_state=None):
+    def children(self):
         with self._child_lock:
             if self._children is None:
                 # debug('1st fetch_children')
-                initial_children = list(self.fetch_children(init_state))
+                initial_children = list(self.fetch_children())
                 # debug('1st replace_children')
                 self._update_children(initial_children)
             return self._children
@@ -232,5 +225,5 @@ class Leaf(Node):
     def is_leaf(self):
         return True
     
-    def fetch_children(self, init_state):
+    def fetch_children(self):
         return []

@@ -30,12 +30,9 @@ class Model(QtCore.QAbstractItemModel):
     def register_node_type(self, node_type):
         self._node_types.append(node_type)
     
-    def set_initial_state(self, init_state):
+    def index_from_state(self, state):
         
         # debug('set_initial_state')
-        
-        if self._root is not None:
-            raise ValueError('cannot set initial state with existing root')
         
         last_match = None
         nodes = [self.root()]
@@ -62,9 +59,14 @@ class Model(QtCore.QAbstractItemModel):
                 continue
             
             # debug('matches via %r:\n\t\t\t\t%r', node.parent, sorted(node.state))
-            if node.parent.child_matches_initial_state(node, init_state):
+            if node.parent.child_matches_initial_state(node, state):
                 # debug('!! YES !!')
-                nodes.extend(node.children(init_state))
+                
+                # Trigger initial async.
+                node.children()
+                
+                node._update_children(node.get_children_from_state(state))
+                nodes.extend(node.children())
                 last_match = node
         
         if last_match:
