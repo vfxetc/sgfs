@@ -207,13 +207,8 @@ class Group(Node):
         # Dispatch to the first real parent.
         return self.parent.child_matches_initial_state(child, init_state)
     
-    def __init__(self, model, key, view_data, state):
-        super(Group, self).__init__(model, key, view_data, state)
-        self._children = ChildList()
-    
-    def children(self, *args):
-        # debug('Group children: %r', self._children)
-        return self._children
+    def fetch_children(self):
+        return []
 
 
 class Leaf(Node):
