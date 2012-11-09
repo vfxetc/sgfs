@@ -1,3 +1,4 @@
+import itertools
 import functools
 
 from PyQt4 import QtCore, QtGui
@@ -7,7 +8,7 @@ from ..utils import debug
 from .base import Node, Group
 
 
-class ShotgunQuery(Node):
+class ShotgunBase(Node):
     
     backrefs = {
         'Asset': [('Project', 'project')],
@@ -57,58 +58,6 @@ class ShotgunQuery(Node):
         'Version': ['code'],
     }
     
-    @classmethod
-    def specialize(cls, entity_types, **kwargs):
-        return functools.partial(cls,
-            entity_types=entity_types,
-            **kwargs
-        )
-    
-    def __init__(self, *args, **kwargs):
-        self.entity_types = kwargs.pop('entity_types')
-        super(ShotgunQuery, self).__init__(*args, **kwargs)
-    
-    def __repr__(self):
-        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.active_types, id(self))
-    
-    def is_next_node(self, state):
-        
-        # If any types have a backref that isn't satisfied.
-        self.active_types = []
-        for type_ in self.entity_types:
-            for backref in self.backrefs[type_]:
-                if backref is None or backref[0] == state.get('self', {}).get('type'):
-                    self.active_types.append(type_)
-                    continue
-        
-        return bool(self.active_types)
-    
-    def child_matches_initial_state(self, child, init_state):
-        
-        last_entity = child.state.get('self')
-        
-        if not last_entity:
-            return
-        
-        if last_entity['type'] not in self.active_types:
-            return
-        
-        return last_entity == init_state.get(last_entity['type'])
-    
-    def update(self, *args):
-        super(ShotgunQuery, self).update(*args)
-        if len(self.active_types) > 1:
-            self.view_data['header'] = ' or '.join(self.active_types)
-        else:
-            headers = self.headers.get(self.active_types[0])
-            self.view_data['header'] = headers[0] if headers else self.active_types[0]
-    
-    def get_initial_children(self, init_state):
-        for type_ in self.active_types:
-            if type_ in init_state:
-                entity = init_state[type_]
-                yield self._child_tuple_from_entity(entity)
-    
     def _child_tuple_from_entity(self, entity):
         
         type_ = entity['type']
@@ -117,10 +66,11 @@ class ShotgunQuery(Node):
         for format_string in self.labels[type_]:
             state = dict(self.state)
             state[type_] = entity
+            state['self'] = entity
             try:
                 labels.append(format_string.format(**state))
             except KeyError:
-                labels.append('%r %% %r' % (label_format, entity))
+                labels.append('%r %% %r' % (format_string, entity))
         
         headers = []
         for format_string in self.headers.get(type_, []):
@@ -138,7 +88,7 @@ class ShotgunQuery(Node):
         groups = []
         
         # Entity type group.
-        if len(self.active_types) > 1:
+        if hasattr(self, 'active_types') and len(self.active_types) > 1:
             groups.append((
                 ('group', type_),
                 {
@@ -184,18 +134,112 @@ class ShotgunQuery(Node):
         
         return entity.cache_key, view_data, new_state
     
-    def fetch_async_children(self, type_i=0):
-        
-        if type_i + 1 < len(self.active_types):
-            self.schedule_async_fetch(self.fetch_async_children, type_i + 1)
-        
-        type_ = self.active_types[type_i]
-        
+    def filters(self, entity_type):
         filters = []
-        for backref in self.backrefs[type_]:
+        for backref in self.backrefs[entity_type]:
             if backref and backref[0] in self.state:
                 filters.append((backref[1], 'is', self.state[backref[0]]))
+        return filters
         
-        for entity in self.model.sgfs.session.find(type_, filters, self.fields.get(type_) or []):
+
+
+
+class ShotgunQuery(ShotgunBase):
+    
+    def __init__(self, *args, **kwargs):
+        self.entity_types = kwargs.pop('entity_types')
+        super(ShotgunQuery, self).__init__(*args, **kwargs)
+    
+    def __repr__(self):
+        return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.active_types, id(self))
+    
+    def is_next_node(self, state):
+        
+        # If any types have a backref that isn't satisfied.
+        self.active_types = []
+        for type_ in self.entity_types:
+            for backref in self.backrefs[type_]:
+                if backref is None or backref[0] == state.get('self', {}).get('type'):
+                    self.active_types.append(type_)
+                    continue
+        
+        return bool(self.active_types)
+    
+    def child_matches_initial_state(self, child, init_state):
+        
+        last_entity = child.state.get('self')
+        
+        if not last_entity:
+            return
+        
+        if last_entity['type'] not in self.active_types:
+            return
+        
+        return last_entity == init_state.get(last_entity['type'])
+    
+    def update(self, *args):
+        super(ShotgunQuery, self).update(*args)
+        if len(self.active_types) > 1:
+            self.view_data['header'] = ' or '.join(self.active_types)
+        else:
+            headers = self.headers.get(self.active_types[0])
+            self.view_data['header'] = headers[0] if headers else self.active_types[0]
+    
+    def get_initial_children(self, init_state):
+        for type_ in self.active_types:
+            if type_ in init_state:
+                entity = init_state[type_]
+                yield self._child_tuple_from_entity(entity)
+                    
+    def fetch_entities(self, entity_type):
+        return self.model.sgfs.session.find(
+            entity_type,
+            self.filters(entity_type),
+            self.fields.get(entity_type) or []
+        )
+    
+    def fetch_async_children(self, type_i=0):
+        if type_i + 1 < len(self.active_types):
+            self.schedule_async_fetch(self.fetch_async_children, type_i + 1)
+        type_ = self.active_types[type_i]
+        for entity in self.fetch_entities(type_):
             yield self._child_tuple_from_entity(entity)
 
+
+class ShotgunPublishStream(ShotgunQuery):
+
+    labels = {'PublishEvent': ['{self[code]} (v{self[sg_version]:04d})']}
+    headers = {'PublishEvent': ['Publish Stream']}
+    
+    def __init__(self, *args, **kwargs):
+        self.publish_type = kwargs.pop('publish_type', 'maya_scene')
+        kwargs.setdefault('entity_types', ['PublishEvent'])
+        super(ShotgunPublishStream, self).__init__(*args, **kwargs)
+    
+    def filters(self, entity_type):
+        filters = super(ShotgunPublishStream, self).filters(entity_type)
+        filters.append(('sg_type', 'is', self.publish_type))
+        return filters
+    
+    def fetch_entities(self, entity_type):
+        entities = super(ShotgunPublishStream, self).fetch_entities(entity_type)
+        entities = sorted(entities, key=lambda e: e['code'])
+        for name, stream in itertools.groupby(entities, key=lambda e: e['sg_type']):
+            yield max(stream, key=lambda e: int(e['sg_version']))
+
+
+class ShotgunEntities(ShotgunBase):
+    
+    def __init__(self, *args, **kwargs):
+        self.entities = kwargs.pop('entities')
+        super(ShotgunEntities, self).__init__(*args, **kwargs)
+    
+    def is_next_node(self, state):
+        return not state
+    
+    def child_matches_initial_state(self, child, init_state):
+        return init_state.get('self') and init_state['self'] == child.state['self']
+    
+    def fetch_children(self, *args):
+        return [self._child_tuple_from_entity(e) for e in self.entities]
+    

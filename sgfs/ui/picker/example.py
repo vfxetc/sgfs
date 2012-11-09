@@ -1,3 +1,6 @@
+import itertools
+import functools
+
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
@@ -18,14 +21,27 @@ if False:
 else:
     model = Model(sgfs=sgfs)
 
+
+# entity = model.sgfs.session.get('Task', 43897)
+# entities = []
+# while entity:
+#     entities.append(entity)
+#     entity = entity.parent()
+# print 'ENTITY', entities
+# model.register_node_type(functools.partial(ShotgunEntities, entities=entities))
+
+
 model.register_node_type(SGFSRoots)
-model.register_node_type(ShotgunQuery.specialize(('Asset', 'Sequence', 'Shot', 'Task', 'PublishEvent')))
-        
+model.register_node_type(ShotgunPublishStream)
+model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Task')))
+
+
 view = ColumnView()
 
 type_ = None
 id_ = None
-    
+
+
 if len(sys.argv) > 1:
     
     import sgfs.commands.utils as command_utils

@@ -15,7 +15,7 @@ from .utils import debug
 class Model(QtCore.QAbstractItemModel):
     
     _header = 'Header Not Set'
-    _task_badges = {}
+    _pixmaps = {}
     
     def __init__(self, root_state=None, sgfs=None, shotgun=None, session=None):
         super(Model, self).__init__()
@@ -167,7 +167,7 @@ class Model(QtCore.QAbstractItemModel):
             
             if isinstance(data, QtGui.QColor):
                 key = (data.red(), data.green(), data.blue())
-                if key not in self._task_badges:
+                if key not in self._pixmaps:
                     pixmap = QtGui.QPixmap(16, 16)
                     painter = QtGui.QPainter(pixmap)
                     painter.eraseRect(0, 0, 16, 16)
@@ -176,11 +176,13 @@ class Model(QtCore.QAbstractItemModel):
                     painter.setPen(data.darker())
                     painter.drawRect(2, 2, 12, 12)
                     painter.end()
-                    self._task_badges[key] = pixmap
-                return self._task_badges[key]
+                    self._pixmaps[key] = pixmap
+                return self._pixmaps[key]
             
             if isinstance(data, basestring):
-                return QtGui.QPixmap(data)
+                if data not in self._pixmaps:
+                    self._pixmaps[data] = QtGui.QPixmap(data)
+                return self._pixmaps[data]
             
             return data
         
