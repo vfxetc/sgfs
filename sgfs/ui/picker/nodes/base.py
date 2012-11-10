@@ -86,6 +86,15 @@ class Node(object):
             # grab the update lock.
             children = list(callback(*args, **kwargs))
         
+        except Exception as e:
+            traceback.print_exc()
+            self.error_count += 1
+            self.is_loading -= 1
+            self.model.dataChanged.emit(self.index, self.index)
+            raise
+            
+        try:
+
             # This forces the update to wait until after the first (static)
             # children have been put into place, even if this function runs
             # very quickly.
@@ -95,10 +104,9 @@ class Node(object):
         
         except Exception as e:
             traceback.print_exc()
-            self.error_count += 1
-            self.is_loading -= 1
             self.model.dataChanged.emit(self.index, self.index)
             raise
+        
         
     def get_temp_children_from_state(self, init_state):
         """Return temporary children that we can from the given init_state, so

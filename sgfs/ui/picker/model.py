@@ -161,6 +161,9 @@ class Model(QtCore.QAbstractItemModel):
             if node.error_count:
                 return icon('fatcow/cross')
             
+            if node.is_loading:
+                return icon('fatcow/arrow_refresh')
+            
             node = self.node_from_index(index)
             data = node.view_data.get(Qt.DecorationRole)
             
