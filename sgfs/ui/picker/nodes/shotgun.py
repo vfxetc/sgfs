@@ -21,6 +21,9 @@ class ShotgunBase(Node):
         'Ticket': [('Tool', 'sg_tool')],
         'Tool': [('Project', 'project')],
         'Version': [('Shot', 'entity'), ('Task', 'sg_task')],
+        'Step': [None],
+        'ActionMenuItem': [None],
+        'EventLogEntry': [('Project', 'entity'), ('Sequence', 'entity'), ('Shot', 'entity')],
     }
     
     labels = {
@@ -34,6 +37,9 @@ class ShotgunBase(Node):
         'Tool': ['{Tool[code]}'],
         'Ticket': ['{Ticket[title]}'],
         'Version': ['{Version[code]}'],
+        'Step': ['{self[entity_type]}', '{Step[code]}'],
+        'ActionMenuItem': ['{self[title]} ({self[entity_type]})'],
+        'EventLogEntry': ['{self[event_type]} - {self[attribute_name]}']
     }
     
     headers = {
@@ -53,10 +59,13 @@ class ShotgunBase(Node):
     
     fields = {
         'Task': ['step.Step.color'],
+        'Step': ['code', 'color', 'entity_type'],
         'Tool': ['code'],
         'Ticket': ['title'],
         'HumanUser': ['firstname', 'lastname', 'email'],
         'Version': ['code'],
+        'ActionMenuItem': ['title', 'entity_type'],
+        'EventLogEntry': ['event_type', 'attribute_name']
     }
     
     def _child_tuple_from_entity(self, entity, strict_format=False):

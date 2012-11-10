@@ -17,7 +17,7 @@ def main():
     global model, view, dialog
     
     sgfs = SGFS()
-    if True:
+    if False:
         model = Model(state_from_entity(sgfs.session.get('Project', 66)), sgfs=sgfs)
     else:
         model = Model(sgfs=sgfs)
@@ -32,9 +32,9 @@ def main():
     # model.register_node_type(functools.partial(ShotgunEntities, entities=entities))
 
 
-    model.register_node_type(SGFSRoots)
-    model.register_node_type(ShotgunPublishStream)
-    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Task')))
+    # model.register_node_type(SGFSRoots)
+    # model.register_node_type(ShotgunPublishStream)
+    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
 
 
     view = ColumnView()

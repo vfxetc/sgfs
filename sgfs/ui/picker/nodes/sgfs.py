@@ -16,7 +16,7 @@ class SGFSRoots(Node):
         return not state
     
     def child_matches_initial_state(self, child, init_state):
-        return 'Project' in init_state and init_state['Project'] == child.state['Project']
+        return 'Project' in init_state and init_state['Project'] == child.state['self']
     
     # We override the master here since we can return children very quickly.
     def fetch_children(self):
