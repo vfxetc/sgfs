@@ -186,7 +186,8 @@ class ShotgunQuery(ShotgunBase):
     def child_matches_initial_state(self, child, init_state):
         
         last_entity = child.state.get('self')
-        
+        # debug('entity %r', last_entity)
+        # debug('state %r', init_state)
         if not last_entity:
             return
         
@@ -207,7 +208,10 @@ class ShotgunQuery(ShotgunBase):
         for type_ in self.active_types:
             if type_ in init_state:
                 entity = init_state[type_]
-                yield self._child_tuple_from_entity(entity)
+                for backref in self.backrefs[type_]:
+                    if backref is None or entity[backref[1]] == self.state[backref[0]]:
+                        yield self._child_tuple_from_entity(entity)
+                        return
     
     def fetch_children(self):
         # # Fetch from local SGFS caches.
