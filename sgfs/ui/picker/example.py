@@ -17,8 +17,8 @@ def main():
     global model, view, dialog
     
     sgfs = SGFS()
-    if False:
-        model = Model(state_from_entity(sgfs.session.get('Project', 74)), sgfs=sgfs)
+    if True:
+        model = Model(state_from_entity(sgfs.session.get('Project', 66)), sgfs=sgfs)
     else:
         model = Model(sgfs=sgfs)
 

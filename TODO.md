@@ -1,7 +1,6 @@
 Picker
 =======
 
-- Can't set root_state anymore.
 - Preview not hidden on Maya 2011.
 - No headers on Maya 2011 or Nuke.
 

@@ -42,6 +42,8 @@ class Model(QtCore.QAbstractItemModel):
     
     def index_from_state(self, state):
         
+        # debug('index_from_state %r', sorted(state))
+        
         last_match = None
         nodes = [self.root()]
         while True:
@@ -50,11 +52,6 @@ class Model(QtCore.QAbstractItemModel):
                 break
             
             node = nodes.pop(0)
-            
-            # Skip the root.
-            if node.parent is None:
-                nodes.extend(node.children())
-                continue
             
             # Skip over groups. It would be nice if the group class would be
             # able to property handle this logic, but we don't want a "positive
@@ -65,8 +62,8 @@ class Model(QtCore.QAbstractItemModel):
                 nodes.extend(node.children())
                 continue
             
-            # debug('match?: %r', node)
-            if node.parent.child_matches_initial_state(node, state):
+            # debug('match?: %r <- %r', node, sorted(node.state))
+            if node.parent is None or node.parent.child_matches_initial_state(node, state):
                 # debug('YES!!')
             
                 # Trigger initial async.
@@ -74,6 +71,7 @@ class Model(QtCore.QAbstractItemModel):
                 
                 node.add_raw_children(node.get_temp_children_from_state(state))
                 nodes.extend(node.children())
+                
                 last_match = node
         
         if last_match:

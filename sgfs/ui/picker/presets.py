@@ -30,7 +30,10 @@ def publishes_from_path(path, sgfs=None):
             entities.append(entity)
             entity = entity.parent()
     
-    model = Model(sgfs=sgfs)
+    if True:
+        model = Model(root_state=state_from_entity(entities[0].project()), sgfs=sgfs)
+    else:
+        model = Model(sgfs=sgfs)
     
     model.register_node_type(functools.partial(ShotgunEntities,
         entities=[entities[0].project()],
@@ -48,14 +51,14 @@ def publishes_from_path(path, sgfs=None):
         
     model.register_node_type(ShotgunPublishStream)
         
-    initial_index = model.index_from_state(state_from_entity(entities[0]))
         
     view = ColumnView()
-    view.setColumnWidths([150, 150, 150, 150, 200, 200, 100])
-    view.setMaximumWidth(sum([150, 150, 150, 150, 200, 200, 100]) + 7)
-    view.setPreviewVisible(False)
+    view.setColumnWidths([150, 150, 150, 200, 200, 125, 200])
+    view.setMaximumWidth(sum([150, 150, 150, 200, 200, 125, 200]) + 6)
+    # view.setPreviewVisible(False)
     view.setModel(model)
         
+    initial_index = model.index_from_state(state_from_entity(entities[0]))
     if initial_index:
         view.setCurrentIndex(initial_index)
         
