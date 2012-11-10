@@ -38,23 +38,17 @@ def publishes_from_path(path, sgfs=None):
     model.register_node_type(functools.partial(ShotgunEntities,
         entities=[entities[0].project()],
     ))
-        
-    is_sequence_pipeline = any(e['type'] == 'Sequence' for e in entities)
-    entity_types = (
-        ['Sequence', 'Shot', 'Task']
-        if is_sequence_pipeline else
-        ['Asset', 'Task']
-    )
+    
     model.register_node_type(functools.partial(ShotgunQuery,
-        entity_types=entity_types,
+        entity_types=['Asset', 'Sequence', 'Shot', 'Task'],
     ))
         
     model.register_node_type(ShotgunPublishStream)
         
         
     view = ColumnView()
-    view.setColumnWidths([150, 150, 150, 200, 200, 125, 200])
-    view.setMaximumWidth(sum([150, 150, 150, 200, 200, 125, 200]) + 6)
+    view.setColumnWidths([200] * 10)
+    # view.setMaximumWidth(sum([150, 150, 150, 200, 200, 125, 200]) + 6)
     # view.setPreviewVisible(False)
     view.setModel(model)
         
