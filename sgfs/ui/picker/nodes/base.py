@@ -182,7 +182,12 @@ class Node(object):
         if signal:
             self.model.layoutChanged.emit()
             if self.view:
-                self.view.layoutChanged.emit()
+                try:
+                    self.view.layoutChanged.emit()
+                
+                # Silence a threading error.
+                except TypeError:
+                    pass
     
     def _repair_heirarchy(self):
         changes = list(self._repair_heirarchy_recurse())
