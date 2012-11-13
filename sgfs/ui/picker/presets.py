@@ -15,6 +15,32 @@ __also_reload__ = [
 ]
 
 
+def any_task(entity=None, path=None, sgfs=None):
+    
+    sgfs = sgfs or SGFS()
+    
+    if path:
+        entities = list(sgfs.entities_from_path(path))
+    if entity:
+        entities = [entity]
+    
+    model = Model(sgfs=sgfs)
+    model.register_node_type(functools.partial(ShotgunQuery,
+        entity_types=['Project', 'Asset', 'Sequence', 'Shot', 'Task'],
+    ))
+
+    view = ColumnView()
+    view.setColumnWidths([200] * 10)
+    view.setModel(model)
+    
+    if entities:
+        initial_index = model.index_from_state(state_from_entity(entities[0]))
+        if initial_index:
+            view.setCurrentIndex(initial_index)
+        
+    return model, view
+
+
 def publishes_from_path(path, sgfs=None):
     
     sgfs = sgfs or SGFS()

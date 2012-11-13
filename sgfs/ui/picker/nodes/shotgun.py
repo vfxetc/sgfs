@@ -218,7 +218,7 @@ class ShotgunQuery(ShotgunBase):
             if type_ in init_state:
                 entity = init_state[type_]
                 for backref in self.backrefs[type_]:
-                    if backref is None or entity[backref[1]] == self.state[backref[0]]:
+                    if backref is None or (entity.get(backref[1]) and entity[backref[1]] == self.state.get(backref[0])):
                         yield self._child_tuple_from_entity(entity)
                         return
     

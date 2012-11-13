@@ -34,7 +34,8 @@ def main():
 
     # model.register_node_type(SGFSRoots)
     # model.register_node_type(ShotgunPublishStream)
-    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
+    # model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
+    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Task', 'Project')))
 
 
     view = ColumnView()
@@ -81,7 +82,7 @@ def main():
         view.setModel(model)
     
     # view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-    view.setFixedWidth(800)
+    view.setMinimumWidth(800)
     view.setFixedHeight(400)
     view.setColumnWidths([198] + [200] * 10) # To be sure that the width is 2 more.
     # view.setResizeGripsVisible(False)
