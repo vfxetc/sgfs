@@ -28,7 +28,16 @@ class Model(QtCore.QAbstractItemModel):
         self._root = None
         
         self.sgfs = sgfs or SGFS(shotgun=shotgun, session=session)
-        self.threadpool = concurrent.futures.ThreadPoolExecutor(1 if platform.system() == 'Darwin' else 4)
+        
+        # Force a more reasonable timeout. Note that this does change the
+        # global parameters on the shotgun object.
+        self.sgfs.session.shotgun.close()
+        self.sgfs.session.shotgun.config.timeout_secs = 5
+        self.sgfs.session.shotgun.config.max_rpc_attempts = 1
+        
+        # Shotgun is not very threadsafe. In our tests it is almost always
+        # faster to only have a single thread running.
+        self.threadpool = concurrent.futures.ThreadPoolExecutor(1)
         
         self._node_types = []
         
