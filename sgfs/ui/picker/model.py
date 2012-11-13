@@ -28,7 +28,7 @@ class Model(QtCore.QAbstractItemModel):
         self._root = None
         
         self.sgfs = sgfs or SGFS(shotgun=shotgun, session=session)
-        self.threadpool = concurrent.futures.ThreadPoolExecutor(4)
+        self.threadpool = concurrent.futures.ThreadPoolExecutor(1 if platform.system() == 'Darwin' else 4)
         
         self._node_types = []
         

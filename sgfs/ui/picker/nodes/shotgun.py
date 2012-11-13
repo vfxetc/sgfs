@@ -259,7 +259,7 @@ class ShotgunQuery(ShotgunBase):
             entity_type,
             filters,
             fields,
-            timeout=timeout
+            # timeout=timeout
         )
         # debug(repr(res))
         return res
