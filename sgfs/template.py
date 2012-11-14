@@ -149,7 +149,10 @@ class Template(object):
             'Awesome_Shot_v0123.ma'
             
         """
-        return self_.format_string.format(**kwargs)
+        try:
+            return self_.format_string.format(**kwargs)
+        except (AttributeError, KeyError) as e:
+            raise type(e)('%s in %r' % (e.args[0], self_.format_string))
     
     def match(self, input):
         """Match a name or path, returning a ``dict`` of fields if the input matched.
