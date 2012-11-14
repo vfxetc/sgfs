@@ -1,5 +1,6 @@
 import itertools
 import functools
+import optparse
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -8,17 +9,31 @@ from sgfs import SGFS
 
 from .model import *
 from .view import *
+from .comboboxview import *
 from .utils import *
 from .nodes.sgfs import *
 from .nodes.shotgun import *
 
 def main():
     
+    import sgfs.commands.utils as command_utils
+    
+    
+    optparser = optparse.OptionParser()
+    optparser.add_option('-c', '--combobox', action="store_true", dest="combobox")
+    optparser.add_option('-r', '--root', dest='root')
+    
+    opts, args = optparser.parse_args()
+    
     global model, view, dialog
     
     sgfs = SGFS()
-    if False:
-        model = Model(state_from_entity(sgfs.session.get('Project', 66)), sgfs=sgfs)
+    
+    
+    if opts.root:
+        root = command_utils.parse_spec(sgfs, opts.root.split())
+        model = Model(state_from_entity(sgfs.session.get(root['type'], root['id'])), sgfs=sgfs)
+    
     else:
         model = Model(sgfs=sgfs)
 
@@ -35,57 +50,38 @@ def main():
     # model.register_node_type(SGFSRoots)
     # model.register_node_type(ShotgunPublishStream)
     # model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
-    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Task', 'Project')))
+    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Sequence', 'Shot', 'Project')))
 
-
-    view = ColumnView()
+    if opts.combobox:
+        view = ComboBoxView()
+    else:
+        view = ColumnView()
+    
+    view.setModel(model)
 
     type_ = None
     id_ = None
-
-
-    if len(sys.argv) > 1:
     
-        import sgfs.commands.utils as command_utils
-        data = command_utils.parse_spec(model.sgfs, sys.argv[1:])
-        
-        type_ = data.get('type')
-        id_ = data.get('id')
+    if args:
+        init = command_utils.parse_spec(model.sgfs, args)
+        type_ = init.get('type')
+        id_ = init.get('id')
+        print type_, id_
     
     if type_ and id_:
-        
-        print type_, id_
         entity = model.sgfs.session.get(type_, id_)
-        
-        init_state = {}
-        while entity and entity['type'] not in init_state:
-            init_state[entity['type']] = entity
-            entity = entity.parent()
+        init_state = state_from_entity(entity)
 
-        print 'Initial state:'
-        pprint.pprint(init_state)
-        print
-    
-    
-        view.setModel(model)
-    
         index = model.index_from_state(init_state)
         if index:
             view.setCurrentIndex(index)
         else:
-            print 'Could not get index for initial state!'
+            print 'Could not get index for initial state.'
 
-    else:
-        
-        print 'no entity specified'
-        
-        view.setModel(model)
     
-    # view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     view.setMinimumWidth(800)
     view.setFixedHeight(400)
-    view.setColumnWidths([198] + [200] * 10) # To be sure that the width is 2 more.
-    # view.setResizeGripsVisible(False)
+    view.setColumnWidths([198] + [200] * 10)
 
     view.setPreviewVisible(False)
 
