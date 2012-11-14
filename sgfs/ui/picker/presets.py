@@ -17,7 +17,7 @@ __also_reload__ = [
 
 def any_task(entity=None, path=None, sgfs=None):
     
-    sgfs = sgfs or SGFS()
+    sgfs = sgfs or SGFS(session=entity.session if entity else None)
     
     if path:
         entities = list(sgfs.entities_from_path(path))

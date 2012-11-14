@@ -20,7 +20,8 @@ class Dialog(QtGui.QDialog):
         self._setup_ui()
     
     def _setup_ui(self):
-        self.setWindowTitle("Create Reference")
+        self.setWindowTitle("Select Workspace")
+        self.setMinimumWidth(600)
         
         self.setLayout(QtGui.QVBoxLayout())
         

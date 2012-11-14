@@ -172,10 +172,15 @@ class ColumnView(QtGui.QColumnView):
                 
         return view
     
+    def currentNode(self):
+        return self.model().node_from_index(self.selectionModel().currentIndex())
+    
+    def currentState(self):
+        return self.currentNode().state
+    
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
-        node = self.model().node_from_index(self.selectionModel().currentIndex())
-        self.nodeChanged(node)
+        self.nodeChanged(self.currentNode())
 
     def nodeChanged(self, node):
         self.stateChanged(node.state)

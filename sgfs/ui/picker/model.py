@@ -138,7 +138,7 @@ class Model(QtCore.QAbstractItemModel):
             return QtCore.QModelIndex()
         
         if child.index is None:
-            debug('child.index is None: %r', child)
+            debug('child.index is None: %r -> %r', child, child.state)
             child.index = self.createIndex(row, col, child)
             if child.parent is None:
                 debug('\tchild.parent is also None')

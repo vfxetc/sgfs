@@ -125,7 +125,11 @@ class Node(object):
         return self.view_data.get('groups') or []
     
     def add_raw_children(self, raw_children):
-        
+        with self._child_lock:
+            self._add_raw_children(raw_children)
+    
+    def _add_raw_children(self, raw_children):
+
         signal = self.index is not None and self._children is not None
         if signal:
             self.model.layoutAboutToBeChanged.emit()
