@@ -251,17 +251,14 @@ class ShotgunQuery(ShotgunBase):
         for entity in self.fetch_entities(type_):
             yield self._child_tuple_from_entity(entity)
 
-    def fetch_entities(self, entity_type, timeout=5):
+    def fetch_entities(self, entity_type):
         filters = self.filters(entity_type)
         fields = self.fields.get(entity_type) or []
-        # debug('find %r %r %r', entity_type, filters, fields)
         res = self.model.sgfs.session.find(
             entity_type,
             filters,
             fields,
-            # timeout=timeout
         )
-        # debug(repr(res))
         return res
 
 

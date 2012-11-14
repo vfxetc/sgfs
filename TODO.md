@@ -1,13 +1,15 @@
 Picker
 =======
 
+- Use shotgun batch mode to query multiple things at once
 - Preview not hidden on Maya 2011.
 - No headers on Maya 2011 or Nuke.
 
 - Fix sizeHint on columns, since they are far too tall.
-- Fix segfault on SSL_read on OS X.
 - Filesystem nodes.
-- __THE_PROCESS_HAS_FORKED_AND_YOU_CANNOT_USE_THIS_COREFOUNDATION_FUNCTIONALITY___YOU_MUST_EXEC__ on errors on OS X
+
+
+
 
 Create Structure
 =================
