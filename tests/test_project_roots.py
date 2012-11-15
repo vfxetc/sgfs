@@ -23,7 +23,7 @@ class TestSingleproject(TestCase):
         self.assertIsNot(sgfs.project_roots.keys()[0], proj)
         self.assertEqual(sgfs.project_roots.values()[0], os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_'))))
         
-        proj = sgfs.session.find_one('Project', [])
+        proj = sgfs.session.find_one('Project', [('id', 'is', proj['id'])])
         self.assertEqual(1, len(sgfs.project_roots))
         self.assertSameEntity(sgfs.project_roots.keys()[0], proj)
         self.assertIs(sgfs.project_roots.keys()[0], proj)
