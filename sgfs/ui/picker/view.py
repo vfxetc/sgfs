@@ -4,7 +4,7 @@ import pprint
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from .utils import debug
+from .utils import debug, icon
 
 
 class Header(QtGui.QHeaderView):
@@ -111,14 +111,6 @@ class ColumnView(QtGui.QColumnView):
         self._widgetsize_max = None
         self._preview_visible = True
         
-        self.doubleClicked.connect(self._on_double_click)
-    
-    def _on_double_click(self, index):
-        if QtGui.QApplication.keyboardModifiers() & Qt.AltModifier:
-            node = self.model().node_from_index(index)
-            node.reset()
-            self.model().dataChanged.emit(index, index)
-        
     def previewVisible(self):
         return self._preview_visible
     
@@ -184,11 +176,16 @@ class ColumnView(QtGui.QColumnView):
         if node.parent:
             node.parent.add_child_menu_actions(node, menu)
         
-        # Display it.
         if not menu.isEmpty():
-            menu.exec_(view.mapToGlobal(point))
+            menu.addSeparator()
         
-    
+        menu.addAction(icon('fatcow/arrow_refresh', as_icon=True), "Reload", functools.partial(self._reload_node, node))
+        menu.exec_(view.mapToGlobal(point))
+        
+    def _reload_node(self, node):
+        node.reset()
+        self.model().dataChanged.emit(node.index, node.index)
+        
     def currentNode(self):
         return self.model().node_from_index(self.selectionModel().currentIndex())
     
