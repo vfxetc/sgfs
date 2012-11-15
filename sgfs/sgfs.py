@@ -111,6 +111,7 @@ class SGFS(object):
             path_cache = self.path_cache(project)
             return path_cache.get(entity) if path_cache is not None else None
         
+        
         # It should be cheaper to hit the disk to poll all caches than to query
         # the Shotgun server for the project.
         for project in self.project_roots:
@@ -184,7 +185,7 @@ class SGFS(object):
         # older Shotgun data is still pulled in.
         if merge_into_session:
             for tag in tags:
-                tag['entity'] = self.session.merge(tag['entity'])
+                tag['entity'] = self.session.merge(tag['entity'], created_at=tag['created_at'])
         else:
             return tags
         
