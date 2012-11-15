@@ -238,6 +238,9 @@ class Group(Node):
         # Dispatch to the first real parent.
         return self.parent.child_matches_initial_state(child, init_state)
     
+    def add_child_menu_actions(self, child, menu):
+        self.parent.add_child_menu_actions(child, menu)
+        
     def fetch_children(self):
         return []
     

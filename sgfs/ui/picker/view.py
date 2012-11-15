@@ -5,7 +5,7 @@ from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
 from .utils import debug, icon
-
+from .nodes import base
 
 class Header(QtGui.QHeaderView):
     
@@ -173,7 +173,7 @@ class ColumnView(QtGui.QColumnView):
         node = self.model().node_from_index(index)
         
         menu = QtGui.QMenu()
-        if node.parent:
+        if node.parent and not isinstance(node, base.Group):
             node.parent.add_child_menu_actions(node, menu)
         
         if not menu.isEmpty():
