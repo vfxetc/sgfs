@@ -37,6 +37,13 @@ class ComboBoxView(QtGui.QAbstractItemView):
         self.setViewport(self._viewport)
         self._layout = QtGui.QHBoxLayout()
         self._viewport.setLayout(self._layout)
+        
+        self.setFrameShape(QtGui.QFrame.NoFrame)
+        
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setViewportMargins(0, 0, 0, 0)
+        self._viewport.setContentsMargins(0, 0, 0, 0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
     
     def _setup_callbacks(self):
         for attr in ('currentChanged', 'dataChanged', 'rowsInserted'):
@@ -65,14 +72,15 @@ class ComboBoxView(QtGui.QAbstractItemView):
         nodes = [self.currentNode()]
         while nodes[0].parent:
             nodes.insert(0, nodes[0].parent)
+        non_leaf_nodes = len(nodes) - int(nodes[-1].is_leaf())
         
         # Make sure we have just enough comboboxes.
-        while len(boxes) > len(nodes):
+        while len(boxes) > non_leaf_nodes:
             box = boxes.pop(-1)
             box.hide()
             box.destroy()
             
-        while len(nodes) > len(boxes):
+        while non_leaf_nodes > len(boxes):
             box = ComboBox()
             box.activated.connect(functools.partial(self._box_activated, len(boxes)))
             boxes.append(box)
@@ -86,9 +94,17 @@ class ComboBoxView(QtGui.QAbstractItemView):
             box.clear()
             children = node.children()
             if node_i + 1 == len(nodes):
-                box.addItem('')
+                box.addItem('Select...')
             for row, child in enumerate(node.children()):
-                box.addItem(child.view_data[Qt.DisplayRole], child)
+                
+                icon = self.model().data(child.index, Qt.DecorationRole)
+                if isinstance(icon, QtGui.QPixmap):
+                    icon = QtGui.QIcon(icon)
+                if isinstance(icon, QtGui.QIcon):
+                    box.addItem(icon, child.view_data[Qt.DisplayRole], child)
+                else:
+                    box.addItem(child.view_data[Qt.DisplayRole], child)
+                
                 if node_i + 1 < len(nodes) and child is nodes[node_i + 1]:
                     box.setCurrentIndex(row)
     
@@ -112,9 +128,6 @@ class ComboBoxView(QtGui.QAbstractItemView):
     def moveCursor(self, action, modifiers):
         #debug('moveCursor(%r, %r)', action, modifiers)
         return self.model().index(0, 0, QtCore.QModelIndex())
-    
-    def setPreviewVisible(self, *args):
-        pass
     
     def setColumnWidths(self, *args):
         pass

@@ -78,12 +78,11 @@ def main():
         else:
             print 'Could not get index for initial state.'
 
-    
-    view.setMinimumWidth(800)
-    view.setFixedHeight(400)
-    view.setColumnWidths([198] + [200] * 10)
-
-    view.setPreviewVisible(False)
+    if not opts.combobox:
+        view.setMinimumWidth(800)
+        view.setFixedHeight(400)
+        view.setColumnWidths([198] + [200] * 10)
+        view.setPreviewVisible(False)
 
     dialog = QtGui.QDialog()
     dialog.setWindowTitle(sys.argv[0])

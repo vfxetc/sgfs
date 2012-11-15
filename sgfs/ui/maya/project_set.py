@@ -22,6 +22,7 @@ class Dialog(QtGui.QDialog):
     def _setup_ui(self):
         self.setWindowTitle("Select Workspace")
         self.setMinimumWidth(600)
+        self.setMinimumHeight(400)
         
         self.setLayout(QtGui.QVBoxLayout())
         
