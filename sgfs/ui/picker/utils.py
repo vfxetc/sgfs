@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import thread
+import subprocess
+import platform
 
 from PyQt4 import QtGui
 
@@ -31,23 +33,30 @@ def state_from_entity(entity):
 
 
 _icons_by_name = {}
-def icon(name):
+def icon(name, as_icon=False):
     
     try:
-        return _icons_by_name[name]
+        icon = _icons_by_name[name]
     except KeyError:
-        pass
     
-    path = os.path.abspath(os.path.join(__file__, 
-        '..', '..', '..', '..',
-        'icons', name + '.png'
-    ))
-    if os.path.exists(path):
-        icon = QtGui.QPixmap(path)
-    else:
-        icon = None
+        path = os.path.abspath(os.path.join(__file__, 
+            '..', '..', '..', '..',
+            'icons', name + '.png'
+        ))
+        if os.path.exists(path):
+            icon = QtGui.QPixmap(path)
+        else:
+            icon = None
     
-    _icons_by_name[name] = icon
+        _icons_by_name[name] = icon
+    
+    if as_icon:
+        icon = QtGui.QIcon(icon)
+    
     return icon
 
-    
+def call_open(x):
+    if platform.system() == 'Darwin':
+        subprocess.call(['open', x])
+    else:
+        subprocess.call(['xdg-open', x])

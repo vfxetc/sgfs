@@ -1,3 +1,4 @@
+import functools
 import pprint
 
 from PyQt4 import QtCore, QtGui
@@ -87,7 +88,7 @@ class HeaderedListView(QtGui.QTreeView):
         self.layoutChanged.connect(self.fix_scroll_for_selection)
     
     def __repr__(self):
-        return '<HeaderedListView %r at 0x%x>' % (self.node.view_data.get('header'), id(self))
+        return '<HeaderedListView %r at 0x%x>' % (self._node.view_data.get('header'), id(self))
     
     def fix_scroll_for_selection(self):
         node = self.model().node_from_index(self.selectionModel().currentIndex())
@@ -166,11 +167,27 @@ class ColumnView(QtGui.QColumnView):
         # Transfer standard behaviour and our options to the new column.
         self.initializeColumn(view)
         
+        view.setContextMenuPolicy(Qt.CustomContextMenu)
+        view.customContextMenuRequested.connect(functools.partial(self._on_context_menu, view))
+        
         # We must hold a reference to this somewhere so that it isn't
         # garbage collected on us.
         node.view = view
                 
         return view
+    
+    def _on_context_menu(self, view, point):
+        index = view.indexAt(point)
+        node = self.model().node_from_index(index)
+        
+        menu = QtGui.QMenu()
+        if node.parent:
+            node.parent.add_child_menu_actions(node, menu)
+        
+        # Display it.
+        if not menu.isEmpty():
+            menu.exec_(view.mapToGlobal(point))
+        
     
     def currentNode(self):
         return self.model().node_from_index(self.selectionModel().currentIndex())

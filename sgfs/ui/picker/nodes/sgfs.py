@@ -1,7 +1,7 @@
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from ..utils import debug
+from ..utils import debug, icon, call_open
 from .base import Node
 
 
@@ -31,3 +31,12 @@ class SGFSRoots(Node):
                     'self': project,
                 },
             )
+    
+    def add_child_menu_actions(self, node, menu):
+        entity = node.state.get('self')
+        if entity:
+            path = self.model.sgfs.path_for_entity(entity)
+            action = menu.addAction(icon('silk/folder_go', as_icon=True), 'Jump to Folder', functools.partial(call_open, path))
+            if not path:
+                action.setEnabled(False)
+            menu.addAction(icon('silk/cog_go', as_icon=True), 'Open in Shotgun', functools.partial(call_open, entity.url))

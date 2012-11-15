@@ -64,6 +64,9 @@ class Node(object):
     def is_leaf(self):
         return False
     
+    def add_child_menu_actions(self, child, menu):
+        pass
+    
     def child_matches_initial_state(self, child, init_state):
         try:
             return all(init_state[k] == v for k, v in child.state.iteritems())
