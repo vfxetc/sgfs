@@ -1,5 +1,7 @@
 Copyright retained by original committers. All rights reserved.
 
+See also: icons/fatcow/README.txt and icons/silk/README.txt
+
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright
