@@ -530,7 +530,7 @@ class SGFS(object):
         for template in structure.iter_templates(template_name):
             return template
     
-    def path_from_template(self, entity_, template_name, *args, **kwargs):
+    def path_from_template(self_, entity_, template_name, *args, **kwargs):
         """Construct a path.
         
         :param entity: The :class:`~sgsession:sgsession.entity.Entity` whose
@@ -550,7 +550,7 @@ class SGFS(object):
             '/Project/SEQ/AA/AA_001/maya/scenes/published/v0123/AA_001_My_Publish_v0123.mb'
             
         """
-        template = self.find_template(entity_, template_name)
+        template = self_.find_template(entity_, template_name)
         if not template:
             raise ValueError('could not find template %r under %r' % (template_name, entity_))
         return template.format(*args, **kwargs)
