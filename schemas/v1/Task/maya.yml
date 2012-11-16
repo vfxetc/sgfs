@@ -26,3 +26,4 @@ templates:
     # Don't need the publish type in here since we won't put any other types
     # into this folder.
     maya_scene_publish: published/{publish.name}/v{publish.version:04d}
+    maya_camera_publish: scenes/camera/published/{publish.name}/v{publish.version:04d}
