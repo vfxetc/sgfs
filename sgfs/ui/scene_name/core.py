@@ -117,8 +117,10 @@ class SceneName(object):
             filename = os.path.relpath(filename, self.workspace)
             if filename.startswith('.'):
                 raise ValueError('File %r not in workspace %r' % (self.filename, self.workspace))
-        print 'filename', repr(filename)
-        self.directory, filename = filename.split('/', 1)
+        try:
+            self.directory, filename = filename.split('/', 1)
+        except ValueError:
+            self.directory = ''
         
         # Extension
         filename, self.extension = os.path.splitext(filename)

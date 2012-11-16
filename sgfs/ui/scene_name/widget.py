@@ -12,6 +12,8 @@ Qt = QtCore.Qt
 
 from .core import SceneName
 
+__also_reload__ = ['.core']
+
 
 class SceneNameWidget(QtGui.QWidget):
 
@@ -19,6 +21,10 @@ class SceneNameWidget(QtGui.QWidget):
         super(SceneNameWidget, self).__init__(parent)
         self._setup_namer(kwargs or {})
         self._setup_ui()
+    
+    @property
+    def namer(self):
+        return self._namer
     
     def _setup_namer(self, kwargs):
         kwargs.setdefault('workspace', os.getcwd())
