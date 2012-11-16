@@ -11,6 +11,7 @@ from sgsession import Session
 from .cache import PathCache
 from .context import Context
 from .schema import Schema
+from . import utils
 
 
 class SGFS(object):
@@ -26,30 +27,42 @@ class SGFS(object):
     """
     
     def __init__(self, root=None, session=None, shotgun=None, schema_name=None):
-        
+        # This constructor is very light weight, not really doing anything
+        # until you ask for it.
+        self._root = root
+        self._session = session
+        self._shotgun = shotgun
+        self.schema_name = schema_name
+    
+    @utils.cached_property
+    def root(self):
         # Take the given root, or look it up in the environment.
+        root = self._root
         if root is None:
             root = os.environ.get('SGFS_ROOT')
             if root is None:
                 raise ValueError('one of root or $SGFS_ROOT must not be None')
-        self.root = os.path.abspath(root)
-        
+        return os.path.abspath(root)
+    
+    @utils.cached_property
+    def session(self):
         # Set the session, building it from a generic Shotgun if nothing was
         # given. This requires a `shotgun_api3_registry.connect()` function.
-        if not shotgun and not session:
+        if not self._shotgun and not self._session:
             import shotgun_api3_registry
-            shotgun = shotgun_api3_registry.connect(auto_name_stack_depth=1)
-        self.session = session or Session(shotgun)
+            self._shotgun = shotgun_api3_registry.connect(auto_name_stack_depth=1)
+        return self._session or Session(self._shotgun)
         
+    @utils.cached_property
+    def project_roots(self):
         # Scan the root looking for Project tags in its top level.
-        self.project_roots = {}
+        roots = {}
         for name in os.listdir(self.root):
             path = os.path.join(self.root, name)
             for tag in self.get_directory_entity_tags(path):
                 if tag['entity']['type'] == 'Project':
-                    self.project_roots[tag['entity']] = path
-        
-        self.schema_name = schema_name
+                    roots[tag['entity']] = path
+        return roots
     
     def path_cache(self, project):
         """Get a :class:`~sgfs.cache.PathCache` for a given path or entity..
