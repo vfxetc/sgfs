@@ -530,7 +530,7 @@ class SGFS(object):
         for template in structure.iter_templates(template_name):
             return template
     
-    def path_from_template(self, entity_, template_name, **kwargs):
+    def path_from_template(self, entity_, template_name, *args, **kwargs):
         """Construct a path.
         
         :param entity: The :class:`~sgsession:sgsession.entity.Entity` whose
@@ -553,7 +553,7 @@ class SGFS(object):
         template = self.find_template(entity_, template_name)
         if not template:
             raise ValueError('could not find template %r under %r' % (template_name, entity_))
-        return template.format(**kwargs)
+        return template.format(*args, **kwargs)
     
     def template_from_path(self, path, template_name):
         """Parse a path from a given template.

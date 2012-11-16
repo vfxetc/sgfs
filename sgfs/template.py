@@ -136,7 +136,7 @@ class Template(object):
         return '(%s)' % (pattern)
     
     # `self_` so that `self` can be passed via kwargs.
-    def format(self_, **kwargs):
+    def format(self_, *args, **kwargs):
         """Format the template with the given kwargs.
         
         :param dict **kwargs: Values to substitute into the pattern.
@@ -149,8 +149,14 @@ class Template(object):
             'Awesome_Shot_v0123.ma'
             
         """
+        
+        data = {}
+        for arg in args:
+            data.update(arg)
+        data.update(kwargs)
+        
         try:
-            return self_.format_string.format(**kwargs)
+            return self_.format_string.format(**data)
         except (AttributeError, KeyError) as e:
             raise type(e)('%s in %r' % (e.args[0], self_.format_string))
     
@@ -255,7 +261,7 @@ class BoundTemplate(object):
         return self.structure.context.entity
     
     # `self_` so that `self` can be passed via kwargs.
-    def format(self_, **kwargs):
+    def format(self_, *args, **kwargs):
         """Format the template as a path with the given kwargs.
         
         The underlying template will be joined to the ``path`` of the bound
@@ -275,8 +281,10 @@ class BoundTemplate(object):
         """
         
         namespace = self_.context.build_eval_namespace(self_.structure.config)
+        for arg in args:
+            namespace.update(arg)
         namespace.update(kwargs)
-        rel_path = self_.template.format(**namespace)
+        rel_path = self_.template.format(namespace)
         return os.path.join(self_.path, rel_path)
     
     def match(self, path):
