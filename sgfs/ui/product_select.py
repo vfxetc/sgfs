@@ -134,10 +134,10 @@ class Section(QtGui.QVBoxLayout):
 _custom_sentinel = object()
 
 
-class ProductSelectorLayout(QtGui.QHBoxLayout):
+class Layout(QtGui.QHBoxLayout):
     
     def __init__(self, parent=None, browse_name='Product', browse_filter=''):
-        super(ProductSelectorLayout, self).__init__()
+        super(Layout, self).__init__()
         
         self._browse_name = browse_name
         self._browse_filter = browse_filter
@@ -318,7 +318,4 @@ class ProductSelectorLayout(QtGui.QHBoxLayout):
         
         for i, path in enumerate(matches):
             self._sections[i]._combobox.selectWithData(path)
-
-
-
 
