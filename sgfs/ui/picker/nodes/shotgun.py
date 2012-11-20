@@ -7,6 +7,8 @@ Qt = QtCore.Qt
 from ..utils import debug, icon, call_open
 from .base import Node, Group
 
+__also_reload__ = ['.base']
+
 
 class ShotgunBase(Node):
     
@@ -273,25 +275,38 @@ class ShotgunQuery(ShotgunBase):
 
 class ShotgunPublishStream(ShotgunQuery):
 
-    labels = {'PublishEvent': ['{self[code]}', 'v{self[sg_version]:04d}']}
-    headers = {'PublishEvent': ['Publish Stream', 'Version']}
+    single_labels = {'PublishEvent': ['{self[code]}', 'v{self[sg_version]:04d}']}
+    single_headers = {'PublishEvent': ['Publish Name', 'Version']}
+
+    multi_labels = {'PublishEvent': ['{self[sg_type]}', '{self[code]}', 'v{self[sg_version]:04d}']}
+    multi_headers = {'PublishEvent': ['Publish Type', 'Name', 'Version']}
     
     def __init__(self, *args, **kwargs):
-        self.publish_type = kwargs.pop('publish_type', 'maya_scene')
+        
+        self.publish_types = kwargs.pop('publish_types', None) or kwargs.pop('publish_type', 'maya_scene')
+        if isinstance(self.publish_types, basestring):
+            self.publish_types = [self.publish_types]
+        if self.publish_types is None or len(self.publish_types) > 1:
+            self.labels = self.multi_labels
+            self.headers = self.multi_headers
+        else:
+            self.labels = self.single_labels
+            self.headers = self.single_headers
+        
         kwargs.setdefault('entity_types', ['PublishEvent'])
         super(ShotgunPublishStream, self).__init__(*args, **kwargs)
     
     def filters(self, entity_type):
         filters = super(ShotgunPublishStream, self).filters(entity_type)
-        filters.append(('sg_type', 'is', self.publish_type))
+        if self.publish_types:
+            # This isn't documented to work, but apparently it does. Go figure.
+            filters.append(('sg_type', 'in') + tuple(self.publish_types))
         return filters
     
     def fetch_entities(self, entity_type):
         entities = super(ShotgunPublishStream, self).fetch_entities(entity_type)
         entities = sorted(entities, key=lambda e: e['code'])
         return entities
-        # for name, stream in itertools.groupby(entities, key=lambda e: e['code']):
-        #     yield max(stream, key=lambda e: int(e['sg_version']))
 
 
 class ShotgunEntities(ShotgunBase):

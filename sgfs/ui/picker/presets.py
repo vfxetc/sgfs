@@ -12,6 +12,8 @@ __also_reload__ = [
     '.view',
     '.utils',
     '.nodes.shotgun',
+    '.nodes.base',
+    '.nodes.sgfs',
 ]
 
 
@@ -41,7 +43,7 @@ def any_task(entity=None, path=None, sgfs=None):
     return model, view
 
 
-def publishes_from_path(path, sgfs=None):
+def publishes_from_path(path, sgfs=None, publish_types=None):
     
     sgfs = sgfs or SGFS()
     
@@ -69,7 +71,9 @@ def publishes_from_path(path, sgfs=None):
         entity_types=['Asset', 'Sequence', 'Shot', 'Task'],
     ))
         
-    model.register_node_type(ShotgunPublishStream)
+    model.register_node_type(functools.partial(ShotgunPublishStream,
+        publish_types=publish_types,
+    ))
         
         
     view = ColumnView()
