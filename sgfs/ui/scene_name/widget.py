@@ -16,7 +16,7 @@ __also_reload__ = ['.core']
 
 
 class SceneNameWidget(QtGui.QWidget):
-
+        
     def __init__(self, kwargs=None, parent=None):
         super(SceneNameWidget, self).__init__(parent)
         self._setup_namer(kwargs or {})
@@ -120,7 +120,17 @@ class SceneNameWidget(QtGui.QWidget):
         rel_path = os.path.relpath(path, self._namer.workspace)
         self._preview_label.setText('<workspace>/' + rel_path)
         if os.path.exists(path):
-            self._preview_label.setStyleSheet('QLabel { color: orange; }')
+            
+            # Pick an error color appropriate for the background color.
+            palette = QtGui.QApplication.palette()
+            bg = palette.color(palette.Window)
+            if bg.red() > 127:
+                fg = 'darkRed'
+            else:
+                fg = 'orange' # Red it too bright to read.
+                
+            self._preview_label.setStyleSheet('QLabel { color: %s; }' % fg)
+        
         else:
             self._preview_label.setStyleSheet('')
     
