@@ -7,13 +7,13 @@ Qt = QtCore.Qt
 from .utils import debug, icon
 from .nodes import base
 
+
 class Header(QtGui.QHeaderView):
     
     def __init__(self, node):
         super(Header, self).__init__(Qt.Horizontal)
         self._node = node
-        self.setResizeMode(0, QtGui.QHeaderView.Fixed)
-        self.setStretchLastSection(True)
+        self.setResizeMode(QtGui.QHeaderView.Stretch)
         
     def paintEvent(self, e):
             
