@@ -3,9 +3,7 @@ import os
 import threading
 import traceback
 import platform
-
-import concurrent.futures
-
+import Queue as queue
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -37,8 +35,11 @@ class Model(QtCore.QAbstractItemModel):
         
         # Shotgun is not very threadsafe. In our tests it is almost always
         # faster to only have a single thread running.
-        self.threadpool = concurrent.futures.ThreadPoolExecutor(1)
-        
+        self._thread_queue = queue.LifoQueue()
+        self._thread = QtCore.QThread()
+        self._thread.run = self._thread_target
+        self._thread_started = False
+                
         self._node_types = []
         
         self.dataChanged.connect(self._on_data_changed)
@@ -46,6 +47,20 @@ class Model(QtCore.QAbstractItemModel):
     def _on_data_changed(self, *args):
         self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
     
+    def _thread_target(self):
+        while True:
+            try:
+                func, args, kwargs = self._thread_queue.get()
+                func(*args, **kwargs)
+            except Exception:
+                traceback.print_exc()
+    
+    def scheduleJob(self, func, *args, **kwargs):
+        self._thread_queue.put((func, args, kwargs))
+        if not self._thread_started:
+            self._thread.start()
+            self._thread_started = True
+        
     def register_node_type(self, node_type):
         self._node_types.append(node_type)
     

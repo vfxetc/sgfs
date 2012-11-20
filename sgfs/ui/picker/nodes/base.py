@@ -80,7 +80,7 @@ class Node(object):
         
     def schedule_async_fetch(self, callback, *args, **kwargs):
         self.is_loading += 1
-        self.model.threadpool.submit(self._process_async, callback, *args, **kwargs)
+        self.model.scheduleJob(self._process_async, callback, *args, **kwargs)
         
     def _process_async(self, callback, *args, **kwargs):
         try:
@@ -90,7 +90,6 @@ class Node(object):
             children = list(callback(*args, **kwargs))
         
         except Exception as e:
-            traceback.print_exc()
             self.error_count += 1
             self.is_loading -= 1
             self.model.dataChanged.emit(self.index, self.index)
@@ -106,7 +105,6 @@ class Node(object):
                 self.add_raw_children(children)
         
         except Exception as e:
-            traceback.print_exc()
             self.model.dataChanged.emit(self.index, self.index)
             raise
         
