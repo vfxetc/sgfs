@@ -10,6 +10,10 @@ This Python package is a translation layer between `Shotgun <http://www.shotguns
 - create new structures on disk;
 - indentify existing structures on disk for use in above translation.
 
+We also provide a number of Qt Widgets to assist in working with Shotgun:
+
+.. image:: _static/picker-screenshot.png
+
 
 Contents
 --------

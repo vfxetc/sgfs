@@ -9,4 +9,8 @@ This Python package is a translation layer between Shotgun entities and a file s
 - create new structures on disk;
 - indentify existing structures on disk for use in above translation.
 
+We also provide a number of Qt Widgets to assist in working with Shotgun:
+
+![Shotgun Picker](https://raw.github.com/westernx/sgfs/master/docs/_static/picker-screenshot.png)
+
 [Read the docs](http://sgfs.readthedocs.org/), and good luck!
