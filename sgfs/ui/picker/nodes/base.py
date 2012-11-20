@@ -80,7 +80,7 @@ class Node(object):
         
     def schedule_async_fetch(self, callback, *args, **kwargs):
         self.is_loading += 1
-        self.model.scheduleJob(self._process_async, callback, *args, **kwargs)
+        self.model.threadpool.submit(self._process_async, callback, *args, **kwargs)
         
     def _process_async(self, callback, *args, **kwargs):
         try:

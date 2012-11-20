@@ -1,9 +1,8 @@
+import functools
 import sys
 import os
-import threading
 import traceback
 import platform
-import Queue as queue
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -12,6 +11,7 @@ from sgfs import SGFS
 
 from .nodes.base import Node, Group, Leaf
 from .utils import debug, icon
+from ..threadpool import ThreadPool
 
 
 class Model(QtCore.QAbstractItemModel):
@@ -33,13 +33,8 @@ class Model(QtCore.QAbstractItemModel):
         self.sgfs.session.shotgun.config.timeout_secs = 5
         self.sgfs.session.shotgun.config.max_rpc_attempts = 1
         
-        # Shotgun is not very threadsafe. In our tests it is almost always
-        # faster to only have a single thread running.
-        self._thread_queue = queue.LifoQueue()
-        self._thread = QtCore.QThread()
-        self._thread.run = self._thread_target
-        self._thread_started = False
-                
+        self.threadpool = ThreadPool(8, lifo=True)
+        
         self._node_types = []
         
         self.dataChanged.connect(self._on_data_changed)
@@ -54,12 +49,6 @@ class Model(QtCore.QAbstractItemModel):
                 func(*args, **kwargs)
             except Exception:
                 traceback.print_exc()
-    
-    def scheduleJob(self, func, *args, **kwargs):
-        self._thread_queue.put((func, args, kwargs))
-        if not self._thread_started:
-            self._thread.start()
-            self._thread_started = True
         
     def register_node_type(self, node_type):
         self._node_types.append(node_type)
@@ -130,8 +119,6 @@ class Model(QtCore.QAbstractItemModel):
             # I.e.: This is a huge hack.
             return self._header
         
-        if role == Qt.DecorationRole:
-            return QtGui.QColor.fromRgb(255, 0, 0)
         return QtCore.QVariant()
     
     def rowCount(self, parent):
