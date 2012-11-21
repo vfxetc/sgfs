@@ -1,5 +1,6 @@
 import itertools
 import functools
+import threading
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -60,7 +61,7 @@ class ShotgunBase(Node):
     }
     
     fields = {
-        'Task': ['step.Step.color'],
+        'Task': ['step.Step.color', 'task_assignees'],
         'Step': ['code', 'color', 'entity_type'],
         'Tool': ['code'],
         'Ticket': ['title'],
@@ -73,6 +74,11 @@ class ShotgunBase(Node):
     def _child_tuple_from_entity(self, entity, strict_format=False):
         
         type_ = entity['type']
+        
+        font = None
+        if type_ == 'Task' and 'task_assignees' in entity and self.model.sgfs.session.guess_user() in entity['task_assignees']:
+            font = QtGui.QFont()
+            font.setUnderline(True)
         
         labels = []
         for format_string in self.labels[type_]:
@@ -124,6 +130,7 @@ class ShotgunBase(Node):
                 {
                     Qt.DisplayRole: label,
                     Qt.DecorationRole: self.icons.get(type_),
+                    Qt.FontRole: font,
                     'header': headers[i + 1],
                 }, {
                     '%s.groups[%d]' % (type_, i): label
@@ -132,6 +139,7 @@ class ShotgunBase(Node):
         
         view_data = {
             Qt.DisplayRole: labels[-1],
+            Qt.FontRole: font,
             'header': headers[-1],
             'groups': groups,
         }
@@ -173,9 +181,17 @@ class ShotgunBase(Node):
 
 class ShotgunQuery(ShotgunBase):
     
+    _getting_user = False
+    
     def __init__(self, *args, **kwargs):
         self.entity_types = kwargs.pop('entity_types')
         super(ShotgunQuery, self).__init__(*args, **kwargs)
+        
+        # Spawn a thread to grab the human user.
+        if not self._getting_user and 'Task' in self.entity_types:
+            self._user_thread = threading.Thread(target=self.model.sgfs.session.guess_user)
+            self._user_thread.start()
+            ShotgunQuery._getting_user = True
     
     def __repr__(self):
         return '<%s for %r at 0x%x>' % (self.__class__.__name__, self.active_types, id(self))

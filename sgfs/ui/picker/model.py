@@ -203,6 +203,11 @@ class Model(QtCore.QAbstractItemModel):
             
             return data
         
+        if role == Qt.FontRole:
+            if node.view_data.get(Qt.FontRole) is not None:
+                return node.view_data[Qt.FontRole]
+            return QtCore.QVariant()
+        
         if role == Qt.ForegroundRole:
             if node.error_count:
                 return QtGui.QColor.fromRgb(128, 0, 0)
