@@ -40,6 +40,9 @@ class Dialog(QtGui.QDialog):
         self._button.setEnabled(False)
         self._button.clicked.connect(self._on_set_project)
         button_layout.addWidget(self._button)
+        
+        # Trigger a button update.
+        self._on_node_changed(self._picker.currentNode())
     
     def _on_node_changed(self, node):
         self._node = node
