@@ -29,9 +29,9 @@ class Node(object):
         self.parent = None
         self.view = None
         
-        self.view_data = None
-        self.state = None
-        self.update(view_data or {}, state or {})
+        self.view_data = {}
+        self.state = {}
+        self.update(view_data, state)
         
         self._child_lock = threading.RLock()
         self._flat_children = None
@@ -55,9 +55,9 @@ class Node(object):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
     def update(self, view_data, state):
-        is_different = self.view_data != view_data
-        self.view_data = view_data
-        self.state = state
+        is_different = any(self.view_data.get(k) != v for k, v in view_data.iteritems())
+        self.view_data.update(view_data)
+        self.state.update(state)
         if is_different and self.index:
             self.model.dataChanged.emit(self.index, self.index)
     
