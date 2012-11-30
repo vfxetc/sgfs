@@ -312,7 +312,7 @@ class SGFS(object):
             for tag in self.get_directory_entity_tags(path, **kwargs):
                 yield path, tag
     
-    def rebuild_cache(self, path, recurse=False):
+    def rebuild_cache(self, path, recurse=False, dry_run=False):
         """Rebuilds the cache for a given directory.
         
         This is useful when a tagged directory has been moved, breaking the
@@ -338,8 +338,8 @@ class SGFS(object):
                 for tag in self.get_directory_entity_tags(path):
                     to_check.append((path, tag))
         else:
-            for tag in self.get_directory_entity_tags(path):
-                to_check.append((path, tag))
+            for tag in self.get_directory_entity_tags(root_path):
+                to_check.append((root_path, tag))
         
         # Update them.
         changed = []
@@ -347,7 +347,8 @@ class SGFS(object):
             old_path = cache.get(tag['entity'])
             if old_path != path:
                 changed.append((old_path, path, tag))
-                cache[tag['entity']] = path
+                if not dry_run:
+                    cache[tag['entity']] = path
         
         return changed
     
