@@ -91,7 +91,7 @@ def parse_spec(sgfs, parts, entity_types=None):
     
     # Direct entities. E.g. `shot 12345`
     elif len(parts) == 2 and re.match(r'^[A-Za-z]{3,}$', parts[0]) and parts[1].isdigit():
-        data.update({'type': parts[0].title(), 'id': int(parts[1])})
+        data.update({'type': parts[0][0].upper() + parts[0][1:], 'id': int(parts[1])})
         return data
     
     # Components.
