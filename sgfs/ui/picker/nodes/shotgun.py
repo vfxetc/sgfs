@@ -314,6 +314,7 @@ class ShotgunPublishStream(ShotgunQuery):
     
     def filters(self, entity_type):
         filters = super(ShotgunPublishStream, self).filters(entity_type)
+        filters.append(('sg_version', 'greater_than', 0))
         if self.publish_types:
             # This isn't documented to work, but apparently it does. Go figure.
             filters.append(('sg_type', 'in') + tuple(self.publish_types))
