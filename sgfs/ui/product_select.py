@@ -251,10 +251,12 @@ class Layout(QtGui.QHBoxLayout):
             
             # Some of our tags are missing parts and I'm not sure why.
             if 'step' not in task:
+                if task.fetch('step') is None:
+                    continue
                 cmds.warning('%r does not have a cached step' % task)
-                
+            
             # Only add one of every step.
-            step_code = task.fetch('step').fetch('code')
+            step_code = task['step'].fetch('code')
             if step_code in step_codes:
                 continue
             step_codes.add(step_code)
