@@ -297,7 +297,7 @@ class Layout(QtGui.QHBoxLayout):
     def path_changed(self, path):
         pass
 
-    def setPath(self, full_path):
+    def setPath(self, full_path, allow_partial=False):
         
         # Try to match it.
         matches = []
@@ -311,10 +311,11 @@ class Layout(QtGui.QHBoxLayout):
                     break
             else:
                 # Could not find it.
-                self._sections[0]._combobox.selectWithData(_custom_sentinel)
-                self._on_section_changed(0, _custom_sentinel)
-                self._set_custom(full_path)
-                return
+                if not allow_partial:
+                    self._sections[0]._combobox.selectWithData(_custom_sentinel)
+                    self._on_section_changed(0, _custom_sentinel)
+                    self._set_custom(full_path)
+                    return
         
         for i, path in enumerate(matches):
             self._sections[i]._combobox.selectWithData(path)
