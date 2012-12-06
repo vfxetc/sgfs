@@ -1,9 +1,7 @@
 Picker
 =======
 
-- Use shotgun batch mode to query multiple things at once
 - Preview not hidden on Maya 2011.
-- No headers on Maya 2011 or Nuke.
 
 - Fix sizeHint on columns, since they are far too tall.
 - Filesystem nodes.
@@ -16,7 +14,14 @@ Create Structure
 
 - Set better permissions, including owner/group/perms from config.
     - Sticky bit on directory will go a long way in our setup.
+    - Don't be recursive about the configuration; everything that isn't default
+      permissions should be set explicitly.
 
+
+Templates
+=========
+
+- Patterns in template names to allow for maya_*_publish template.
 
 
 Other
