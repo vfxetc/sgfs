@@ -299,7 +299,7 @@ class ShotgunPublishStream(ShotgunQuery):
     
     def __init__(self, *args, **kwargs):
         
-        self.publish_types = kwargs.pop('publish_types', None) or kwargs.pop('publish_type', 'maya_scene')
+        self.publish_types = kwargs.pop('publish_types', None) or kwargs.pop('publish_type', None)
         if isinstance(self.publish_types, basestring):
             self.publish_types = [self.publish_types]
         if self.publish_types is None or len(self.publish_types) > 1:
