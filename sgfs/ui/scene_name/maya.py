@@ -18,16 +18,9 @@ from .widget import Dialog
 
 dialog = None
 
-
-def __before_reload__():
-
-    print '__before_reload__'
-    
+def __before_reload__():    
     if dialog:
         dialog.close()
-
-
-__also_reload__ = ['.widget', '.core']
 
 
 class MayaDialog(Dialog):

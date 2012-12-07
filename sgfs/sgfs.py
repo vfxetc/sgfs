@@ -13,8 +13,6 @@ from .context import Context
 from .schema import Schema
 from . import utils
 
-__also_reload__ = ['sgsession']
-
 
 class SGFS(object):
     

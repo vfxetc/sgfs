@@ -8,8 +8,6 @@ Qt = QtCore.Qt
 from ..utils import debug, icon, call_open
 from .base import Node, Group
 
-__also_reload__ = ['.base']
-
 
 class ShotgunBase(Node):
     

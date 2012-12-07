@@ -12,8 +12,6 @@ Qt = QtCore.Qt
 
 from .core import SceneName
 
-__also_reload__ = ['.core']
-
 
 class SceneNameWidget(QtGui.QWidget):
         

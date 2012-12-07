@@ -8,10 +8,6 @@ from maya import cmds, mel
 
 from sgfs.ui.picker import presets as picker_presets
 
-__also_reload__ = [
-    'sgfs.ui.picker.presets',
-]
-
 
 class Dialog(QtGui.QDialog):
     

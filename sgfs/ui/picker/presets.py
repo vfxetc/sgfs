@@ -6,16 +6,6 @@ from .view import ColumnView
 from .nodes.shotgun import ShotgunEntities, ShotgunQuery, ShotgunPublishStream
 from .utils import state_from_entity
 
-__also_reload__ = [
-    '...sgfs',
-    '.model',
-    '.view',
-    '.utils',
-    '.nodes.shotgun',
-    '.nodes.base',
-    '.nodes.sgfs',
-]
-
 
 def any_task(entity=None, path=None, sgfs=None):
     
