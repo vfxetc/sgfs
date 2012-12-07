@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import itertools
 import functools
 import threading
@@ -5,8 +7,8 @@ import threading
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from ..utils import debug, icon, call_open
-from .base import Node, Group
+from sgfs.ui.picker.utils import debug, icon, call_open
+from sgfs.ui.picker.nodes.base import Node, Group
 
 
 class ShotgunBase(Node):

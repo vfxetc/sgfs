@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import threading
 import traceback
 import multiprocessing.pool
@@ -6,8 +8,8 @@ import Queue as queue
 from PyQt4 import QtCore
 Qt = QtCore.Qt
 
-from ..childlist import ChildList
-from ..utils import debug
+from sgfs.ui.picker.childlist import ChildList
+from sgfs.ui.picker.utils import debug
 
 
 class Node(object):

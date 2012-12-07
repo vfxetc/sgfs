@@ -1,6 +1,6 @@
 import copy
 
-from . import utils
+from sgfs import utils
 
 
 class Context(object):

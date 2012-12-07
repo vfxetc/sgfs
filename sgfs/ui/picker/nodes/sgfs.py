@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from ..utils import debug, icon, call_open
-from .base import Node
+from sgfs.ui.picker.utils import debug, icon, call_open
+from sgfs.ui.picker.nodes.base import Node
 
 
 class SGFSRoots(Node):

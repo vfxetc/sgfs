@@ -9,9 +9,9 @@ Qt = QtCore.Qt
 
 from sgfs import SGFS
 
-from .nodes.base import Node, Group, Leaf
-from .utils import debug, icon
-from ..threadpool import ThreadPool
+from sgfs.ui.picker.nodes.base import Node, Group, Leaf
+from sgfs.ui.picker.utils import debug, icon
+from sgfs.ui.threadpool import ThreadPool
 
 
 class Model(QtCore.QAbstractItemModel):

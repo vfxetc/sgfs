@@ -7,12 +7,12 @@ Qt = QtCore.Qt
 
 from sgfs import SGFS
 
-from .model import *
-from .view import *
-from .comboboxview import *
-from .utils import *
-from .nodes.sgfs import *
-from .nodes.shotgun import *
+from sgfs.ui.picker.model import *
+from sgfs.ui.picker.view import *
+from sgfs.ui.picker.comboboxview import *
+from sgfs.ui.picker.utils import *
+from sgfs.ui.picker.nodes.sgfs import *
+from sgfs.ui.picker.nodes.shotgun import *
 
 def main():
     

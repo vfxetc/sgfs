@@ -17,7 +17,7 @@ Qt = QtCore.Qt
 
 from maya import cmds, mel
 
-from ..sgfs import SGFS
+from sgfs.sgfs import SGFS
 
 
 sgfs = SGFS()

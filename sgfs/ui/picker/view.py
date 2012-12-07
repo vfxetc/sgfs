@@ -4,8 +4,8 @@ import pprint
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from .utils import debug, icon
-from .nodes import base
+from sgfs.ui.picker.utils import debug, icon
+from sgfs.ui.picker.nodes import base
 
 
 class Header(QtGui.QHeaderView):

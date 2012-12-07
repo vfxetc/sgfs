@@ -3,7 +3,7 @@ import functools
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from .utils import debug
+from sgfs.ui.picker.utils import debug
 
 
 class ComboBox(QtGui.QComboBox):

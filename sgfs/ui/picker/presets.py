@@ -1,10 +1,10 @@
 import functools
 
-from ...sgfs import SGFS
-from .model import Model
-from .view import ColumnView
-from .nodes.shotgun import ShotgunEntities, ShotgunQuery, ShotgunPublishStream
-from .utils import state_from_entity
+from sgfs.sgfs import SGFS
+from sgfs.ui.picker.model import Model
+from sgfs.ui.picker.view import ColumnView
+from sgfs.ui.picker.nodes.shotgun import ShotgunEntities, ShotgunQuery, ShotgunPublishStream
+from sgfs.ui.picker.utils import state_from_entity
 
 
 def any_task(entity=None, path=None, sgfs=None):
