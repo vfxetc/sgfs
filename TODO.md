@@ -27,7 +27,12 @@ Templates
 Other
 =====
 
-- Legacy schema.
+- Rename SceneName
+    - FileNameBuilder
+    
+- Rename product_select.
+- ProductSelector(allow_custom=False)
+
 - Cache lookups by code/name as well as by ID.
 - Get setup.py including the schema (via a MANIFEST?).
 - Rename some SGFS methods:

@@ -132,7 +132,6 @@ class SceneName(object):
         
         # Assign (sub)directory around versioning.
         directory_parts = re.split(r'v\d+(?:/revisions?)?(?:/|$)', directory)
-        print 'DIRECTORY', repr(directory), directory_parts
         if len(directory_parts) > 1:
             self.directory, self.sub_directory = directory_parts
         else:
