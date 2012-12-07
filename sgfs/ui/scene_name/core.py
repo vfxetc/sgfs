@@ -1,21 +1,25 @@
 """
 
-This is lifted directoy out of the WesternX key_base repo. Please be very
+This is lifted directly out of the WesternX key_base repo. Please be very
 careful in changing this until our tools have migrated.
+
+Asset scene paths look like:
+    {workspace}/{directory}/v{version}/{sub_directory}/{entity}_step_name_{detail}_v{version}{ext}
+    {workspace}/{directory}/v{version}/revisions/{sub_directory}/{entity}_step_name_{detail}_v{version}_r{revision}{ext}
+
+Note the versioning information between `directory` and `sub_directory`.
+
+Everything else looks like:
+    {workspace}/{directory}/{sub_directory}/{entity}_step_name_{detail}_v{version}_r{revision}{ext}
+
+TODO:
+    - Use SGFS to determine where the workspace is (by looking for a directory
+      tagged with a Task).
 
 """
 
 import os
 import re
-
-
-def verbose(func):
-    return func
-    def _verbose(*args, **kwargs):
-        arg_specs = [repr(x) for x in args] + ['%s=%r' % x for x in sorted(kwargs.iteritems())]
-        print '%s.%s(%s)' % (args[0].__class__.__name__, func.__name__, ', '.join(arg_specs))
-        return func(*args, **kwargs)
-    return _verbose
 
 
 class SceneName(object):
@@ -27,7 +31,6 @@ class SceneName(object):
         self.entity_name = ''
         self.entity_type = None
         self.extension = ''
-        self.legacy = False
         self.revision = 1
         self.step_name = kwargs.get('step_name')
         self.sub_directory = ''
@@ -53,7 +56,6 @@ class SceneName(object):
         self.entity_name = kwargs.pop('entity_name', self.entity_name)
         self.entity_type = kwargs.pop('entity_type', self.entity_type)
         self.extension = kwargs.pop('extension', self.extension)
-        self.legacy = bool(kwargs.pop('legacy', self.legacy))
         self.revision = int(kwargs.pop('revision', self.revision))
         self.step_name = kwargs.pop('step_name', self.step_name)
         # "scenes_name" one is for backwards compatibility.
@@ -81,7 +83,6 @@ class SceneName(object):
     def error(self, message):
         raise ValueError(message)
 
-    @verbose
     def _parse_workspace(self, workspace):
         
         # Isolate the entity from the standard WesternX structure, e.g.:
@@ -93,60 +94,49 @@ class SceneName(object):
             self.error('Could not parse WesternX workspace.')
             return
         
-        filename_dir, parent_type, parent_name, self.entity_name, step_name, software = m.groups()
+        filename_dir, parent_type, parent_name, self.entity_name, self.step_name, software = m.groups()
         self.entity_type = 'Shot' if parent_type == 'SEQ' else 'Asset'
         self.workspace = m.group(0)
         
         remaining = workspace[m.end(0):].rstrip('/')
         if remaining:
             self.warning('workspace may be too specific; %r remains' % remaining)
-                
-        # Determine if it is legacy or not.
-        if step_name == '3D':
-            self.legacy = True
-            
-        else:
-            self.legacy = False
-            self.step_name = step_name
     
-    
-    @verbose
     def _parse_filename(self, filename):
         
         if os.path.isabs(filename):
             filename = os.path.relpath(filename, self.workspace)
             if filename.startswith('.'):
                 raise ValueError('File %r not in workspace %r' % (self.filename, self.workspace))
-        try:
-            self.directory, filename = filename.split('/', 1)
-        except ValueError:
-            self.directory = ''
-        
+
         # Extension
         filename, self.extension = os.path.splitext(filename)
-
-        # Legacy paths have the step_name here.
-        if self.legacy:
-            self.step_name, filename = filename.split('/', 1)
-                
-        # Versions and revisions.
-        m = re.search(r'v(\d+)', filename)
+        
+        directory = os.path.dirname(filename)
+        filename = os.path.basename(filename)
+        
+        # Versions and revisions come out of the basename, and then the dirname
+        m = re.search(r'v(\d+)', filename) or re.search(r'v(\d+)', directory)
         if m:
             self.version = int(m.group(1))
         else:
             self.warning('Could not match version.')
-        m = re.search(r'r(\d+)', filename)
+        m = re.search(r'r(\d+)', filename) or re.search(r'r(\d+)', directory)
         if m:
             self.revision = int(m.group(1))
         else:
             self.revision = 0
-        filename = filename.replace('/revisions/', '')
+        
+        # Completely strip versioning out of the basename.
         filename = re.sub(r'_?[rv]\d+/?', '', filename)
         
-        # Sub directory
-        parts = filename.rsplit('/', 1)
-        if len(parts) == 2:
-            self.sub_directory, filename = parts
+        # Assign (sub)directory around versioning.
+        directory_parts = re.split(r'v\d+(?:/revisions?)?(?:/|$)', directory)
+        print 'DIRECTORY', repr(directory), directory_parts
+        if len(directory_parts) > 1:
+            self.directory, self.sub_directory = directory_parts
+        else:
+            self.directory = directory
         
         # Strip entity name.
         if self.entity_name and filename.lower().startswith(self.entity_name.lower()):
@@ -167,17 +157,11 @@ class SceneName(object):
         if self._step_names:
             return self._step_names
         
-        if self.legacy:
-            step_dir = os.path.join(self.workspace, self.directory)
-            for name in os.listdir(step_dir):
-                if os.path.isdir(os.path.join(step_dir, name)):
-                    self._step_names.append(name)
-        else:
-            step_dir = os.path.dirname(os.path.dirname(self.workspace))
-            for name in os.listdir(step_dir):
-                # XXX: Hardcoded SGFS tag name?!
-                if os.path.exists(os.path.join(step_dir, name, '.sgfs.yml')):
-                    self._step_names.append(name)
+        step_dir = os.path.dirname(os.path.dirname(self.workspace))
+        for name in os.listdir(step_dir):
+            # XXX: Hardcoded SGFS tag name?!
+            if os.path.exists(os.path.join(step_dir, name, '.sgfs.yml')):
+                self._step_names.append(name)
         
         # Make sure we have a step name.
         if self.step_name is None:
@@ -207,23 +191,17 @@ class SceneName(object):
     
     def get_directory(self):
         
-        if self.legacy:
-            path = os.path.join(self.workspace, self.directory, self.step_name)
-        else:
-            path = os.path.join(self.workspace, self.directory)
-        
-        path = os.path.join(path, self.sub_directory)
-        
-        if self.entity_type == 'Shot' or self.directory != 'scenes':
-            return path
-        
-        else:
-            # Add '/v0001/revisions' if in an Asset and this is a maya scene.
+        path = os.path.join(self.workspace, self.directory)
+            
+        # Add '/v0001/revisions' if in an Asset and this is a maya scene.
+        # Because the artists said so. That's why.
+        if self.entity_type == 'Asset' and self.directory.startswith('scenes'):
             path = os.path.join(path, 'v' + '%04d' % self.version)
             if self.revision:
-                return os.path.join(path, 'revisions')
-            else:
-                return path
+                path = os.path.join(path, 'revisions')
+                
+        path = os.path.join(path, self.sub_directory)
+        return path
     
     def get_path(self):
         return os.path.join(self.get_directory(), self.get_basename())
