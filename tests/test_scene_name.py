@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase
 
-from ks.core.scene_name import SceneName
+from sgfs.ui.scene_name import SceneName
 
 
 root = '/Projects/Test_Project'
