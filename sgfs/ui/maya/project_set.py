@@ -51,13 +51,14 @@ class Dialog(QtGui.QDialog):
     def _on_set_project(self):
         workspace = os.path.join(self._path, 'maya')
 
+        # We *really* set the workspace.
         os.chdir(workspace)
         cmds.workspace(workspace, openWorkspace=True)
         cmds.workspace(dir=workspace)
         mel.eval('addRecentProject("%s");' % workspace)
         
         print '# Workspace set to:', workspace
-        
+
         self.hide()
 
 

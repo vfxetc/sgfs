@@ -83,34 +83,40 @@ class SceneName(object):
     def error(self, message):
         raise ValueError(message)
 
-    def _parse_workspace(self, workspace):
-        
+    def _split_workspace(self, workspace):
+
         # Isolate the entity from the standard WesternX structure, e.g.:
         # - /Volumes/VFX/Projects/Super_Buddies/Assets/Character/Cow
         # - /Volumes/VFX/Projects/Testing_Sandbox/SEQ/GP/GP_001_001
         m = re.match(r'(/.+?)/(SEQ|Assets)/([^/]+)/([^/]+)/([^/]+)(?:/(maya|nuke))?', workspace)
+        return m, workspace[m.end(0):].strip('/') if m else workspace
+
+    def _parse_workspace(self, workspace, warn_on_remaining=True):
         
+        m, remaining = self._split_workspace(workspace)
+
         if not m:
             self.error('Could not parse WesternX workspace.')
             return
+
+        if remaining and warn_on_remaining:
+            self.warning('workspace may be too specific; %r remains' % remaining)
         
         filename_dir, parent_type, parent_name, self.entity_name, self.step_name, software = m.groups()
         self.entity_type = 'Shot' if parent_type == 'SEQ' else 'Asset'
         self.workspace = m.group(0)
         
-        remaining = workspace[m.end(0):].rstrip('/')
-        if remaining:
-            self.warning('workspace may be too specific; %r remains' % remaining)
     
     def _parse_filename(self, filename):
         
         if os.path.isabs(filename):
-            filename = os.path.relpath(filename, self.workspace)
-            if filename.startswith('.'):
-                raise ValueError('File %r not in workspace %r' % (self.filename, self.workspace))
+            rel_filename = os.path.relpath(filename, self.workspace)
+            if rel_filename.startswith('.'):
+                self.warning('file not in workspace; %r not in %r' % (filename, self.workspace))
+                _, rel_filename = self._split_workspace(filename)
 
         # Extension
-        filename, self.extension = os.path.splitext(filename)
+        filename, self.extension = os.path.splitext(rel_filename)
         
         directory = os.path.dirname(filename)
         filename = os.path.basename(filename)

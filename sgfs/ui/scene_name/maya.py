@@ -78,4 +78,4 @@ def run():
     
     dialog = MayaDialog()
     dialog.show()
-    
+
