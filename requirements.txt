@@ -4,3 +4,4 @@
 -e git://github.com/westernx/sgsession.git@master#egg=sgsession
 
 PyYaml
+futures
