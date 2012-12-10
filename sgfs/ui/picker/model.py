@@ -9,9 +9,9 @@ Qt = QtCore.Qt
 
 from sgfs import SGFS
 
-from sgfs.ui.picker.nodes.base import Node, Group, Leaf
-from sgfs.ui.picker.utils import debug, icon
-from sgfs.ui.threadpool import ThreadPool
+from .nodes.base import Node, Group, Leaf
+from .utils import debug, icon
+from ..threadpool import ThreadPool
 
 
 class Model(QtCore.QAbstractItemModel):
@@ -218,14 +218,3 @@ class Model(QtCore.QAbstractItemModel):
         except KeyError:
             return QtCore.QVariant()
 
-
-
-
-
-
-
-
-
-        
-
-    
