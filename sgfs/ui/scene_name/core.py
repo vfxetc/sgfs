@@ -114,6 +114,8 @@ class SceneName(object):
             if rel_filename.startswith('.'):
                 self.warning('file not in workspace; %r not in %r' % (filename, self.workspace))
                 _, rel_filename = self._split_workspace(filename)
+        else:
+            rel_filename = filename
 
         # Extension
         filename, self.extension = os.path.splitext(rel_filename)
