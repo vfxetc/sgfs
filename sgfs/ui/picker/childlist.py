@@ -28,3 +28,4 @@ class ChildList(list):
                     return child
             raise KeyError(key)
         return super(ChildList, self).__getitem__(key)
+

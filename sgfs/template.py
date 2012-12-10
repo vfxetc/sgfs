@@ -307,20 +307,4 @@ class BoundTemplate(object):
         """
         rel_path = os.path.relpath(path, self.path)
         return self.template.match(rel_path)
-        
 
-
-
-
-
-
-
-
-
-
-
-
-
-            
-    
-        

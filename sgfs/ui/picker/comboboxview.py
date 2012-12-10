@@ -131,3 +131,4 @@ class ComboBoxView(QtGui.QAbstractItemView):
     
     def setColumnWidths(self, *args):
         pass
+

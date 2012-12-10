@@ -27,3 +27,4 @@ def _run(dry_run, entity_type, selected_ids, **kwargs):
         title='Preview Folders' if dry_run else 'Creating Folders',
         message='\n'.join(commands) or 'Everything is up to date.',
     )
+

@@ -177,3 +177,4 @@ def parse_spec(sgfs, parts, entity_types=None):
 
 if __name__ == '__main__':
     pprint(parse(sys.argv[1:]))
+

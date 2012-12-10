@@ -34,4 +34,4 @@ def main():
     sgfs.session.fetch_core(entities)
     
     sgfs.tag_directory_with_entity(path, entity, cache=opts.cache)
-    
+

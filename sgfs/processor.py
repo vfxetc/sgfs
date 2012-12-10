@@ -61,4 +61,3 @@ class Processor(object):
             if not self.dry_run:
                 os.chmod(dest, 0666) # Race condition?
 
-

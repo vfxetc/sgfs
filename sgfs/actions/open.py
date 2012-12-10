@@ -33,4 +33,3 @@ def run(entity_type, selected_ids, **kwargs):
         else:
             call(['xdg-open', path])
 
-    

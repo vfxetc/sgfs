@@ -81,7 +81,4 @@ class Schema(object):
                     structure.children.append(child_structure)
         
         return structure
-        
-        
-
 

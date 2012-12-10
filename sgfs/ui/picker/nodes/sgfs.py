@@ -42,3 +42,4 @@ class SGFSRoots(Node):
             if not path:
                 action.setEnabled(False)
             menu.addAction(icon('silk/cog_go', as_icon=True), 'Open in Shotgun', functools.partial(call_open, entity.url))
+

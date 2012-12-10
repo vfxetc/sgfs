@@ -34,4 +34,3 @@ def run(entity_type, selected_ids, **kwargs):
     
     call(['maya_launcher'], cwd=path, env=env)
 
-    

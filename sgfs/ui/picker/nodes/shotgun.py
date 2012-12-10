@@ -349,4 +349,4 @@ class ShotgunEntities(ShotgunBase):
     
     def sort_children(self):
         pass
-    
+

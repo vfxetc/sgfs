@@ -59,3 +59,4 @@ class OpenCommand(Command):
 run_open = OpenCommand('open_directory')
 run_shotgun = OpenCommand('open_shotgun')
 run_path = OpenCommand('print_path')
+

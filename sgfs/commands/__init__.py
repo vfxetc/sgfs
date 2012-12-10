@@ -29,3 +29,4 @@ class Command(object):
         sgfs = SGFS(root=opts.root)
         
         return self.run(sgfs, opts, args, *call_args, **kwargs)
+

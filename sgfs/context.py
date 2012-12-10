@@ -156,4 +156,4 @@ class Context(object):
             namespace[head.entity['type']] = head.entity
             head = head.parent
         return namespace
-    
+

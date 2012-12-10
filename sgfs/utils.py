@@ -66,4 +66,3 @@ class chain_map(collections.Mapping):
                 visited.add(k)
                 yield k
 
-

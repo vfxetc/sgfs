@@ -77,3 +77,4 @@ def publishes_from_path(path, sgfs=None, publish_types=None):
         view.setCurrentIndex(initial_index)
         
     return model, view
+

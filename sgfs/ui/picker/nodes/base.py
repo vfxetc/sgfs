@@ -259,3 +259,4 @@ class Leaf(Node):
     
     def fetch_children(self):
         return []
+

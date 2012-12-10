@@ -570,7 +570,4 @@ class SGFS(object):
             res = template.match(path)
             if res is not None:
                 return template, res
-        
-    
-    
-    
+

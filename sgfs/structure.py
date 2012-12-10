@@ -247,4 +247,3 @@ class File(Structure):
             else:
                 processor.touch(self.path)
 
-

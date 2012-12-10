@@ -60,3 +60,4 @@ def call_open(x):
         subprocess.call(['open', x])
     else:
         subprocess.call(['xdg-open', x])
+

@@ -202,4 +202,4 @@ class ColumnView(QtGui.QColumnView):
     def stateChanged(self, state):
         pass
         # debug('stateChanged:\n%s\n', pprint.pformat(state))
-        
+

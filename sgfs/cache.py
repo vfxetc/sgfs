@@ -96,5 +96,4 @@ class PathCache(collections.MutableMapping):
             for row in c:
                 entity = self.sgfs.session.merge(dict(type=row[0], id=row[1]))
                 yield os.path.join(self.project_root, row[2]), entity
-            
-        
+
