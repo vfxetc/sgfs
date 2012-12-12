@@ -50,7 +50,7 @@ class ComboBoxView(QtGui.QAbstractItemView):
             setattr(self, attr, functools.partial(self._passthrough, attr))
     
     def _passthrough(self, attr, *args):
-        debug('passthrough %s', attr)
+        # debug('passthrough %s', attr)
         getattr(super(ComboBoxView, self), attr)(*args)
         self._setup_boxes()
     
@@ -60,36 +60,33 @@ class ComboBoxView(QtGui.QAbstractItemView):
         self._setup_boxes()
     
     def layoutChanged(self):
-        debug('layoutChanged')
         self._setup_boxes()
     
     def _setup_boxes(self):
-        debug('setup_boxes')
-        
         boxes = self._boxes
-        
         
         nodes = [self.currentNode()]
         while nodes[0].parent:
             nodes.insert(0, nodes[0].parent)
         non_leaf_nodes = len(nodes) - int(nodes[-1].is_leaf())
         
-        # Make sure we have just enough comboboxes.
+        # Prune extra boxes.
         while len(boxes) > non_leaf_nodes:
             box = boxes.pop(-1)
             box.hide()
             box.destroy()
-            
+        
+        # Create new boxes.
         while non_leaf_nodes > len(boxes):
             box = ComboBox()
             box.activated.connect(functools.partial(self._box_activated, len(boxes)))
             boxes.append(box)
             self._layout.addWidget(box)
         
-        debug('nodes: %r', nodes)
-        debug('boxes: %r', boxes)
+        # debug('nodes: %r', nodes)
+        # debug('boxes: %r', boxes)
         
-        # Reset them all...
+        # Reset them all. Somewhat wasteful, but whatever.
         for node_i, (node, box) in enumerate(zip(nodes, boxes)):
             box.clear()
             children = node.children()
@@ -109,16 +106,25 @@ class ComboBoxView(QtGui.QAbstractItemView):
                     box.setCurrentIndex(row)
     
     def _box_activated(self, box_i, row_i):
-        debug('box_activated(%r, %r)', box_i, row_i)
+        # debug('box_activated(%r, %r)', box_i, row_i)
         box = self._boxes[box_i]
         node = box.itemData(row_i)
         self.setCurrentIndex(node.index)
-    
-    
-    
+
     def currentNode(self):
         return self.model().node_from_index(self.selectionModel().currentIndex())
     
+    # Stubs for AbstractModelView
+
+    def scrollTo(self, index, *args):
+        pass
+
+    def visualRect(self, index):
+        return self.rect()
+
+    def visualRegionForSelection(self, selection):
+        return self.visibleRegion()
+
     def verticalOffset(self):
         return 0
     
@@ -131,4 +137,8 @@ class ComboBoxView(QtGui.QAbstractItemView):
     
     def setColumnWidths(self, *args):
         pass
+
+    def indexAt(self, point):
+        return QtCore.QModelIndex()
+
 
