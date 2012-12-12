@@ -1,13 +1,24 @@
 Picker
 =======
 
+- Rename module:
+    - sgfs.model_view (perhaps too generic)
+    - sgfs.entity_picker
+    - sgfs.state_picker (this is how it is implemented)
+
 - Preview not hidden on Maya 2011.
 
-- Fix sizeHint on columns, since they are far too tall.
 - Filesystem nodes.
 
+- Sort order or sort-key that is seperate from the display data
+- Auto-select, to automatically jump to the latest version. Takes effect
+  when a node is added, has "select" in `view_data`, and its parent is
+  already selected
 
+- Node to wrap around other nodes to get a union of them. Then we can
+  easily add a union of PublishEvent and WorkFiles
 
+- 
 
 Create Structure
 =================
@@ -24,14 +35,31 @@ Templates
 - Patterns in template names to allow for maya_*_publish template.
 
 
+Work Namer (aka SceneName)
+==========================
+
+- sgfs.scene_name warnings should collect in a list and be displayed to
+  the user by the UI, optionally.
+
+
+Work Picker (aka product_select)
+================================
+
+- Should this be changed to the sgfs.state_picker?
+
 Other
 =====
 
-- Rename SceneName
-    - FileNameBuilder
-    
-- Rename product_select.
-- ProductSelector(allow_custom=False)
+- Rename a few things: scene_name and product_select:
+    - both of these things work with arbitrary "products", which are files
+      that are associated with Shotgun Tasks:
+        - sgfs.product_name.ProductName
+        - sgfs.product_selector.ProductSelectorLayout
+    - products are things that are the results of work, so maybe workfile:
+        - sgfs.workfile_name or work_name or work_namer
+        - sgfs.workfile_pick or work_pick or work_picker
+        - sgfs.path_picker (this is how it is implemented)
+
 
 - Cache lookups by code/name as well as by ID.
 - Get setup.py including the schema (via a MANIFEST?).
