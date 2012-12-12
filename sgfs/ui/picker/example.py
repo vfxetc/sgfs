@@ -48,9 +48,9 @@ def main():
 
 
     # model.register_node_type(SGFSRoots)
-    # model.register_node_type(ShotgunPublishStream)
+    model.register_node_type(functools.partial(ShotgunPublishStream, publish_types=['maya_scene']))
     # model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
-    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Project')))
+    model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Project', 'Task')))
 
     if opts.combobox:
         view = ComboBoxView()
@@ -78,17 +78,20 @@ def main():
         else:
             print 'Could not get index for initial state.'
 
+    view.setMinimumWidth(800)
+
     if not opts.combobox:
-        view.setMinimumWidth(800)
-        view.setFixedHeight(400)
-        view.setColumnWidths([198] + [200] * 10)
+        view.setMaximumHeight(400)
         view.setPreviewVisible(False)
+        view.setColumnWidths([148] + [150] * 10)
+
 
     dialog = QtGui.QDialog()
     dialog.setWindowTitle(sys.argv[0])
-    dialog.setLayout(QtGui.QVBoxLayout())
+    dialog.setLayout(QtGui.QHBoxLayout())
     dialog.layout().addWidget(view)
-    
+    dialog.layout().addStretch()
+
     dialog.show()
     dialog.raise_()
 
