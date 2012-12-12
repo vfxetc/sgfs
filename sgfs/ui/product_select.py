@@ -144,23 +144,30 @@ class Layout(QtGui.QHBoxLayout):
         
         self._parent = parent
         
+        self._ui_is_setup = False
+
         self._sections = []
         self._setup_sections()
         
         self._setup_ui()
+        self._ui_is_setup = True
     
     def _setup_sections(self):
         self.register_section("Entity", self._iter_entity_items)
         self.register_section("Step", self._iter_step_items)
     
     def register_section(self, name, iter_func):
-        self._sections.append(Section(
+        section =Section(
             self._parent,
             self,
             len(self._sections),
             name,
             iter_func,
-        ))
+        )
+        self._sections.append(section)
+        if self._ui_is_setup:
+            self.addLayout(section)
+            self._sections[0].repopulate(self.root())
     
     def _setup_ui(self):
         
@@ -321,4 +328,6 @@ class Layout(QtGui.QHBoxLayout):
         
         for i, path in enumerate(matches):
             self._sections[i]._combobox.selectWithData(path)
+
+        return True
 
