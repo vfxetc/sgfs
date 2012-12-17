@@ -4,7 +4,7 @@ import pprint
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from sgfs.ui.picker.utils import debug, icon
+from sgfs.ui.picker.utils import debug, icon, state_from_entity
 from sgfs.ui.picker.nodes import base
 
 
@@ -201,5 +201,20 @@ class ColumnView(QtGui.QColumnView):
     
     def stateChanged(self, state):
         pass
-        # debug('stateChanged:\n%s\n', pprint.pformat(state))
+
+    def setEntityFromPath(self, path, entity_types=None):
+
+        entities = self.model().sgfs.entities_from_path(path, entity_types)
+        if not entities:
+            return False
+
+        init_state = state_from_entity(entities)
+        index = self.model().index_from_state(init_state)
+        if not index:
+            return False
+
+        view.setCurrentIndex(index)
+        return True
+
+
 
