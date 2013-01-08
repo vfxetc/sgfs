@@ -7,3 +7,7 @@ steps_to_include:
     - Matchmove Character
     - Matchmove Rotomation
     
+
+templates:
+    boujou_work_area: work
+

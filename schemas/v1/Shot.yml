@@ -2,3 +2,9 @@ name_expr: self['code']
 
 children:
     Task: Task.yml
+
+templates:
+    plate_directory: Plates/DPX_action/{name}
+    plate_proxy_directory: Plates/JPG/{name}
+
+
