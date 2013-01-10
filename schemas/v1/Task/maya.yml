@@ -19,12 +19,7 @@ steps_to_include:
     - Previs
     - Rigging
     - Rig
-    
 
 templates:
-    maya_scene_publish:  published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
-    maya_camera_publish: published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
-    maya_reference_edits_publish: published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
-    maya_light_rig_publish: published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
-    maya_geocache_publish: published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
-    maya_locators_publish: published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
+    # Generic maya publish.
+    maya_*_publish:  published/{publisher.type}/{publisher.name}/v{publisher.version:04d}

@@ -78,14 +78,14 @@ class Structure(object):
         for child in sorted(self.children, key=lambda x: x.name):
             child.pprint(depth + 1)
     
-    def walk(self, children_first=False):
+    def walk(self, depth_first=False):
         """Walk depth-first, yielding ``(path, node)`` pairs."""
-        if not children_first:
+        if not depth_first:
             yield self
         for child in self.children:
-            for x in child.walk():
+            for x in child.walk(depth_first):
                 yield x
-        if children_first:
+        if depth_first:
             yield self
     
     def create(self, **kwargs):
@@ -110,10 +110,10 @@ class Structure(object):
         pass
     
     def iter_templates(self, name):
-        for node in self.walk(children_first=True):
-            raw_template = node.config.get('templates', {}).get(name)
-            if raw_template is not None:
-                yield BoundTemplate(raw_template, structure=node)
+        for node in self.walk(depth_first=True):
+            for name_pattern, raw_template in node.config.get('templates', {}).iteritems():
+                if fnmatch.fnmatchcase(name, name_pattern):
+                    yield BoundTemplate(raw_template, structure=node)
             
 
 

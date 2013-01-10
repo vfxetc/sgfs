@@ -124,6 +124,16 @@ class TestSGFSTemplates(TestCase):
         # CANT TEST FOR NAME HERE, since it will match wrong.
         
         # self.fail()
+
+    def test_definition_patterns(self):
+
+        tpl = self.sgfs.find_template(self.tasks[0], 'maya_camera_folder')
+        self.assertEqual(tpl.template.format(), 'data/camera')
+
+        tpl = self.sgfs.find_template(self.tasks[0], 'maya_lightrig_folder')
+        self.assertEqual(tpl.template.format(), 'data/generic')
+
+
         
         
         
