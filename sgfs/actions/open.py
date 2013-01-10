@@ -1,9 +1,6 @@
 from subprocess import call
-import optparse
-import os
 import platform
 
-from shotgun_api3_registry import connect
 from sgfs import SGFS
 
 from sgactions.utils import notify

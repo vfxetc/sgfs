@@ -1,10 +1,7 @@
 """Development script to be able to identify an entity given a variety of inputs."""
 
-import sys
-import re
 import os
-from pprint import pprint
-
+import re
 
 
 def _expand_entity(data, entity, seen=None):
@@ -168,13 +165,3 @@ def parse_spec(sgfs, parts, entity_types=None):
     
     # We didn't identify anything.
     return data
-
-
-
-
-
-
-
-if __name__ == '__main__':
-    pprint(parse(sys.argv[1:]))
-

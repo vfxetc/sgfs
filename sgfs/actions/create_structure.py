@@ -1,7 +1,3 @@
-import optparse
-import os
-
-from shotgun_api3_registry import connect
 from sgfs import SGFS
 
 from sgactions.utils import notify
@@ -27,4 +23,3 @@ def _run(dry_run, entity_type, selected_ids, **kwargs):
         title='Preview Folders' if dry_run else 'Creating Folders',
         message='\n'.join(commands) or 'Everything is up to date.',
     )
-

@@ -1,16 +1,6 @@
-import optparse
-import os
-
-from shotgun_api3_registry import connect
-from sgfs import SGFS
-
-
-import os
 from subprocess import call
-import platform
 
 from . import Command
-from . import utils
 
 
 class RelinkCommand(Command):

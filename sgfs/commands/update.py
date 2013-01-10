@@ -1,20 +1,10 @@
-import optparse
 import os
 import yaml
 from subprocess import call
 import datetime
 import sys
 
-from shotgun_api3_registry import connect
-from sgfs import SGFS
-
-
-import os
-from subprocess import call
-import platform
-
 from . import Command
-from . import utils
 
 
 def iter_entity_delta(a, b):

@@ -1,7 +1,5 @@
 import optparse
-import os
 
-from shotgun_api3_registry import connect
 from sgfs import SGFS
 
 
