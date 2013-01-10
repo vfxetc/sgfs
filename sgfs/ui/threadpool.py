@@ -1,6 +1,5 @@
 import functools
 import threading
-import traceback
 import Queue as queue
 
 from PyQt4 import QtCore

@@ -11,7 +11,6 @@ import os
 import platform
 
 import maya.cmds as cmds
-import maya.mel as mm
 
 from .widget import Dialog
 

@@ -8,14 +8,11 @@ careful in changing this until our tools have migrated.
 from __future__ import absolute_import
 
 import os
-import re
-import difflib
-import sys
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from maya import cmds, mel
+from maya import cmds
 
 from sgfs.sgfs import SGFS
 
@@ -289,9 +286,7 @@ class Layout(QtGui.QHBoxLayout):
         self.path_changed(self.path())
     
     def path(self):
-        
-        workspace = cmds.workspace(q=True, directory=True)
-        
+                
         path_parts = [self.root()]
         for section in self._sections:
             path = section._combobox.currentData()

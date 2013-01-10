@@ -1,4 +1,3 @@
-import functools
 import os
 
 from PyQt4 import QtCore, QtGui

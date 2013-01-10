@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import itertools
 import functools
 import threading
 
@@ -8,7 +7,7 @@ from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
 from sgfs.ui.picker.utils import debug, icon, call_open
-from sgfs.ui.picker.nodes.base import Node, Group
+from sgfs.ui.picker.nodes.base import Node
 
 
 class ShotgunBase(Node):
@@ -103,7 +102,7 @@ class ShotgunBase(Node):
                 if strict_format:
                     raise
                 debug('formatting error: %s', e)
-                headers.append('%r %% %r' % (label_format, entity))
+                headers.append('%r %% %r' % (format_string, entity))
         
         # Add some default headers.
         headers.extend(labels[len(headers):-1])

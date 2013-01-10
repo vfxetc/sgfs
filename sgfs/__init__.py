@@ -4,3 +4,5 @@ from .sgfs import SGFS
 from .structure import Structure
 from .template import Template, BoundTemplate
 
+# Silence pyflakes.
+assert Context and Schema and SGFS and Structure and Template and BoundTemplate

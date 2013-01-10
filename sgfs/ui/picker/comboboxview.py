@@ -3,8 +3,6 @@ import functools
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from sgfs.ui.picker.utils import debug
-
 
 class ComboBox(QtGui.QComboBox):
     
@@ -89,7 +87,6 @@ class ComboBoxView(QtGui.QAbstractItemView):
         # Reset them all. Somewhat wasteful, but whatever.
         for node_i, (node, box) in enumerate(zip(nodes, boxes)):
             box.clear()
-            children = node.children()
             if node_i + 1 == len(nodes):
                 box.addItem('Select...')
             for row, child in enumerate(node.children()):

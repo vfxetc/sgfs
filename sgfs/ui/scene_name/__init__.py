@@ -7,3 +7,5 @@ careful in changing this until our tools have migrated.
 
 from .core import SceneName
 
+# Silence pyflakes
+assert SceneName

@@ -1,10 +1,9 @@
 import functools
-import pprint
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from sgfs.ui.picker.utils import debug, icon, state_from_entity
+from sgfs.ui.picker.utils import icon, state_from_entity
 from sgfs.ui.picker.nodes import base
 
 
@@ -213,7 +212,7 @@ class ColumnView(QtGui.QColumnView):
         if not index:
             return False
 
-        view.setCurrentIndex(index)
+        self.setCurrentIndex(index)
         return True
 
 

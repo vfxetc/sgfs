@@ -1,15 +1,11 @@
 from __future__ import absolute_import
 
 import threading
-import traceback
-import multiprocessing.pool
-import Queue as queue
 
 from PyQt4 import QtCore
 Qt = QtCore.Qt
 
 from sgfs.ui.picker.childlist import ChildList
-from sgfs.ui.picker.utils import debug
 
 
 class Node(object):
@@ -91,7 +87,7 @@ class Node(object):
             # grab the update lock.
             children = list(callback(*args, **kwargs))
         
-        except Exception as e:
+        except Exception:
             self.error_count += 1
             self.is_loading -= 1
             self.model.dataChanged.emit(self.index, self.index)
@@ -106,7 +102,7 @@ class Node(object):
                 self.is_loading -= 1
                 self.add_raw_children(children)
         
-        except Exception as e:
+        except Exception:
             self.model.dataChanged.emit(self.index, self.index)
             raise
         

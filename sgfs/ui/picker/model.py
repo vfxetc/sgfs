@@ -1,15 +1,11 @@
-import functools
-import sys
-import os
 import traceback
-import platform
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
 from sgfs import SGFS
 
-from .nodes.base import Node, Group, Leaf
+from .nodes.base import Group, Leaf
 from .utils import debug, icon
 from ..threadpool import ThreadPool
 

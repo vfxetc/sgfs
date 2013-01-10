@@ -1,4 +1,4 @@
-import itertools
+import sys
 import functools
 import optparse
 
@@ -7,12 +7,12 @@ Qt = QtCore.Qt
 
 from sgfs import SGFS
 
-from sgfs.ui.picker.model import *
-from sgfs.ui.picker.view import *
-from sgfs.ui.picker.comboboxview import *
-from sgfs.ui.picker.utils import *
-from sgfs.ui.picker.nodes.sgfs import *
-from sgfs.ui.picker.nodes.shotgun import *
+from sgfs.ui.picker.model import Model
+from sgfs.ui.picker.view import ColumnView
+from sgfs.ui.picker.comboboxview import ComboBoxView
+from sgfs.ui.picker.utils import state_from_entity
+from sgfs.ui.picker.nodes.shotgun import ShotgunPublishStream, ShotgunQuery
+
 
 def main():
     
@@ -98,9 +98,6 @@ def main():
 if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
-    
-    import gc
-    # gc.set_debug(gc.DEBUG_LEAK)
     
     main()
     exit(app.exec_())
