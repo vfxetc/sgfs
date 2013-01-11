@@ -10,6 +10,8 @@ import nuke
 from sgfs import SGFS
 from uitools.qt import QtGui
 
+from .utils import dispatch
+
 
 _menu_bar = nuke.menu('Nuke')
 _sgfs = SGFS()
@@ -95,32 +97,44 @@ def build_for_path(path):
     if not entities:
 
         menu = _menu_bar.addMenu('Shotgun [detached]')
-        return
+        entity = None
 
-    entity = entities[0]
-    name_pattern = _entity_name_formats.get(entity['type'], '{type}')
-    menu = _menu_bar.addMenu(
-        'Shotgun [%s]' % name_pattern.format(**entity),
-        index=index,
-    )
+    else:
 
-    # This is the best we can do for a title.
-    menu.addCommand('Open...').setEnabled(False)
-    
+        entity = entities[0]
+        name_pattern = _entity_name_formats.get(entity['type'], '{type}')
+        menu = _menu_bar.addMenu(
+            'Shotgun [%s]' % name_pattern.format(**entity),
+            index=index,
+        )
+
+
+    if not entity:
+        menu.addCommand('No entities found!').setEnabled(False)
+
     # Generate an item for every step up to the top.
     head = entity
     while head and head['type'] in _entity_name_formats:
         menu.addCommand(
-            _entity_name_formats[head['type']].format(**head),
+            'Open %s' % _entity_name_formats[head['type']].format(**head),
             functools.partial(_open_entity, head),
             icon=_icon_path(_entity_icons.get(head['type'])),
         )
         head = head.parent()
 
     menu.addSeparator()
+    menu.addCommand(
+        'Save to Work Area...',
+        functools.partial(dispatch, 'sgfs.nuke.save_to_work_area:run'),
+        'ctrl+alt+S',
+    )
 
-    item = menu.addCommand('Change Workspace...')
-    item.setEnabled(False)
+    if 'KS_DEV_ARGS' in os.environ:
+        menu.addSeparator()
+        menu.addCommand(
+            '[dev] Reload',
+            functools.partial(dispatch, '%s:build_for_path' % __name__, (path, )),
+        )
 
 
 
