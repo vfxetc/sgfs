@@ -116,7 +116,7 @@ def build_for_path(path):
     head = entity
     while head and head['type'] in _entity_name_formats:
         menu.addCommand(
-            'Open %s' % _entity_name_formats[head['type']].format(**head),
+            'Go to %s' % _entity_name_formats[head['type']].format(**head),
             functools.partial(_open_entity, head),
             icon=_icon_path(_entity_icons.get(head['type'])),
         )
