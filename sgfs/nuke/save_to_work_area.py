@@ -12,43 +12,69 @@ import platform
 
 import nuke
 
-from sgfs.ui.scene_name.widget import Dialog
+from uitools.qt import QtGui
+from sgfs.ui.scene_name.widget import SceneNameWidget
+from sgfs.ui.picker.presets import any_task
 
 
-class NukeDialog(Dialog):
+class Dialog(QtGui.QDialog):
     
-    def __init__(self, parent=None):
-        super(NukeDialog, self).__init__({
-            'workspace': nuke.root().name(),
+    def __init__(self, kwargs=None, parent=None):
+        super(Dialog, self).__init__(parent)
+
+        self._kwargs = {
+            'workspace': os.path.dirname(nuke.root().name()),
             'filename': nuke.root().name(),
             'directory': 'scripts/comp',
             'warning': nuke.warning,
             'error': nuke.error,
             'extension': '.nk',
-        }, parent)
-    
-    def _check_overwrite_safety(self, path):
+        }
+        self._kwargs.update(kwargs or {})
+        self._setupGui()
+
+    def _setupGui(self):
+
+        self.setWindowTitle('Save Script to Work Area')
+        self.setLayout(QtGui.QVBoxLayout())
+
+        self._pickerModel, self._pickerView = any_task(path=nuke.root().name())
+        self._pickerView.setFixedSize(600, 250)
+        self._pickerView.setPreviewVisible(False)
+        self.layout().addWidget(self._pickerView)
+
+        # The main widget.
+        self._sceneName = SceneNameWidget(self._kwargs)
+        self.layout().addWidget(self._sceneName)
         
-        # Good to go if it doesn't exist.
-        basic = super(NukeDialog, self)._check_overwrite_safety(path)
+        # Save button.
+        button = QtGui.QPushButton('Save', clicked=self._onSaveClicked)
+        self.layout().addWidget(button)
+    
+    def show(self):
+        super(Dialog, self).show()
+        self.setMinimumSize(self.size())
+        self.setMaximumHeight(self.height())
+    
+    def _onSaveClicked(self, *args):
+        path = self._sceneName.path()
+        if not self._checkOverwriteSafety(path):
+            return
+        dir_name = os.path.dirname(path)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        print 'Save to', repr(path)
+        self._save(path)
+        self.close()
+    
+    def _checkOverwriteSafety(self, path):
+        
+        basic = not os.path.exists(path)
         if basic:
             return True
-        
-        # Ask the user.
-        kwargs = dict(
-            icon='warning',
-            button=['Yes', 'No'],
-            cancelButton='No',
-            defaultButton='No',
-        )
+
         message = "%s already exists.\nDo you want to replace it?" % os.path.basename(path)
-        if platform.system() == 'Darwin':
-            kwargs['title'] = message
-        else:
-            kwargs['title'] = 'Save As'
-            kwargs['message'] = message
-        
-        # return cmds.confirmDialog(**kwargs) == 'Yes'
+        return nuke.ask(message)
     
     def _save(self, path):
         nuke.scriptSaveAs(path, 1)
@@ -68,6 +94,6 @@ def run():
     if dialog:
         dialog.close()
     
-    dialog = NukeDialog()
+    dialog = Dialog()
     dialog.show()
 

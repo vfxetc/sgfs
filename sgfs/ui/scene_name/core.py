@@ -165,10 +165,13 @@ class SceneName(object):
             return self._step_names
         
         step_dir = os.path.dirname(os.path.dirname(self.workspace))
-        for name in os.listdir(step_dir):
-            # XXX: Hardcoded SGFS tag name?!
-            if os.path.exists(os.path.join(step_dir, name, '.sgfs.yml')):
-                self._step_names.append(name)
+        try:
+            for name in os.listdir(step_dir):
+                # XXX: Hardcoded SGFS tag name?!
+                if os.path.exists(os.path.join(step_dir, name, '.sgfs.yml')):
+                    self._step_names.append(name)
+        except OSError:
+            pass
         
         # Make sure we have a step name.
         if self.step_name is None:
