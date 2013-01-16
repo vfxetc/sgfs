@@ -1,7 +1,7 @@
 
 condition: |
-    if self.get('step') is None:
-        raise RuntimeError('%r has no pipeline step' % self)
+    if not self.get('step'):
+        raise ValueError('%(type)s %(id)s has no pipeline step' % self)
     return all(self['step'][x] not in do_not_create for x in ('code', 'short_name'))
 
 do_not_create:
