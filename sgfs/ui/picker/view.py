@@ -100,6 +100,9 @@ class HeaderedListView(QtGui.QTreeView):
 
 class ColumnView(QtGui.QColumnView):
     
+    # Emitted whenever a different node is selected.
+    nodeChanged = QtCore.pyqtSignal([object])
+
     def __init__(self):
         super(ColumnView, self).__init__()
         
@@ -184,22 +187,20 @@ class ColumnView(QtGui.QColumnView):
     def _reload_node(self, node):
         node.reset()
         self.model().dataChanged.emit(node.index, node.index)
-        
+    
     def currentNode(self):
         return self.model().node_from_index(self.selectionModel().currentIndex())
     
+    # TODO: Deprecate.
     def currentState(self):
         return self.currentNode().state
     
     def currentChanged(self, current, previous):
         super(ColumnView, self).currentChanged(current, previous)
-        self.nodeChanged(self.currentNode())
 
-    def nodeChanged(self, node):
-        self.stateChanged(node.state)
-    
-    def stateChanged(self, state):
-        pass
+        # Ideally I would connect to the same signal on the selectionModel that
+        # this object does, but it is easier for me to just overload this slot.
+        self.nodeChanged.emit(self.model().node_from_index(current))
 
     def setEntityFromPath(self, path, entity_types=None):
 
