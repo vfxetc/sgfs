@@ -3,25 +3,24 @@ import functools
 import itertools
 
 
-def eval_expr_or_func(src, globals_, locals_=None):
+def eval_expr_or_func(src, globals_, locals_=None, filename=None):
+
+    if filename is None:
+        filename = '<string:%s>' % (src.encode('string-escape'))
+
     lines = src.strip().splitlines()
     if len(lines) > 1:
         # Surely I can create a function object directly with a compiled code
         # object, but I couldn't quit figure it out in the time that I allowed.
         # Ergo, we are evalling strings. Sorry.
-        src = 'def _():\n' + '\n'.join('\t' + line for line in lines)
+        src = 'def __expr__():\n' + '\n'.join('\t' + line for line in lines)
         locals_ = locals_ if locals_ is not None else {}
-        code = compile(src, '<str>', 'exec')
+        code = compile(src, filename, 'exec')
         eval(code, globals_, locals_)
-        try:
-            return locals_['_']()
-        except Exception, e:
-            raise ValueError('Error while running %r -> %r' % (src, e))
+        return locals_['__expr__']()
     else:
-        try:
-            return eval(lines[0], globals_)
-        except Exception, e:
-            raise ValueError('Error while running %r -> %r' % (lines[0], e))
+        code = compile(lines[0], filename, 'eval')
+        return eval(code, globals_)
 
 
 class cached_property(object):
