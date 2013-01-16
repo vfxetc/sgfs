@@ -29,6 +29,7 @@ class Structure(object):
         if not condition or utils.eval_expr_or_func(
             condition,
             context.build_eval_namespace(config),
+            filename='sgfs.schema.%s.%s' % (context.entity['type'], 'condition')
         ):
             return constructor(context, config, root)
 
@@ -62,6 +63,7 @@ class Structure(object):
             return utils.eval_expr_or_func(
                 self.config[expr_name],
                 self.context.build_eval_namespace(self.config),
+                filename='sgfs.schema.%s.%s' % (self.context.entity['type'], name)
             )
         return default
         
