@@ -11,3 +11,6 @@ steps_to_include:
     - FX
     - Matte Painting
     
+
+templates:
+    nuke_scripts_dir: scripts

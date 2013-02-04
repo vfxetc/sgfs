@@ -167,7 +167,7 @@ class ColumnView(QtGui.QColumnView):
         # We must hold a reference to this somewhere so that it isn't
         # garbage collected on us.
         node.view = view
-                
+
         return view
     
     def _on_context_menu(self, view, point):
