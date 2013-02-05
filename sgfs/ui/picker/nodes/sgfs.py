@@ -49,6 +49,61 @@ class SGFSRoots(Node):
             menu.addAction(icon('silk/cog_go', as_icon=True), 'Open in Shotgun', functools.partial(call_open, entity.url))
 
 
+class DirectoryPicker(Node):
+
+    def __init__(self, *args, **kwargs):
+        self.entity_types = set(kwargs.pop('entity_types'))
+        self.template_name = kwargs.pop('template', None)
+        super(DirectoryPicker, self).__init__(*args, **kwargs)
+
+    def is_next_node(self, state):
+
+        if 'path' in state:
+            return os.path.isdir(state['path'])
+
+        if 'self' not in state:
+            return
+
+        if state['self']['type'] not in self.entity_types:
+            return
+
+        return True
+
+    def fetch_async_children(self):
+
+        self.path = self.state.get('path')
+        if self.path is None:
+            if self.template_name:
+                try:
+                    self.path = self.model.sgfs.path_from_template(self.state['self'], self.template_name)
+                except ValueError:
+                    return
+            else:
+                self.path = self.model.sgfs.path_for_entity(self.state['self'])
+        
+        if self.path is None or not os.path.isdir(self.path):
+            return
+
+        for name in os.listdir(self.path):
+
+            if name.startswith('.') or name.endswith('~'):
+                continue
+            
+            path = os.path.join(self.path, name)
+            is_dir = os.path.isdir(path)
+            yield (
+                path,
+                {
+                    Qt.DisplayRole: name,
+                    'disabled': not is_dir,
+                    Qt.DecorationRole: 'fatcow/folder' if is_dir else None,
+                }, {
+                    'path': path,
+                    'is_dir': is_dir,
+                }
+            )
+
+
 class TemplateGlobPicker(Node):
 
     def __init__(self, *args, **kwargs):
@@ -73,15 +128,20 @@ class TemplateGlobPicker(Node):
 
     def fetch_async_children(self):
 
-        try:
-            self.root = self.model.sgfs.path_from_template(self.state['self'], self.template_name)
-        except ValueError:
-            return
+        self.path = self.state.get('path')
+        if self.path is None:
+            if self.template_name:
+                try:
+                    self.path = self.model.sgfs.path_from_template(self.state['self'], self.template_name)
+                except ValueError:
+                    return
+            else:
+                self.path = self.model.sgfs.path_for_entity(self.state['self'])
         
-        if not os.path.isdir(self.root):
+        if self.path is None or not os.path.isdir(self.path):
             return
 
-        for dir_name, dir_names, file_names in os.walk(self.root):
+        for dir_name, dir_names, file_names in os.walk(self.path):
             for file_name in file_names:
                 if file_name.startswith('.'):
                     continue
@@ -89,7 +149,7 @@ class TemplateGlobPicker(Node):
                     continue
 
                 path = os.path.join(dir_name, file_name)
-                group_names = os.path.relpath(dir_name, self.root).lstrip('.').strip('/').split('/')
+                group_names = os.path.relpath(dir_name, self.path).lstrip('.').strip('/').split('/')
                 group_names = filter(None, group_names)
                 groups = [(
                     name,

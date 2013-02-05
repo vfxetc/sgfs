@@ -151,6 +151,18 @@ class Model(QtCore.QAbstractItemModel):
         else:
             return QtCore.QModelIndex()
     
+    def flags(self, index):
+
+        if not index.isValid():
+            return QtCore.QVariant()
+        node = self.node_from_index(index)
+
+        if node.view_data.get('disabled'):
+            return Qt.NoItemFlags
+        else:
+            return super(Model, self).flags(index)
+        
+
     def data(self, index, role):
         
         if not index.isValid():
