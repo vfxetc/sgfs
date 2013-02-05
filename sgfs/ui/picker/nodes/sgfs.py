@@ -93,6 +93,7 @@ class TemplateGlobPicker(Node):
                 groups = [(
                     name,
                     {
+                        'header': name,
                         Qt.DisplayRole: name,
                         Qt.DecorationRole: 'fatcow/folder',
                     },

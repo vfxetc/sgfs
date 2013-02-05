@@ -1,4 +1,5 @@
 import functools
+import threading
 
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
@@ -61,7 +62,7 @@ class HeaderedListView(QtGui.QTreeView):
     
     # This needs to be a signal so that it runs in the main thread.
     layoutChanged = QtCore.pyqtSignal()
-    
+
     def __init__(self, masterView, model, index, node):
         super(HeaderedListView, self).__init__()
         
@@ -88,11 +89,26 @@ class HeaderedListView(QtGui.QTreeView):
         self.layoutChanged.connect(self.fix_scroll_for_selection)
         self.layoutChanged.connect(self._assertAutoWidth)
 
+
     def _initGui(self):
+
+        # We need some wacky work-around to be able to set the width of the
+        # field, since we can't setColumnWidths while the column is being
+        # created, and we don't seem to have any other hooks. So we setup
+        # a thread to call our signal in the event loop to restore the
+        # minimum size back to what it was and then finally call the proper
+        # sizing function.
         width = self.sizeHintForColumn(0)
         if width > 0:
-            # print 'should force min width to', width
             self.setMinimumWidth(width + 32)
+            self._widthDeferred.connect(self._handleDeferredWidth)
+            threading.Thread(target=self._widthDeferred.emit).start()
+
+    _widthDeferred = QtCore.pyqtSignal()
+
+    def _handleDeferredWidth(self):
+        self.setMinimumWidth(100)
+        self._assertAutoWidth()
 
     def __repr__(self):
         return '<HeaderedListView %r at 0x%x>' % (self._node.view_data.get('header'), id(self))
@@ -127,7 +143,7 @@ class HeaderedListView(QtGui.QTreeView):
             widths = [1]
         while len(widths) <= column + 1:
             widths.append(widths[-1])
-        widths[column] = max(widths[column], width)
+        widths[column] = width
 
         self._masterView.setColumnWidths(widths)
 
