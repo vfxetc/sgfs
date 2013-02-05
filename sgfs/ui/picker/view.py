@@ -14,13 +14,8 @@ class Header(QtGui.QHeaderView):
         super(Header, self).__init__(Qt.Horizontal)
         self._node = node
         self.setResizeMode(QtGui.QHeaderView.Stretch)
-        
-    def paintEvent(self, e):
-            
-        # We need a horrible hack to get different headers in different columns.
-        # Before every paint event we update the data that the model will
-        # provide when requested in real painting implementation.
-        
+    
+    def _text(self):
         if self._node.is_loading:
             header = 'Loading...'
         else:
@@ -30,9 +25,17 @@ class Header(QtGui.QHeaderView):
         
         if self._node.error_count:
             header = 'Loading Error'
-        
-        self.model()._header = header
-        
+
+        return header
+
+    def _setupModel(self):
+        # We need a horrible hack to get different headers in different columns.
+        # Before every paint event we update the data that the model will
+        # provide when requested in real painting implementation.
+        self.model()._header = self._text()
+
+    def paintEvent(self, e):
+        self._setupModel()
         super(Header, self).paintEvent(e)
 
 
@@ -63,6 +66,7 @@ class HeaderedListView(QtGui.QTreeView):
     # This needs to be a signal so that it runs in the main thread.
     layoutChanged = QtCore.pyqtSignal()
 
+
     def __init__(self, masterView, model, index, node):
         super(HeaderedListView, self).__init__()
         
@@ -86,34 +90,46 @@ class HeaderedListView(QtGui.QTreeView):
         self.setModel(model)
         self.setRootIndex(index)
         
-        self.layoutChanged.connect(self.fix_scroll_for_selection)
-        self.layoutChanged.connect(self._assertAutoWidth)
+        self.layoutChanged.connect(self._scrollToCurrentIndex)
+        self.layoutChanged.connect(self.resizeToContents)
+
+        # Transfer standard behaviour and our options to the new column.
+        self._masterView.initializeColumn(self)
+
+        self._deferResize()
 
 
-    def _initGui(self):
+    # We need a hook for resizing columns after the column view has
+    # inserted this column; see self._deferResize().
+    _columnViewSetUp = QtCore.pyqtSignal([int])
+
+    def _deferResize(self):
 
         # We need some wacky work-around to be able to set the width of the
         # field, since we can't setColumnWidths while the column is being
         # created, and we don't seem to have any other hooks. So we setup
-        # a thread to call our signal in the event loop to restore the
-        # minimum size back to what it was and then finally call the proper
+        # a thread to call our signal in the event loop to  call the proper
         # sizing function.
+
+        # We set the minimum size here (and reset it in the event) so that
+        # the animation by QColumnView is still correct.
+
+        # Only bother if we already have a size.
         width = self.sizeHintForColumn(0)
         if width > 0:
-            self.setMinimumWidth(width + 32)
-            self._widthDeferred.connect(self._handleDeferredWidth)
-            threading.Thread(target=self._widthDeferred.emit).start()
+            old_min = self.minimumWidth()
+            self.setMinimumWidth(width + 32) # 32 -> decoration padding.
+            self._columnViewSetUp.connect(self._handleDeferredResize, Qt.QueuedConnection)
+            self._columnViewSetUp.emit(old_min)
 
-    _widthDeferred = QtCore.pyqtSignal()
-
-    def _handleDeferredWidth(self):
-        self.setMinimumWidth(100)
-        self._assertAutoWidth()
+    def _handleDeferredResize(self, old_min):
+        self.setMinimumWidth(old_min)
+        self.resizeToContents()
 
     def __repr__(self):
         return '<HeaderedListView %r at 0x%x>' % (self._node.view_data.get('header'), id(self))
     
-    def fix_scroll_for_selection(self):
+    def _scrollToCurrentIndex(self):
         node = self.model().node_from_index(self.selectionModel().currentIndex())
         while node.parent:
             if node.parent is self._node:
@@ -121,14 +137,15 @@ class HeaderedListView(QtGui.QTreeView):
                 return
             node = node.parent
 
-    def _assertAutoWidth(self):
-
+    def resizeToContents(self):
+        
         width = self.sizeHintForColumn(0)
+
+        # Don't bother if we can't figure it out.
         if width <= 0:
             return
 
-        # print 'column width for', self._node.view_data.get('header'), 'should be', width
-
+        # Pad for icons and decorations.
         width += 32
         
         # Determine our depth in the view.
@@ -138,16 +155,14 @@ class HeaderedListView(QtGui.QTreeView):
             column += 1
             index = index.parent()
 
+        # Set the width.
         widths = self._masterView.columnWidths()
         if not widths:
-            widths = [1]
+            widths = [100]
         while len(widths) <= column + 1:
             widths.append(widths[-1])
         widths[column] = width
-
         self._masterView.setColumnWidths(widths)
-
-        # print '\t', column, widths
 
 
 
@@ -211,10 +226,6 @@ class ColumnView(QtGui.QColumnView):
         node = self.model().node_from_index(index)
         view = HeaderedListView(self, self.model(), index, node)
         
-        # Transfer standard behaviour and our options to the new column.
-        self.initializeColumn(view)
-        view._initGui()
-
         view.setContextMenuPolicy(Qt.CustomContextMenu)
         view.customContextMenuRequested.connect(functools.partial(self._on_context_menu, view))
         

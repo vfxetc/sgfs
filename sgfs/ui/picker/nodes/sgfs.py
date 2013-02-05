@@ -89,7 +89,8 @@ class TemplateGlobPicker(Node):
                     continue
 
                 path = os.path.join(dir_name, file_name)
-                group_names = os.path.relpath(dir_name, self.root).strip('/').split('/')
+                group_names = os.path.relpath(dir_name, self.root).lstrip('.').strip('/').split('/')
+                group_names = filter(None, group_names)
                 groups = [(
                     name,
                     {
