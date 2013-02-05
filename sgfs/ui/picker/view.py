@@ -62,9 +62,10 @@ class HeaderedListView(QtGui.QTreeView):
     # This needs to be a signal so that it runs in the main thread.
     layoutChanged = QtCore.pyqtSignal()
     
-    def __init__(self, model, index, node):
+    def __init__(self, masterView, model, index, node):
         super(HeaderedListView, self).__init__()
         
+        self._masterView = masterView
         self._node = node
         
         # Take control over what is displayed in the header.
@@ -85,6 +86,10 @@ class HeaderedListView(QtGui.QTreeView):
         self.setRootIndex(index)
         
         self.layoutChanged.connect(self.fix_scroll_for_selection)
+        self.layoutChanged.connect(self._assertAutoWidth)
+
+        # Force the children to load.
+        self._assertAutoWidth()
     
     def __repr__(self):
         return '<HeaderedListView %r at 0x%x>' % (self._node.view_data.get('header'), id(self))
@@ -96,6 +101,33 @@ class HeaderedListView(QtGui.QTreeView):
                 self.scrollTo(node.index)
                 return
             node = node.parent
+
+    def _assertAutoWidth(self):
+
+        width = self.sizeHintForColumn(0)
+        print self, width
+        if width <= 0:
+            return
+
+        width += 32
+        
+        # Determine our depth in the view.
+        column = 0
+        index = self.rootIndex()
+        while index.isValid():
+            column += 1
+            index = index.parent()
+
+        widths = self._masterView.columnWidths()
+        print widths
+        if not widths:
+            widths = [1]
+        while len(widths) <= column:
+            widths.append(widths[-1])
+        widths[column] = max(widths[column], width)
+        self._masterView.setColumnWidths(widths)
+        print widths
+
 
 
 class ColumnView(QtGui.QColumnView):
@@ -156,7 +188,7 @@ class ColumnView(QtGui.QColumnView):
         # and this was the only way I found to do it.
         
         node = self.model().node_from_index(index)
-        view = HeaderedListView(self.model(), index, node)
+        view = HeaderedListView(self, self.model(), index, node)
         
         # Transfer standard behaviour and our options to the new column.
         self.initializeColumn(view)

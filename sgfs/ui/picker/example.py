@@ -12,6 +12,7 @@ from sgfs.ui.picker.view import ColumnView
 from sgfs.ui.picker.comboboxview import ComboBoxView
 from sgfs.ui.picker.utils import state_from_entity
 from sgfs.ui.picker.nodes.shotgun import ShotgunPublishStream, ShotgunQuery
+from sgfs.ui.picker.nodes.sgfs import TemplateGlobPicker
 
 
 def main():
@@ -48,9 +49,11 @@ def main():
 
 
     # model.register_node_type(SGFSRoots)
-    model.register_node_type(functools.partial(ShotgunPublishStream, publish_types=['maya_scene']))
+    # model.register_node_type(functools.partial(ShotgunPublishStream, publish_types=['maya_scene']))
     # model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
     model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Project', 'Task')))
+
+    model.register_node_type(functools.partial(TemplateGlobPicker, entity_types=('Task', ), template='nuke_scripts_dir', glob='*.nk'))
 
     if opts.combobox:
         view = ComboBoxView()
@@ -83,7 +86,7 @@ def main():
     if not opts.combobox:
         view.setMaximumHeight(400)
         view.setPreviewVisible(False)
-        view.setColumnWidths([148] + [150] * 10)
+        view.setColumnWidths([1] * 10)
 
 
     dialog = QtGui.QDialog()
