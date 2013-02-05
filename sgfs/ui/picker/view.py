@@ -88,9 +88,12 @@ class HeaderedListView(QtGui.QTreeView):
         self.layoutChanged.connect(self.fix_scroll_for_selection)
         self.layoutChanged.connect(self._assertAutoWidth)
 
-        # Force the children to load.
-        self._assertAutoWidth()
-    
+    def _initGui(self):
+        width = self.sizeHintForColumn(0)
+        if width > 0:
+            # print 'should force min width to', width
+            self.setMinimumWidth(width + 32)
+
     def __repr__(self):
         return '<HeaderedListView %r at 0x%x>' % (self._node.view_data.get('header'), id(self))
     
@@ -105,9 +108,10 @@ class HeaderedListView(QtGui.QTreeView):
     def _assertAutoWidth(self):
 
         width = self.sizeHintForColumn(0)
-        print self, width
         if width <= 0:
             return
+
+        # print 'column width for', self._node.view_data.get('header'), 'should be', width
 
         width += 32
         
@@ -119,14 +123,15 @@ class HeaderedListView(QtGui.QTreeView):
             index = index.parent()
 
         widths = self._masterView.columnWidths()
-        print widths
         if not widths:
             widths = [1]
-        while len(widths) <= column:
+        while len(widths) <= column + 1:
             widths.append(widths[-1])
         widths[column] = max(widths[column], width)
+
         self._masterView.setColumnWidths(widths)
-        print widths
+
+        # print '\t', column, widths
 
 
 
@@ -192,7 +197,8 @@ class ColumnView(QtGui.QColumnView):
         
         # Transfer standard behaviour and our options to the new column.
         self.initializeColumn(view)
-        
+        view._initGui()
+
         view.setContextMenuPolicy(Qt.CustomContextMenu)
         view.customContextMenuRequested.connect(functools.partial(self._on_context_menu, view))
         

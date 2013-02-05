@@ -71,7 +71,7 @@ class TemplateGlobPicker(Node):
 
         return True
 
-    def fetch_children(self):
+    def fetch_async_children(self):
 
         try:
             self.root = self.model.sgfs.path_from_template(self.state['self'], self.template_name)
