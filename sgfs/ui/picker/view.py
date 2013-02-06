@@ -18,21 +18,15 @@ class ResizingListView(HeaderedListView):
     # This needs to be a signal so that it runs in the main thread.
     layoutChanged = QtCore.pyqtSignal()
 
-
-    def __init__(self, masterView, model, index, node):
-        super(ResizingListView, self).__init__()
+    def __init__(self, master, *args, **kwargs):
+        super(ResizingListView, self).__init__(*args, **kwargs)
         
-        self._masterView = masterView
-        self._node = node
-        
-        self.setModel(model)
-        self.setRootIndex(index)
+        self._master = master
         
         self.layoutChanged.connect(self._scrollToCurrentIndex)
         self.layoutChanged.connect(self.resizeToContents)
 
         self._deferResize()
-
 
     # We need a hook for resizing columns after the column view has
     # inserted this column; see self._deferResize().
@@ -60,17 +54,14 @@ class ResizingListView(HeaderedListView):
     def _handleDeferredResize(self, old_min):
         self.setMinimumWidth(old_min)
         self.resizeToContents()
-
-    def __repr__(self):
-        return '<HeaderedListView %r at 0x%x>' % (self._node.view_data.get('header'), id(self))
     
     def _scrollToCurrentIndex(self):
-        node = self.model().node_from_index(self.selectionModel().currentIndex())
-        while node.parent:
-            if node.parent is self._node:
-                self.scrollTo(node.index)
+        index = self.selectionModel().currentIndex()
+        while index.isValid():
+            if index.parent() == self.rootIndex():
+                self.scrollTo(index)
                 return
-            node = node.parent
+            index = index.parent()
 
     def resizeToContents(self):
         
@@ -91,14 +82,15 @@ class ResizingListView(HeaderedListView):
             index = index.parent()
 
         # Set the width.
-        widths = self._masterView.columnWidths()
+        widths = self._master.columnWidths()
         if not widths:
             widths = [100]
         while len(widths) <= column + 1:
             widths.append(widths[-1])
         widths[column] = width
-        self._masterView.setColumnWidths(widths)
+        self._master.setColumnWidths(widths)
 
+        self._master.scroll(1, 0)
 
 
 class ColumnView(QtGui.QColumnView):
@@ -154,19 +146,14 @@ class ColumnView(QtGui.QColumnView):
     
     def createColumn(self, index):
         
-        # This method exists solely because we want headers in our list views,
-        # and this was the only way I found to do it.
-        
         node = self.model().node_from_index(index)
 
-        view = ResizingListView(self, self.model(), index, node)
+        view = ResizingListView(self)
         view.setModel(self.model())
         view.setRootIndex(index)
 
         self.initializeColumn(view)
         view.restoreAfterInitialize()
-
-        # view = HeaderedListView(self, self.model(), index, node)
         
         view.setContextMenuPolicy(Qt.CustomContextMenu)
         view.customContextMenuRequested.connect(functools.partial(self._on_context_menu, view))

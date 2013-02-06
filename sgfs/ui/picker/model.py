@@ -13,7 +13,6 @@ from ..threadpool import ThreadPool
 
 class Model(QtCore.QAbstractItemModel):
     
-    _header = 'Header Not Set'
     _pixmaps = {}
     
     def __init__(self, root_state=None, sgfs=None, shotgun=None, session=None):
@@ -33,11 +32,6 @@ class Model(QtCore.QAbstractItemModel):
         self.threadpool = ThreadPool(8, lifo=True)
         
         self._node_types = []
-        
-        self.dataChanged.connect(self._on_data_changed)
-    
-    def _on_data_changed(self, *args):
-        self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
     
     def _thread_target(self):
         while True:
@@ -108,15 +102,6 @@ class Model(QtCore.QAbstractItemModel):
     
     def node_from_index(self, index):
         return index.internalPointer() if index.isValid() else self.root()
-    
-    def headerData(self, section, orientation, role):
-        
-        if role == Qt.DisplayRole:
-            # This is set by the HeaderedListView widgets as they are being painted.
-            # I.e.: This is a huge hack.
-            return self._header
-        
-        return QtCore.QVariant()
     
     def rowCount(self, parent):
         node = self.node_from_index(parent)
