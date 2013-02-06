@@ -10,93 +10,26 @@ from sgfs.ui.picker.utils import icon, state_from_entity
 from sgfs.ui.picker.nodes import base
 
 
-class Header(QtGui.QHeaderView):
-    
-    def __init__(self, node):
-        super(Header, self).__init__(Qt.Horizontal)
-        self._node = node
-        self.setResizeMode(QtGui.QHeaderView.Stretch)
-    
-    def _text(self):
-        if self._node.is_loading:
-            header = 'Loading...'
-        else:
-            header = self._node.view_data.get('header', '')
-                
-        header += ' (%d)' % len(self._node.children())
-        
-        if self._node.error_count:
-            header = 'Loading Error'
-
-        return header
-
-    def _setupModel(self):
-        # We need a horrible hack to get different headers in different columns.
-        # Before every paint event we update the data that the model will
-        # provide when requested in real painting implementation.
-        self.model()._header = self._text()
-
-    def paintEvent(self, e):
-        self._setupModel()
-        super(Header, self).paintEvent(e)
 
 
-class HeaderedListViewDelegate(QtGui.QStyledItemDelegate):
-    
-    def sizeHint(self, *args):
-        size = super(HeaderedListViewDelegate, self).sizeHint(*args)
-        return size.expandedTo(QtCore.QSize(1, 20))
-    
-    def paint(self, painter, options, index):
-        
-        style = QtGui.QApplication.style()
-        style.drawPrimitive(QtGui.QStyle.PE_PanelItemViewRow, options, painter)
-        
-        # Shift it left by 2 for padding the icons.
-        options.rect.adjust(2, 0, 0, 0)
-        
-        super(HeaderedListViewDelegate, self).paint(painter, options, index)
-        
-        # Triangle.
-        if options.state & QtGui.QStyle.State_Children:
-            options.rect.setLeft(options.rect.right() - 12)
-            style.drawPrimitive(QtGui.QStyle.PE_IndicatorColumnViewArrow, options, painter)
 
-
-class OldHeaderedListView(QtGui.QTreeView):
+class ResizingListView(HeaderedListView):
     
     # This needs to be a signal so that it runs in the main thread.
     layoutChanged = QtCore.pyqtSignal()
 
 
     def __init__(self, masterView, model, index, node):
-        super(HeaderedListView, self).__init__()
+        super(ResizingListView, self).__init__()
         
         self._masterView = masterView
         self._node = node
-        
-        # Take control over what is displayed in the header.
-        self._header = Header(node)
-        self.setHeader(self._header)
-        
-        # Make this behave like a fancier QListView. This also allows for the
-        # right arrow to select.
-        self.setRootIsDecorated(False)
-        self.setItemsExpandable(False)
-        
-        # To force a row height, otherwise it snaps smaller when the
-        # "layoutChanged" signal fires.
-        self._delegate = HeaderedListViewDelegate()
-        self.setItemDelegateForColumn(0, self._delegate)
         
         self.setModel(model)
         self.setRootIndex(index)
         
         self.layoutChanged.connect(self._scrollToCurrentIndex)
         self.layoutChanged.connect(self.resizeToContents)
-
-        # Transfer standard behaviour and our options to the new column.
-        self._masterView.initializeColumn(self)
 
         self._deferResize()
 
@@ -226,7 +159,7 @@ class ColumnView(QtGui.QColumnView):
         
         node = self.model().node_from_index(index)
 
-        view = HeaderedListView()
+        view = ResizingListView(self, self.model(), index, node)
         view.setModel(self.model())
         view.setRootIndex(index)
 
