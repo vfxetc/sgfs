@@ -117,7 +117,7 @@ class ShotgunBase(Node):
                 {
                     Qt.DisplayRole: type_ + 's',
                     Qt.DecorationRole: self.icons.get(type_),
-                    'header': headers[0],
+                    'header': 'Entity Type',
                 },
                 {}
             ))
@@ -130,7 +130,7 @@ class ShotgunBase(Node):
                     Qt.DisplayRole: label,
                     Qt.DecorationRole: self.icons.get(type_),
                     Qt.FontRole: font,
-                    'header': headers[i + 1],
+                    'header': headers[i],
                 }, {
                     '%s.groups[%d]' % (type_, i): label
                 }
@@ -230,14 +230,6 @@ class ShotgunQuery(ShotgunBase):
             return
         
         return last_entity == init_state.get(last_entity['type'])
-    
-    def update(self, *args):
-        super(ShotgunQuery, self).update(*args)
-        if len(self.active_types) > 1:
-            self.view_data['header'] = ' or '.join(self.active_types)
-        else:
-            headers = self.headers.get(self.active_types[0])
-            self.view_data['header'] = headers[0] if headers else self.active_types[0]
     
     def get_temp_children_from_state(self, init_state):
         for type_ in self.active_types:

@@ -3,8 +3,9 @@ import traceback
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
-from sgfs import SGFS
+from uitools.headeredlistview import HeaderDisplayRole
 
+from sgfs import SGFS
 from .nodes.base import Group, Leaf
 from .utils import debug, icon
 from ..threadpool import ThreadPool
@@ -171,7 +172,10 @@ class Model(QtCore.QAbstractItemModel):
         node = self.node_from_index(index)
         
         if role == Qt.DisplayRole:
-            return node.view_data.get(Qt.DisplayRole, repr(node))
+            try:
+                return node.view_data[Qt.DisplayRole]
+            except KeyError:
+                return QtCore.QVariant()
         
         if role == Qt.DecorationRole:
             
@@ -220,6 +224,12 @@ class Model(QtCore.QAbstractItemModel):
             if node.error_count:
                 return QtGui.QColor.fromRgb(128, 0, 0)
         
+        if role == HeaderDisplayRole:
+            try:
+                return node.view_data['header']
+            except KeyError:
+                pass
+
         # Passthrough other roles.
         try:
             return node.view_data[role]

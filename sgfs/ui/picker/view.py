@@ -4,6 +4,8 @@ import threading
 from PyQt4 import QtCore, QtGui
 Qt = QtCore.Qt
 
+from uitools.headeredlistview import HeaderedListView, HeaderDisplayRole
+
 from sgfs.ui.picker.utils import icon, state_from_entity
 from sgfs.ui.picker.nodes import base
 
@@ -61,7 +63,7 @@ class HeaderedListViewDelegate(QtGui.QStyledItemDelegate):
             style.drawPrimitive(QtGui.QStyle.PE_IndicatorColumnViewArrow, options, painter)
 
 
-class HeaderedListView(QtGui.QTreeView):
+class OldHeaderedListView(QtGui.QTreeView):
     
     # This needs to be a signal so that it runs in the main thread.
     layoutChanged = QtCore.pyqtSignal()
@@ -171,11 +173,10 @@ class ColumnView(QtGui.QColumnView):
     # Emitted whenever a different node is selected.
     nodeChanged = QtCore.pyqtSignal([object])
 
-    def __init__(self):
-        super(ColumnView, self).__init__()
-        
-        # A sensible default for Shotgun entities.
-        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('verticalScrollMode', self.ScrollPerPixel)
+        kwargs.setdefault('selectionMode', self.SingleSelection)
+        super(ColumnView, self).__init__(*args, **kwargs)
         
         # State for setting preview visibility.
         self._widgetsize_max = None
@@ -224,7 +225,15 @@ class ColumnView(QtGui.QColumnView):
         # and this was the only way I found to do it.
         
         node = self.model().node_from_index(index)
-        view = HeaderedListView(self, self.model(), index, node)
+
+        view = HeaderedListView()
+        view.setModel(self.model())
+        view.setRootIndex(index)
+
+        self.initializeColumn(view)
+        view.restoreAfterInitialize()
+
+        # view = HeaderedListView(self, self.model(), index, node)
         
         view.setContextMenuPolicy(Qt.CustomContextMenu)
         view.customContextMenuRequested.connect(functools.partial(self._on_context_menu, view))
