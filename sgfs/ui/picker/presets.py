@@ -22,7 +22,6 @@ def any_task(entity=None, path=None, sgfs=None):
     ))
 
     view = ColumnView()
-    view.setColumnWidths([200] * 10)
     view.setModel(model)
     
     if entities:
@@ -67,9 +66,6 @@ def publishes_from_path(path, sgfs=None, publish_types=None):
         
         
     view = ColumnView()
-    view.setColumnWidths([200] * 10)
-    # view.setMaximumWidth(sum([150, 150, 150, 200, 200, 125, 200]) + 6)
-    # view.setPreviewVisible(False)
     view.setModel(model)
         
     initial_index = model.index_from_state(state_from_entity(entities[0]))

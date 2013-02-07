@@ -30,7 +30,11 @@ class ResizingListView(HeaderedListView):
 
     # We need a hook for resizing columns after the column view has
     # inserted this column; see self._deferResize().
-    _columnViewSetUp = QtCore.pyqtSignal([int])
+    _columnViewSetUp = QtCore.pyqtSignal()
+
+    def setRootIndex(self, index):
+        super(ResizingListView, self).setRootIndex(index)
+        self._deferResize()
 
     def _deferResize(self):
 
@@ -40,19 +44,13 @@ class ResizingListView(HeaderedListView):
         # a thread to call our signal in the event loop to  call the proper
         # sizing function.
 
-        # We set the minimum size here (and reset it in the event) so that
-        # the animation by QColumnView is still correct.
-
         # Only bother if we already have a size.
         width = self.sizeHintForColumn(0)
         if width > 0:
-            old_min = self.minimumWidth()
-            self.setMinimumWidth(width + 32) # 32 -> decoration padding.
             self._columnViewSetUp.connect(self._handleDeferredResize, Qt.QueuedConnection)
-            self._columnViewSetUp.emit(old_min)
+            self._columnViewSetUp.emit()
 
-    def _handleDeferredResize(self, old_min):
-        self.setMinimumWidth(old_min)
+    def _handleDeferredResize(self):
         self.resizeToContents()
     
     def _scrollToCurrentIndex(self):
@@ -72,8 +70,8 @@ class ResizingListView(HeaderedListView):
             return
 
         # Pad for icons and decorations.
-        width += 32
-        
+        width += 27
+
         # Determine our depth in the view.
         column = 0
         index = self.rootIndex()
@@ -81,16 +79,19 @@ class ResizingListView(HeaderedListView):
             column += 1
             index = index.parent()
 
-        # Set the width.
         widths = self._master.columnWidths()
         if not widths:
-            widths = [100]
+            widths = [self.minimumWidth()]
         while len(widths) <= column + 1:
             widths.append(widths[-1])
         widths[column] = width
         self._master.setColumnWidths(widths)
 
-        self._master.scroll(1, 0)
+        # Force it to perform a reflow of the columns.
+        size = self._master.size()
+        self._master.resizeEvent(QtGui.QResizeEvent(size, size))
+
+
 
 
 class ColumnView(QtGui.QColumnView):
@@ -103,6 +104,7 @@ class ColumnView(QtGui.QColumnView):
         kwargs.setdefault('selectionMode', self.SingleSelection)
         super(ColumnView, self).__init__(*args, **kwargs)
         
+        self.setColumnWidths([120] * 100)
         # State for setting preview visibility.
         self._widgetsize_max = None
         self._preview_visible = True
