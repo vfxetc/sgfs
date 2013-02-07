@@ -26,6 +26,7 @@ class Dialog(QtGui.QDialog):
         self._picker.setMaximumHeight(400)
         self._picker.setPreviewVisible(False)
         self._picker.nodeChanged.connect(self._on_node_changed)
+        self._picker.setColumnWidths([200] * 10)
         self.layout().addWidget(self._picker)
         
         button_layout = QtGui.QHBoxLayout()
