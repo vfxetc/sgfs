@@ -139,7 +139,7 @@ class ShotgunBase(Node):
         view_data = {
             Qt.DisplayRole: labels[-1],
             Qt.FontRole: font,
-            'header': headers[-1],
+            'header': headers[len(labels) - 1],
             'groups': groups,
         }
         
