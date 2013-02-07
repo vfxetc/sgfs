@@ -72,14 +72,16 @@ class DirectoryPicker(Node):
     def fetch_async_children(self):
 
         self.path = self.state.get('path')
+        self.workspace = None
+
         if self.path is None:
+            
+            self.workspace = self.path = self.model.sgfs.path_for_entity(self.state['self'])
             if self.template_name:
                 try:
                     self.path = self.model.sgfs.path_from_template(self.state['self'], self.template_name)
                 except ValueError:
                     return
-            else:
-                self.path = self.model.sgfs.path_for_entity(self.state['self'])
         
         if self.path is None or not os.path.isdir(self.path):
             return
@@ -91,6 +93,14 @@ class DirectoryPicker(Node):
             
             path = os.path.join(self.path, name)
             is_dir = os.path.isdir(path)
+
+            new_state = {
+                'path': path,
+                'is_dir': is_dir,
+            }
+            if self.workspace:
+                new_state['workspace'] = self.workspace
+
             yield (
                 path,
                 {
@@ -98,10 +108,8 @@ class DirectoryPicker(Node):
                     'disabled': not is_dir,
                     Qt.DecorationRole: 'fatcow/folder' if is_dir else None,
                     'header': './%s/' % os.path.basename(self.path),
-                }, {
-                    'path': path,
-                    'is_dir': is_dir,
-                }
+                }, 
+                new_state,
             )
 
 

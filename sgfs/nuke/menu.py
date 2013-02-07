@@ -123,9 +123,15 @@ def build_for_path(path):
         head = head.parent()
 
     menu.addSeparator()
+
+    menu.addCommand(
+        'Open from Work Area...',
+        functools.partial(dispatch, 'sgfs.nuke.open_script:run'),
+        'ctrl+alt+O',
+    )
     menu.addCommand(
         'Save to Work Area...',
-        functools.partial(dispatch, 'sgfs.nuke.save_to_work_area:run'),
+        functools.partial(dispatch, 'sgfs.nuke.save_script:run'),
         'ctrl+alt+S',
     )
 

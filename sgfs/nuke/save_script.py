@@ -7,14 +7,15 @@ careful in changing this until our tools have migrated.
 
 from __future__ import absolute_import
 
+import functools
 import os
-import platform
 
 import nuke
 
 from uitools.qt import QtGui
 from sgfs.ui.scene_name.widget import SceneNameWidget
 from sgfs.ui.picker.presets import any_task
+from sgfs.ui.picker.nodes.sgfs import DirectoryPicker
 
 
 class Dialog(QtGui.QDialog):
@@ -22,10 +23,14 @@ class Dialog(QtGui.QDialog):
     def __init__(self, kwargs=None, parent=None):
         super(Dialog, self).__init__(parent)
 
+        filename = nuke.root().name()
+        if filename == 'Root':
+            filename = ''
+
         self._kwargs = {
             'workspace': os.path.dirname(nuke.root().name()),
-            'filename': nuke.root().name(),
-            'directory': 'scripts/comp',
+            'filename': filename,
+            'directory': '',
             'warning': nuke.warning,
             'error': nuke.error,
             'extension': '.nk',
@@ -39,8 +44,17 @@ class Dialog(QtGui.QDialog):
         self.setLayout(QtGui.QVBoxLayout())
 
         self._pickerModel, self._pickerView = any_task(path=nuke.root().name())
+
         self._pickerView.setFixedSize(600, 250)
         self._pickerView.setPreviewVisible(False)
+        self._pickerView.nodeChanged.connect(self._pickerNodeChanged)
+
+        self._pickerModel.register_node_type(functools.partial(
+            DirectoryPicker,
+            entity_types=['Task'],
+            template='nuke_scripts_dir',
+        ))
+
         self.layout().addWidget(self._pickerView)
 
         # The main widget.
@@ -48,7 +62,9 @@ class Dialog(QtGui.QDialog):
         self.layout().addWidget(self._sceneName)
         
         # Save button.
-        button = QtGui.QPushButton('Save', clicked=self._onSaveClicked)
+        self._button = button = QtGui.QPushButton('Save', clicked=self._onSaveClicked)
+        button.setEnabled(False)
+
         self.layout().addWidget(button)
     
     def show(self):
@@ -56,8 +72,27 @@ class Dialog(QtGui.QDialog):
         self.setMinimumSize(self.size())
         self.setMaximumHeight(self.height())
     
+    def _pickerNodeChanged(self, node):
+
+        entity = node.state.get('Shot') or node.state.get('Asset')
+        if entity:
+            self._sceneName.setEntityName(entity.get('code') or entity.get('name'))
+
+        if 'path' in node.state:
+            self._sceneName.setWorkspace(node.state['workspace'])
+            relpath = os.path.relpath(node.state['path'], node.state['workspace'])
+            self._sceneName.setDirectory(relpath)
+
+
+        self._button.setEnabled(
+            'path' in node.state
+        )
+
     def _onSaveClicked(self, *args):
-        path = self._sceneName.path()
+        path = os.path.join(
+            self._pickerView.currentNode().state['path'],
+            self._sceneName._namer.get_basename(),
+        )
         if not self._checkOverwriteSafety(path):
             return
         dir_name = os.path.dirname(path)

@@ -105,7 +105,24 @@ class SceneNameWidget(QtGui.QWidget):
         self._detail_edit.setText(detail)
         self._version_spinner.setValue(version)
         self._revision_spinner.setValue(revision)
-        
+    
+    def setEntityName(self, text):
+        self._entity_name_edit.setText(text)
+        self.update_preview()
+
+    def setDirectory(self, relpath):
+        self._namer.directory = relpath
+        self._namer.sub_directory = ''
+        self.update_preview()
+
+    def setWorkspace(self, path):
+        self._namer._parse_workspace(path)
+        self._build_step_combo()
+        self._step_name_combo.update()
+        self._step_name_combo.parent().update()
+
+        self.update_preview()
+
     def update_preview(self, *args):
         """Update the displayed path, and the warning to the user if it exists."""
         

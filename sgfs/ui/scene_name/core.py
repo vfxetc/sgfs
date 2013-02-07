@@ -43,6 +43,8 @@ class SceneName(object):
         if self.error is False:
             self.error = self.warning
         
+        self._step_names = []
+
         # Parse given paths.
         self.workspace = kwargs.pop('workspace', None)
         if self.workspace is not None:
@@ -63,7 +65,6 @@ class SceneName(object):
         self.sub_directory = kwargs.pop('sub_directory', self.sub_directory)
         self.version = int(kwargs.pop('version', self.version))
         
-        self._step_names = []
         
         if kwargs:
             raise TypeError(
@@ -105,6 +106,8 @@ class SceneName(object):
         filename_dir, parent_type, parent_name, self.entity_name, self.step_name, software = m.groups()
         self.entity_type = 'Shot' if parent_type == 'SEQ' else 'Asset'
         self.workspace = m.group(0)
+        
+        self._step_names = []
         
     
     def _parse_filename(self, filename):
