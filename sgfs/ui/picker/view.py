@@ -82,8 +82,10 @@ class ResizingListView(HeaderedListView):
         widths = self._master.columnWidths()
         if not widths:
             widths = [self.minimumWidth()]
-        while len(widths) <= column + 1:
+        while len(widths) <= column:
             widths.append(widths[-1])
+        if width <= widths[column]:
+            return
         widths[column] = width
         self._master.setColumnWidths(widths)
 

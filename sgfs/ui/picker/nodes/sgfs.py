@@ -97,6 +97,7 @@ class DirectoryPicker(Node):
                     Qt.DisplayRole: name,
                     'disabled': not is_dir,
                     Qt.DecorationRole: 'fatcow/folder' if is_dir else None,
+                    'header': './%s/' % os.path.basename(self.path),
                 }, {
                     'path': path,
                     'is_dir': is_dir,

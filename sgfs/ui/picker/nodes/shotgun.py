@@ -310,12 +310,6 @@ class ShotgunPublishStream(ShotgunQuery):
             # This isn't documented to work, but apparently it does. Go figure.
             filters.append(('sg_type', 'in') + tuple(self.publish_types))
         return filters
-    
-    def fetch_entities(self, entity_type):
-        entities = super(ShotgunPublishStream, self).fetch_entities(entity_type)
-        entities = sorted(entities, key=lambda e: e['code'])
-        return entities
-
 
 class ShotgunEntities(ShotgunBase):
     
