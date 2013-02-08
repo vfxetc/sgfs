@@ -7,7 +7,7 @@ from sgfs.ui.picker.nodes.shotgun import ShotgunEntities, ShotgunQuery, ShotgunP
 from sgfs.ui.picker.utils import state_from_entity
 
 
-def any_task(entity=None, path=None, sgfs=None):
+def any_task(entity=None, path=None, sgfs=None, extra_node_types=None):
     
     sgfs = sgfs or SGFS(session=entity.session if entity else None)
     
@@ -20,12 +20,17 @@ def any_task(entity=None, path=None, sgfs=None):
     model.register_node_type(functools.partial(ShotgunQuery,
         entity_types=['Project', 'Asset', 'Sequence', 'Shot', 'Task'],
     ))
+    for node_type in extra_node_types or ():
+        model.register_node_type(node_type)
 
     view = ColumnView()
     view.setModel(model)
     
     if entities:
-        initial_index = model.index_from_state(state_from_entity(entities[0]))
+        state = state_from_entity(entities[0])
+        if path:
+            state['path'] = path
+        initial_index = model.index_from_state(state)
         if initial_index:
             view.setCurrentIndex(initial_index)
         

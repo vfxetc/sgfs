@@ -29,25 +29,28 @@ class Dialog(QtGui.QDialog):
         self.setWindowTitle('Open Script from Work Area')
         self.setLayout(QtGui.QVBoxLayout())
 
-        self._pickerModel, self._pickerView = any_task(path=nuke.root().name())
+        self._pickerModel, self._pickerView = any_task(
+            path=nuke.root().name(),
+            extra_node_types=[functools.partial(
+                TemplateGlobPicker,
+                    entity_types=['Task'],
+                    template='nuke_scripts_dir',
+                    glob='*.nk',
+                ),
+            ],
+        )
 
         self._pickerView.setFixedSize(600, 250)
         self._pickerView.setPreviewVisible(False)
         self._pickerView.nodeChanged.connect(self._pickerNodeChanged)
 
-        self._pickerModel.register_node_type(functools.partial(
-            TemplateGlobPicker,
-            entity_types=['Task'],
-            template='nuke_scripts_dir',
-            glob='*.nk',
-        ))
-
         self.layout().addWidget(self._pickerView)
         
         self._button = button = QtGui.QPushButton('Open', clicked=self._onOpenClicked)
-        button.setEnabled(False)
 
         self.layout().addWidget(button)
+
+        self._pickerNodeChanged(self._pickerView.currentNode())
     
     def show(self):
         super(Dialog, self).show()

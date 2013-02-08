@@ -43,17 +43,19 @@ class Dialog(QtGui.QDialog):
         self.setWindowTitle('Save Script to Work Area')
         self.setLayout(QtGui.QVBoxLayout())
 
-        self._pickerModel, self._pickerView = any_task(path=nuke.root().name())
+        self._pickerModel, self._pickerView = any_task(
+            path=os.path.dirname(nuke.root().name()),
+            extra_node_types=[functools.partial(
+                DirectoryPicker,
+                entity_types=['Task'],
+                template='nuke_scripts_dir',
+                ),
+            ],
+        )
 
         self._pickerView.setFixedSize(600, 250)
         self._pickerView.setPreviewVisible(False)
         self._pickerView.nodeChanged.connect(self._pickerNodeChanged)
-
-        self._pickerModel.register_node_type(functools.partial(
-            DirectoryPicker,
-            entity_types=['Task'],
-            template='nuke_scripts_dir',
-        ))
 
         self.layout().addWidget(self._pickerView)
 
@@ -63,9 +65,10 @@ class Dialog(QtGui.QDialog):
         
         # Save button.
         self._button = button = QtGui.QPushButton('Save', clicked=self._onSaveClicked)
-        button.setEnabled(False)
 
         self.layout().addWidget(button)
+
+        self._pickerNodeChanged(self._pickerView.currentNode())
     
     def show(self):
         super(Dialog, self).show()

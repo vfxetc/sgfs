@@ -49,7 +49,18 @@ class SGFSRoots(Node):
             menu.addAction(icon('silk/cog_go', as_icon=True), 'Open in Shotgun', functools.partial(call_open, entity.url))
 
 
-class DirectoryPicker(Node):
+class PathBase(Node):
+
+    def get_temp_children_from_state(self, init_state):
+        return self.fetch_async_children()
+
+    def child_matches_initial_state(self, child, init_state):
+        child_parts = child.state['path'].split('/')
+        state_parts = init_state['path'].split('/')
+        return state_parts[:len(child_parts)] == child_parts
+
+
+class DirectoryPicker(PathBase):
 
     def __init__(self, *args, **kwargs):
         self.entity_types = set(kwargs.pop('entity_types'))
@@ -75,7 +86,7 @@ class DirectoryPicker(Node):
         self.workspace = None
 
         if self.path is None:
-            
+
             self.workspace = self.path = self.model.sgfs.path_for_entity(self.state['self'])
             if self.template_name:
                 try:
@@ -113,7 +124,9 @@ class DirectoryPicker(Node):
             )
 
 
-class TemplateGlobPicker(Node):
+
+
+class TemplateGlobPicker(PathBase):
 
     def __init__(self, *args, **kwargs):
         self.entity_types = set(kwargs.pop('entity_types'))
@@ -134,6 +147,7 @@ class TemplateGlobPicker(Node):
             return
 
         return True
+
 
     def fetch_async_children(self):
 
