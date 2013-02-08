@@ -44,7 +44,11 @@ class Processor(object):
             if not self.dry_run:
                 # Race condition?
                 umask = os.umask(0)
-                os.makedirs(path, 0777)
+                try:
+                    os.makedirs(path, 0777)
+                except OSError as e:
+                    if e.errno != 17: # Directory already exists.
+                        raise
                 os.umask(umask)
     
     def touch(self, path):

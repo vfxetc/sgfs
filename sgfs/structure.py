@@ -127,8 +127,7 @@ class Directory(Structure):
             self._scan_template(template)
     
     def _create(self, processor):
-        if not os.path.exists(self.path):
-            processor.mkdir(self.path)
+        processor.mkdir(self.path)
         
     def _scan_template(self, template):
         
@@ -218,8 +217,7 @@ class Entity(Directory):
             # Don't let people create Projects.
             processor.assert_allow_entity(self.entity)
             
-            if not os.path.exists(self.path):
-                processor.mkdir(self.path)
+            processor.mkdir(self.path)
             self.sgfs.tag_directory_with_entity(self.path, self.entity)
         
 
