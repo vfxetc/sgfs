@@ -109,17 +109,19 @@ class DirectoryPicker(PathBase):
                 'path': path,
                 'is_dir': is_dir,
             }
+            view_data = {
+                Qt.DisplayRole: name,
+                'disabled': not is_dir,
+                Qt.DecorationRole: 'fatcow/folder' if is_dir else None,
+                'header': './%s/' % os.path.basename(self.path),
+            }
             if self.workspace:
                 new_state['workspace'] = self.workspace
+                view_data['header'] = 'Workspace'
 
             yield (
                 path,
-                {
-                    Qt.DisplayRole: name,
-                    'disabled': not is_dir,
-                    Qt.DecorationRole: 'fatcow/folder' if is_dir else None,
-                    'header': './%s/' % os.path.basename(self.path),
-                }, 
+                view_data,
                 new_state,
             )
 
