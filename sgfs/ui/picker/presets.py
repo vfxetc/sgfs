@@ -13,8 +13,10 @@ def any_task(entity=None, path=None, sgfs=None, extra_node_types=None):
     
     if path:
         entities = list(sgfs.entities_from_path(path))
-    if entity:
+    elif entity:
         entities = [entity]
+    else:
+        entities = []
     
     model = Model(sgfs=sgfs)
     model.register_node_type(functools.partial(ShotgunQuery,

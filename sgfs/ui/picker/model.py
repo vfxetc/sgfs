@@ -67,6 +67,7 @@ class Model(QtCore.QAbstractItemModel):
                 continue
             
             # debug('match?: %r <- %r', node, sorted(node.state))
+
             if node.parent is None or node.parent.child_matches_initial_state(node, state):
                 # debug('YES!!')
             

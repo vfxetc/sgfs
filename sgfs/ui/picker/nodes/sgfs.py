@@ -55,6 +55,8 @@ class PathBase(Node):
         return self.fetch_async_children()
 
     def child_matches_initial_state(self, child, init_state):
+        if 'path' not in child.state:
+            return
         child_parts = child.state['path'].split('/')
         state_parts = init_state['path'].split('/')
         return state_parts[:len(child_parts)] == child_parts

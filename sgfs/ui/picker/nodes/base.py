@@ -201,7 +201,10 @@ class Node(object):
             )
     
     def sort_children(self):
-        self.children().sort(key=lambda n: n.view_data[Qt.DisplayRole])
+        self.children().sort(key=lambda n: (
+            n.view_data.get('header'),
+            n.view_data.get(Qt.DisplayRole),
+        ))
     
     def _repair_heirarchy_recurse(self):
         self.sort_children()
