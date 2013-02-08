@@ -177,15 +177,16 @@ class TemplateGlobPicker(PathBase):
                 groups = [(
                     name,
                     {
-                        'header': name,
+                        'header': ('./%s/' % group_names[i - 1]) if i else 'Workspace',
                         Qt.DisplayRole: name,
                         Qt.DecorationRole: 'fatcow/folder',
                     },
-                    {}) for name in group_names
+                    {}) for i, name in enumerate(group_names)
                 ]
                 yield (
                     path,
                     {
+                        'header': ('./%s/' % group_names[-1]) if group_names else 'Files',
                         Qt.DisplayRole: os.path.basename(path),
                         Qt.DecorationRole: 'custom/file_extension_nk',
                         'groups': groups,
