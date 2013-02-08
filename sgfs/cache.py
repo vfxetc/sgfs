@@ -1,5 +1,6 @@
 from subprocess import call
 import collections
+import errno
 import os
 import sqlite3
 
@@ -11,17 +12,28 @@ class PathCache(collections.MutableMapping):
     def __init__(self, sgfs, project_root):
         
         self.sgfs = sgfs
-        
         self.project_root = os.path.abspath(project_root)
-        if not os.path.exists(project_root):
-            os.makedirs(project_root)
         
-        # If it doesn't exist then touch it with read/write permissions for all.
-        db_path = os.path.join(project_root, '.sgfs-cache.sqlite')
-        if not os.path.exists(db_path):
-            umask = os.umask(0111)
-            call(['touch', db_path])
-            os.umask(umask)
+        # We are in the middle of a transtion of where the SQLite file
+        # is located, and for now we prioritize the old location.
+        for name in ('.sgfs-cache.sqlite', '.sgfs/cache.sqlite'):
+            db_path = os.path.join(project_root, name)
+            if os.path.exists(db_path):
+                break
+        else:
+            # If it doesn't exist then touch it with read/write permissions for all.
+            db_dir = os.path.dirname(db_path)
+            umask = os.umask(0)
+            try:
+                try:
+                    os.makedirs(db_dir)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise
+                os.umask(0111)
+                call(['touch', db_path])
+            finally:
+                os.umask(umask)
         
         self.conn = sqlite3.connect(db_path)
         self.conn.text_factory = str

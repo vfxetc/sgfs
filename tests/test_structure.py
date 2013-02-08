@@ -82,7 +82,8 @@ class PathTester(object):
     def assertProject(self):
         self.assertMatches(1, r'/Assets/')
         self.assertMatches(1, r'/SEQ/')
-        self.assertMatches(1, r'/\.sgfs-cache\.sqlite')
+        self.assertMatches(1, r'/\.sgfs/')
+        self.assertMatches(1, r'/\.sgfs/cache\.sqlite')
         self.assertMatches(1, r'/\.sgfs\.yml')
     
     def assertAssetType(self, count):
