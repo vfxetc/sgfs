@@ -1,5 +1,5 @@
 from subprocess import call
-import platform
+import sys
 
 from sgfs import SGFS
 
@@ -25,7 +25,7 @@ def run(entity_type, selected_ids, **kwargs):
     notify('Opening:\n' + '\n'.join(sorted(paths)))
     
     for path in set(paths):
-        if platform.system() == 'Darwin':
+        if sys.platform.startswith('darwin'):
             call(['open', path])
         else:
             call(['xdg-open', path])

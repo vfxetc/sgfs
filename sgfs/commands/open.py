@@ -1,5 +1,5 @@
 from subprocess import call
-import platform
+import sys
 
 from . import Command
 from . import utils
@@ -32,7 +32,7 @@ class OpenCommand(Command):
         getattr(self, self.method_name)(sgfs, type_, id_, data)
     
     def open(self, x):
-        if platform.system() == 'Darwin':
+        if sys.platform.startswith('darwin'):
             call(['open', x])
         else:
             call(['xdg-open', x])

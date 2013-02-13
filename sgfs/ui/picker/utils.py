@@ -3,7 +3,6 @@ import sys
 import time
 import thread
 import subprocess
-import platform
 
 from PyQt4 import QtGui
 
@@ -56,7 +55,7 @@ def icon(name, as_icon=False):
     return icon
 
 def call_open(x):
-    if platform.system() == 'Darwin':
+    if sys.platform.startswith('darwin'):
         subprocess.call(['open', x])
     else:
         subprocess.call(['xdg-open', x])

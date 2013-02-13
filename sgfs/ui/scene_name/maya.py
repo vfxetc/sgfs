@@ -8,7 +8,7 @@ careful in changing this until our tools have migrated.
 from __future__ import absolute_import
 
 import os
-import platform
+import sys
 
 import maya.cmds as cmds
 
@@ -55,7 +55,7 @@ class MayaDialog(Dialog):
             defaultButton='No',
         )
         message = "%s already exists.\nDo you want to replace it?" % os.path.basename(path)
-        if platform.system() == 'Darwin':
+        if sys.platform.startswith('darwin'):
             kwargs['title'] = message
         else:
             kwargs['title'] = 'Save As'

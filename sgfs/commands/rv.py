@@ -1,6 +1,6 @@
 import os
 from subprocess import call, Popen, PIPE
-import platform
+import sys
 
 from . import Command
 from . import utils
@@ -73,7 +73,7 @@ class OpenSequenceInRV(Command):
         self.open(rvlink)
     
     def open(self, x):
-        if platform.system() == 'Darwin':
+        if sys.platform.startswith('darwin'):
             call(['open', x])
         else:
             call(['xdg-open', x])
