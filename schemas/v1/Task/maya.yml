@@ -21,5 +21,7 @@ steps_to_include:
     - Rig
 
 templates:
-    # Generic maya publish.
+
+    maya_workspace: .
+
     maya_*_publish:  published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
