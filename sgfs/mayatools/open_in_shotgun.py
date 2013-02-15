@@ -1,24 +1,13 @@
-import sys
-from subprocess import call
+"""
 
-from maya import cmds
+This is just a stub to redirect a function to its new location. This module
+and the containing package can be deleted after a few days.
 
-from sgfs import SGFS
+"""
 
+from metatools.deprecate import renamed_func
 
-def run():
-    
-    workspace = cmds.workspace(q=True, rootDirectory=True)
-    if not workspace:
-        cmds.error('Workspace not set.')
-        return
+from sgfs.maya.workspace import open_parent_in_shotgun
 
-    entities = SGFS().entities_from_path(workspace, ('Asset', 'Shot'))
-    if not entities:
-        cmds.error('No entities for workspace.')
-        return
-
-    if sys.platform == 'darwin':
-        call(['open', entities[0].url])
-    else:
-        call(['xdg-open', entities[0].url])
+# The only function that was exporter previously.
+run = renamed_func(open_parent_in_shotgun, 'run', __name__)
