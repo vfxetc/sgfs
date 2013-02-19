@@ -265,7 +265,7 @@ class BoundTemplate(object):
         """Format the template as a path with the given kwargs.
         
         The underlying template will be joined to the ``path`` of the bound
-        :class:`.Structure`
+        :class:`.Structure`, and the path will be normalized.
         
         Also uses entities from the bound :class:`.Context`, and values from
         the bound :attr:`.Schema.config`, but priority is
@@ -285,7 +285,7 @@ class BoundTemplate(object):
             namespace.update(arg)
         namespace.update(kwargs)
         rel_path = self_.template.format(namespace)
-        return os.path.join(self_.path, rel_path)
+        return os.path.normpath(os.path.join(self_.path, rel_path))
     
     def match(self, path):
         """Match a path, returning a ``dict`` of fields if the input matched.
