@@ -250,7 +250,8 @@ class Layout(QtGui.QHBoxLayout):
         if not entity_path:
             return
         
-        step_codes = set()
+        steps = set()
+        paths = set()
         for path, task in sgfs.entities_in_directory(entity_path, 'Task', load_tags=None):
             
             # Some of our tags are missing parts and I'm not sure why.
@@ -258,14 +259,20 @@ class Layout(QtGui.QHBoxLayout):
                 if task.fetch('step') is None:
                     continue
                 cmds.warning('%r does not have a cached step' % task)
-            
-            # Only add one of every step.
-            step_code = task['step'].fetch('code')
-            if step_code in step_codes:
+
+
+            # Only add each path once. We used to do this by step codes, but it
+            # was really confused when a step was changed after the folders
+            # were created.
+            if path in paths:
                 continue
-            step_codes.add(step_code)
+            paths.add(path)
             
-            yield step_code, path, 1 if step_code.lower().startswith('anim') else 0
+            step_code = task['step'].fetch('code')
+            name = '{0} ({1})'.format(step_code, os.path.basename(path)) if step_code in steps else step_code
+            steps.add(step_code)
+            
+            yield name, path, 1 if step_code.lower().startswith('anim') else 0
     
     def _browse(self):
         return str(QtGui.QFileDialog.getOpenFileName(self.parentWidget(), "Select %s" % self._browse_name, self.root(), self._browse_filter))
