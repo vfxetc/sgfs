@@ -250,7 +250,6 @@ class Layout(QtGui.QHBoxLayout):
         if not entity_path:
             return
         
-        steps = set()
         paths = set()
         for path, task in sgfs.entities_in_directory(entity_path, 'Task', load_tags=None):
             
@@ -268,10 +267,15 @@ class Layout(QtGui.QHBoxLayout):
                 continue
             paths.add(path)
             
-            step_code = task['step'].fetch('code')
-            name = '{0} ({1})'.format(step_code, os.path.basename(path)) if step_code in steps else step_code
-            steps.add(step_code)
-            
+            # Disambiguate steps where the name has changed significantly from
+            # when the folders were created.
+            step_code, step_short_name = task['step'].fetch(('code', 'short_name'))
+            base_name = os.path.basename(path)
+            if base_name in (step_code, step_short_name):
+                name = step_code
+            else:
+                name = '{0} ({1})'.format(step_code, os.path.basename(path))
+                
             yield name, path, 1 if step_code.lower().startswith('anim') else 0
     
     def _browse(self):
