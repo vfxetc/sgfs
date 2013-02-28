@@ -40,16 +40,28 @@ class Processor(object):
     def mkdir(self, path):
         if path not in self.made_directories:
             self.made_directories.add(path)
+
+            # Seems like our NFS is not always mounting fast enough if we just
+            # try to make the folder directly, so I'm going to check for it
+            # before creating it to give it a small kick in the ass. This will
+            # also reduce the number of lines in the log to exclude folders
+            # which already exist.
+            if os.path.exists(path):
+                return
+
             self.log(list2cmdline(['mkdir', '-pm', '0777', path]))
+
             if not self.dry_run:
-                # Race condition?
+
+                # Be wary of thread-unsafe umask....
                 umask = os.umask(0)
                 try:
                     os.makedirs(path, 0777)
                 except OSError as e:
                     if e.errno != 17: # Directory already exists.
                         raise
-                os.umask(umask)
+                finally:
+                    os.umask(umask)
     
     def touch(self, path):
         if path not in self.touched_files:
