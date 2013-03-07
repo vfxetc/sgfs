@@ -50,6 +50,16 @@ Work Picker (aka product_select)
 Other
 =====
 
+
+- Refactor scene_name so that it can have parts of it set relatively
+  easily
+    - call it sgfs.work_area, and LEAVE THE OLD ONE so that I break less things
+    - perhaps work with SGFS templates?
+    - "Options" toggle to hide the sub-directory
+    - I haven't ever seen people set the entity or step, so push them into
+      the hidden settings
+
+
 - Rename a few things: scene_name and product_select:
     - both of these things work with arbitrary "products", which are files
       that are associated with Shotgun Tasks:
