@@ -295,7 +295,7 @@ class SGFS(object):
         This uses the path cache to avoid actually walking the directory.
         
         :param str path: The path to walk for entities.
-        :param **kwargs: Passed to :func:`~sgfs.sgfs.SGFS.get_directory_entity_tags`.
+        :param kwargs: Passed to :func:`~sgfs.sgfs.SGFS.get_directory_entity_tags`.
         :return: Iterator of ``(path, tag_dict)`` tuples.
             
         """
@@ -534,7 +534,7 @@ class SGFS(object):
         :param entity: The :class:`~sgsession:sgsession.entity.Entity` whose
             :class:`.Structure` should be searched for a template.
         :param str template_name: The name of the template to look for.
-        :param **kwargs: Values to pass to :meth:`.BoundTemplate.format`.
+        :param kwargs: Values to pass to :meth:`.BoundTemplate.format`.
         :returns str: The absolute path.
         :raises ValueError: When the template cannot be found.
         

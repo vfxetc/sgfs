@@ -139,7 +139,7 @@ class Template(object):
     def format(self_, *args, **kwargs):
         """Format the template with the given kwargs.
         
-        :param dict **kwargs: Values to substitute into the pattern.
+        :param dict kwargs: Values to substitute into the pattern.
         :raises KeyError: When there is a missing value.
         
         ::
