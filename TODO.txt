@@ -18,7 +18,8 @@ Picker
 - Node to wrap around other nodes to get a union of them. Then we can
   easily add a union of PublishEvent and WorkFiles
 
-- 
+- unit tests for columnview
+
 
 Create Structure
 =================
@@ -50,6 +51,30 @@ Work Picker (aka product_select)
 Other
 =====
 
+- refactor relinking commands onto the path cache since it is so low level
+
+- document sgfs troubleshooting:
+    Q: I just started a new project but cannot create folders!
+    Q: I created folders, then changed something about the entity, but it
+       does not create new folders for it!
+
+- sgfs.template can be given default data that must match, so it builds a new
+  regex for it and thus can be more accurate in spotting other values
+
+- SGFS(magic) pull it from magic.session if isinstance(magic, Entity)
+
+- sgfs tag deserializing needs to be able to return as much as possible even
+  if classes/functions are not availible
+
+- sgpublish.ui.exporter.basic.Dialog
+    - just takes an exporter, and has no extra controls
+
+- How to deal with accidentally relinking a folder that was copied by an artist
+  as a template? If the copy comes after alphabetically then it results in
+  the SGFS cache mapping to the copy.
+
+- get scene_name working off of sgfs publishes, then there is nothing
+  stopping us from migrating the geocacher to mayatools
 
 - Refactor scene_name so that it can have parts of it set relatively
   easily
@@ -58,7 +83,6 @@ Other
     - "Options" toggle to hide the sub-directory
     - I haven't ever seen people set the entity or step, so push them into
       the hidden settings
-
 
 - Rename a few things: scene_name and product_select:
     - both of these things work with arbitrary "products", which are files
@@ -69,7 +93,6 @@ Other
         - sgfs.workfile_name or work_name or work_namer
         - sgfs.workfile_pick or work_pick or work_picker
         - sgfs.path_picker (this is how it is implemented)
-
 
 - Cache lookups by code/name as well as by ID.
 - Get setup.py including the schema (via a MANIFEST?).
