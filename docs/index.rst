@@ -3,6 +3,10 @@
 sgfs
 =========
 
+.. image:: https://secure.travis-ci.org/westernx/sgfs.png
+    :alt: Test Status
+    :target: http://travis-ci.org/westernx/sgfs
+
 This Python package is a translation layer between `Shotgun <http://www.shotgunsoftware.com/>`_ entities and a file structure on disk. In general, its overarching tasks are to:
 
 - map Shotgun entities to their canonical path on disk;
