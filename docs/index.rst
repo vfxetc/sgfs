@@ -30,6 +30,8 @@ Contents
     
     sgfs
 
+    known_issues
+
 
 Low-Level APIs
 --------------

@@ -36,11 +36,16 @@ Open the Shotgun page for the given entity.
 Tags and Caches
 ---------------
 
+.. _sgfs_tag:
+
 sgfs-tag
 ^^^^^^^^
 
-.. todo:: Document this.
+::
+    $ sgfs-tag <entity_type> <entity_id> <path_to_folder>
 
+
+.. _sgfs_update:
 
 sgfs-update
 ^^^^^^^^^^^
@@ -55,6 +60,8 @@ This command will rewrite the tags with up-to-date data::
     Update the cached tag data for every entity in the current folder.
     $ sgfs-update -r .
 
+
+.. _sgfs_relink:
 
 sgfs-relink
 ^^^^^^^^^^^

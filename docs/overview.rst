@@ -1,6 +1,8 @@
 Overview
 ========
 
+.. _tags:
+
 Tags
 ----
 
