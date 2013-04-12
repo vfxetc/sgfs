@@ -1,0 +1,224 @@
+These are the docs that I wrote before implementing any of this; they may still
+be of use for the places that aren't documented.
+
+Good luck!
+
+---
+
+Tasks
+=====
+
+1. Map entities to the canonical path.
+    a. A shot Task must be in the Shot tree.
+
+2. Map a path to entity chains.
+    a. A path may map to several chains in the case of colliding Task-Steps.
+       Decide if we will represent this with multiple lists or a graph which
+       may fork. E.g.
+           1. [Project, Sequence, Shot, Task1]
+              [Product, Sequence, Shot, Task2]
+           2. Project:
+               - Sequence:
+                   - Shot:
+                       - Task1
+                       - Task2
+
+3. Generate structure for a given entity.
+    a. Unless requested, only consider the directories that are children of the
+       entities which are not already represented. E.g. If generating for a Shot
+       only consider the Sequence structure if the sequence is not already
+       tagged.
+    b. Be able to provide a list of canonical entity paths.
+    c. Be able to preview the changes as well as doing them: implement as a
+       generator of actions which have a .preview() method.
+
+4. Identify existing structures.
+    a. Give it potential entities that it could be, get the canonical paths for
+       those entities, and tag them if they exist.
+
+
+Mapping Paths and Entities
+===========================
+
+- .sgfs.yml files
+
+    - specify which entitities map to this structure
+        entity_type: Shot
+        shots:
+            - id: 123
+              code: xxx
+            ...
+        
+    - can potentially identify several entities in the case of pipeline steps
+      since it is the tasks that generate those
+  
+    - Context object must like Tank
+        - must be able to deal with multiple entities for a single path
+    
+    - only in directories where there is a change in context
+        e.g. $PROJ/Super_Buddies/
+                .sgfs.yml
+                .sgfs-reverse.sqlite
+                SEQ/<sequence_code>/
+                    .sgfs.yml
+                    <shot_code>/
+                        .sgfs.yml
+                    
+    - walk up the heirarchy until you hit a project
+
+    - specify the name/version/item of the schema that generated it so that it
+      can be compared for missing items later
+
+- reverse map could be a .sgfs-reverse.sqlite which maps single entities to
+  the directory which contains their yaml
+  
+- this drops us to storing data about the file structure in two places
+  instead of three like Tank (e.g. the schema, templates, and the cache)
+
+- for a given Task, get the full entity chain (e.g. Project, Sequence, Shot, Task)
+  then walk from specific to general looking for the first one that exists, then
+  generate the structure for the ones that do not starting at the most general
+  that does not exist. Tag them with .sgfs.yml as you go.
+
+
+Structure Schema Specification
+==============================
+
+- root schema folder gives it a name so we can have "legacy" and "tankish"
+
+- should a child be situated within a parent so that the relationship bettween
+  Task and Shot vs Task and Asset is explicit?
+  
+- Parents specify their children with a path.
+
+- Children specify their path relative to the parent-specified mount-point with
+  a "name" which may include slashes.
+  
+- "template" is taken to be basename of the config file, by default
+
+
+Use Case Stories
+================
+
+
+Generating Structure
+--------------------
+
+- Construct the Context: Project -> Sequence -> Shot
+
+    >>> context = sgfs.context_from_entities([task])
+    >>> context.pprint()
+    Project:510 at 0xXXX
+        -> Sequence:826 at 0xXXX
+            -> Shot:2374 at 0xXXX
+                -> Task:2994 at 0xXXX
+    
+- Load the Schema we want to use.
+
+    >>> schema = sgfs.schema('testing')
+    >>> schema.pprint()
+    Project at 0xXXX {
+        Asset at 0xXXX {
+            Task at 0xXXX
+        }
+        Sequence at 0xXXX {
+            Shot at 0xXXX {
+                Task at 0xXXX
+            }
+        }
+    }
+
+- Get the structure for this context; it potentially includes entities which
+  already exist.
+  
+    >>> structure = schema.structure(context)
+    >>> structure.pprint()
+    . <- Project 123
+    Assets/
+    SEQ/AA/ <- Sequence 123
+        AA_001/ <- Shot 12
+            Audio/
+            Client/ <- Task 123
+                <Include "maya">
+                    scenes/
+                        backups/
+                        published/
+                    workspace.mel
+                <Include "nuke">
+                    scripts/
+            Plates/
+            Ref/
+
+- Create the structure which does not already exist.
+
+    >>> sgfs.process_structure(structure)
+    - Only create entities if they do not already exist in the sgfs. Need a
+      handle back to the sgfs for this, which means the schema needs it too, or
+      we need to pass it.
+    
+- Processor
+    .join_schema(path)
+    .join_project(path)
+    .mkdir(dst)
+    .touch(dst)
+    .copy(src, dst)
+- Get the schemas for these by walking the schema chain starting at Project
+  and looking at the child relationships. The chain must be continuous and
+  unbroken. We define elsewhere what relationships are present on the
+  various entities, OR we try to derive some logic for determining it at
+  runtime.
+
+- Walk backwards on the graph until we find a canonical path which already
+  exists: we find that the Sequence exists.
+
+- Construct a MountedSchema which takes into account the existing canonical
+  sequence path, and the Shot mount-point within a sequence.
+
+- Yield a sequence of StructureOperations which can be called to either
+  preview or do the actual changes.
+
+
+APIs
+====
+
+
+SGFS
+----
+- the main controller that links everything together.
+    
+- sgfs.context_from_path(path)
+    - look up the tag files to load all the entities, then construct the
+      graph
+    
+- read_tag
+- write_tag
+    - writes the .sgfs.yml file and adds it to the .sgfs-reverse.sqlite
+
+
+Context
+-------
+- A graph of Entities that we want to perform some operations on.
+- Usually rooted at a Project.
+
+
+Schema
+------
+
+- A graph of nodes that specifies the structure Schema.
+    
+- Via sgfs.schema(name) which gives the 'Project' node.
+    
+- Must line up with Context graph shape in order to be meaningful.
+    
+- Should this also include all the secondary items, such as directories,
+  files, includes, etc.?
+      
+√ load config from spec, then default to something else
+√ self.config -> the yaml
+√ self.children -> dict of entity_types to their SchemaNodes
+- self.path(context) -> the absolute path for the given entity specified by
+  a ContextNode. If given an entity then it can first build the context
+  and get the first leaf.
+      
+- self.structure(context) -> The structure graph for this context. It should
+  include nodes for all entities in the context.

@@ -21,6 +21,121 @@ Picker
 - unit tests for columnview
 
 
+- refactoring plan
+
+  - uitools.dictmodel.DictModel
+    - DictNode handles all of the data/flags/index/parent/whatever
+      that the model normally does, and it is represented by a dictionary
+      mapping Qt.ItemDataRole (or their uitools.qt.roles version) to a
+      value
+
+  - uitools.statemodel.StateModel
+    - extends DictModel to have "generators" which "mount" onto the current
+      state and provide children
+    - class StateNode(DictNode): pass
+
+  - uitools.headeredlistview.HeaderedListView
+    - what I wrote this morning
+
+  - uitools.headeredcolumnview.HeaderedColumnView
+    - the bulk of the SGFS picker view
+
+  - generators are classes
+
+    - Generator.mount(self, state):
+      return self if it does mount here
+
+    - Generator.generate(self, state, schedule_async):
+      returns an iterator of nodes (or node tuples), and may schedule async
+      node-fetching-functions via passed function. If None is returned and
+      nothing is scheduled, then it does not mount here and there are no
+      children.
+
+    - Generator.regenerate(self, state):
+      return immediate children that appear to exist in the given state
+
+  - GeneratedNode is created from the results, holding a reference to
+    its Generator (for resetting, etc). This inherits from the StateNode
+
+  - the plan (that should be incremental)
+    √ HeaderedListView into uitools
+      √ uitools.roles.get_role_for_name('header')
+    √ use HeaderedListView in picker ColumnView:
+      √ pull headers from the nodes
+      √ restore resizing
+      - loading/error/counts in headers?
+        - empty headers can be emitted via first fetch_children, and then
+          they can be removed via an updated view_data. Perhaps including
+          {'ignore': True} would cause it to not be rendered any more.
+
+
+- document how to create new picker nodes, and how the ``state`` works.
+  - ``self`` as the last entity is deprecated; use ``last_entity`` or
+    ``entities`` (a tuple of them in order) from here forward.
+- refactor picker names to be camelCase
+- add path for all entities?
+  - Can we trust that a ``path`` is always the last path, or do we need to
+    check the state deltas to be sure? Refactoring state into new_state and
+    all_state would be a good idea, or if state was actually a dictionary
+    stack, where state.last['path'] would get you the deltas
+
+- refactor so that the nodes that the model uses (e.g. group, leaf, general
+  data and flags) are different from the ones that generate that data
+
+  - the model delegates all rowCount, columnCount, data, flags, etc to the
+    ModelNode attached to the ModelIndex. Perhaps refactor this model into
+    something in uitools.model_graph that we can use for more things.
+
+  - somehow, multiple generators should be able to mount to a state and
+    generate children.
+    - sorting is done on the entire list by the model via a "sort_key" in the
+      view_data.
+    - Where do headers come from? If there is only one header, then it is
+      tricky since there are several sources to pick from. If you can have
+      multiple headers (like ActionMenuItems) then it is no longer a problem.
+
+  - simpler signal that a generator cannot mount on the state; current
+    raising of TypeError is overloading that exception type.
+
+
+
+
+  - if headers are set by an item in that section, then the header logic (from
+    the generators point of view) will get easier. What do we set the header to
+    for a section that does not have children? "Empty"?
+
+    - sometimes we want the header to come from the parent node: the Shotgun
+      ones set the header to the entity_type
+    - sometimes we want the header to come from the node itself
+
+  - if headers are created in a similar manner to the Shotgun action menu (in
+    which headers are in the flow of the items and group several items together)
+    then there are some more possibilities. Would want to pin a header to the
+    top and then have some more going down.
+
+  - move the key/uuid into the view_data instead of being a seperate object?
+
+
+- prioritize the threads that you just clicked on
+    - this may require me to write my own threadpool around queue.LifoQueue
+    - since we dont take the results from the futures, they could be more
+      general and pop the node with the most recent access time from the queue
+    - use shotgun batch mode to jam a bunch of the queued requests together
+
+
+
+
+- SGFSChildren to grab children
+
+- be able to specify text that it can match when you type
+
+- ComboBoxView
+      
+- thumbnails from shotgun
+    'thumbnail' displaymode, or with a delegate
+
+
+
 Create Structure
 =================
 
@@ -35,6 +150,21 @@ Templates
 
 - Patterns in template names to allow for maya_*_publish template.
 
+- Template mini-language:
+  Standard formatting:
+      {version:04d}
+  Expressions (like Jinja):
+      {{ '%04d' % version }}
+      {{ '{{' }} for raw {{
+  Conditions (like Jinja):
+      {% if <test> %}
+      {% for i in range(10) -%}
+          {{ ', ' if i else '' }}{{ i }}
+      {%- endfor %}
+  Flags (signals to compiler):
+      {# collapse_path(True) #}
+    
+
 
 Work Namer (aka SceneName)
 ==========================
@@ -47,6 +177,29 @@ Work Picker (aka product_select)
 ================================
 
 - Should this be changed to the sgfs.state_picker?
+
+SceneName
+---------
+
+- can this be done with templates? Seems like it can IFF we can either use
+  regexes (or something like them) or have multiple templates
+    
+    maya_work_area: maya/scenes
+    
+    maya_scene_name:
+        - v{version}/revisions/{Task[entity][code]}_{Task[step][short_name]}_{detail}_v{version:04d}_r{revision:04d}{ext}
+        - v{version}/{Task[entity][code]}_{Task[step][short_name]}_{detail}_v{version:04d}{ext}
+    
+    maya_scene_name:
+        - {Task[entity][code]}_{Task[step][short_name]}_{detail}_v{version:04d}_r{revision:04d}{ext}
+        - {Task[entity][code]}_{Task[step][short_name]}_{detail}_v{version:04d}{ext}
+        
+- set_workspace()
+- set_filename(filename, strict=False)
+- more portable warnings and errors
+- SceneNameWidget
+- expose the underlying SceneName (but leave a copy where it was for b/c)
+
 
 Other
 =====
