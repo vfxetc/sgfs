@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name='sgfs',
@@ -6,7 +6,7 @@ setup(
     description='Translation layer between Shotgun entities and a file structure.',
     url='http://github.com/westernx/sgfs',
     
-    packages=['sgfs'],
+    packages=find_packages(exclude=['build*', 'tests*']),
     
     author='Mike Boers',
     author_email='sgfs@mikeboers.com',
