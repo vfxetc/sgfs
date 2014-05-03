@@ -39,8 +39,8 @@ def icon(name, as_icon=False):
     except KeyError:
     
         path = os.path.abspath(os.path.join(__file__, 
-            '..', '..', '..', '..',
-            'icons', name + '.png'
+            '..', '..', '..', 'art', 'icons',
+            name + '.png'
         ))
         if os.path.exists(path):
             icon = QtGui.QPixmap(path)

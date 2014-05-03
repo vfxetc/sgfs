@@ -7,6 +7,7 @@ setup(
     url='http://github.com/westernx/sgfs',
     
     packages=find_packages(exclude=['build*', 'tests*']),
+    include_package_data=True,
     
     author='Mike Boers',
     author_email='sgfs@mikeboers.com',
