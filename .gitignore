@@ -8,3 +8,8 @@
 /bin
 /docs/_build
 /sandbox
+/build
+/dist
+/cover
+/.coverage
+*.egg-info
