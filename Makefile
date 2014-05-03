@@ -1,4 +1,4 @@
-ENTRYPOINTS_BUILD := $(shell python -c 'import entrypoints.build as x; print x.__file__')
+ENTRYPOINTS_BUILD := $(shell python -c 'import metatools.entrypoints.build as x; print x.__file__')
 SGACTIONS_DEPLOY := $(shell python -c 'import sgactions.deploy as x; print x.__file__')
 
 .PHONY : default entrypoints sgactions clean
@@ -9,7 +9,7 @@ ENTRYPOINTS_SENTINEL := bin/.make-sentinel
 entrypoints : $(ENTRYPOINTS_SENTINEL)
 $(ENTRYPOINTS_SENTINEL) : entrypoints.yml $(ENTRYPOINTS_BUILD)
 	mkdir -p bin
-	python -m entrypoints.build entrypoints.yml bin
+	python -m metatools.entrypoints.build entrypoints.yml bin
 	@ touch $(ENTRYPOINTS_SENTINEL)
 
 SGACTIONS_SENTINEL := .sgactions.make-sentinel
