@@ -13,7 +13,6 @@ class Schema(object):
         root = os.path.abspath(os.path.join(
             __file__, 
             os.pardir,
-            os.pardir,
             'schemas',
             name,
         ))

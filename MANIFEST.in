@@ -1,1 +1,2 @@
 recursive-include sgfs/art *
+recursive-include sgfs/schemas *
