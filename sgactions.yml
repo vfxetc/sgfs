@@ -32,6 +32,17 @@
     selection_required: true
 
 -
+    entrypoint: sgfs.actions.open_terminal:run
+    title: "File System: Jump to Terminal"
+    rich:
+        heading: File System
+        title: Jump to Terminal
+        icon: application-osx-terminal
+    list_order: 24
+    entity_types: [Sequence, Asset, Shot, Task, PublishEvent]
+    selection_required: true
+
+-
     entrypoint: sgfs.actions.launch_maya:run
     title: "Toolbox: Launch Maya"
     rich:
