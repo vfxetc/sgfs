@@ -100,6 +100,7 @@ def build_for_path(path):
         menu_name = 'Shotgun [%s]' % menu_name_pattern.format(**entity)
     else:
         menu_name = 'Shotgun [detached]'
+        entity = None
 
     # Append or insert the menu if it existed.
     index = _clear_existing()
@@ -108,18 +109,18 @@ def build_for_path(path):
     else:
         menu = _menu_bar.addMenu(menu_name)
 
-    if not entity:
+    if entity:
+        # Generate an item for every step up to the top.
+        head = entity
+        while head and head['type'] in _entity_name_formats:
+            menu.addCommand(
+                'Go to %s' % _entity_name_formats[head['type']].format(**head),
+                functools.partial(_open_entity, head),
+                icon=_icon_path(_entity_icons.get(head['type'])),
+            )
+            head = head.parent()
+    else:
         menu.addCommand('No entities found!').setEnabled(False)
-
-    # Generate an item for every step up to the top.
-    head = entity
-    while head and head['type'] in _entity_name_formats:
-        menu.addCommand(
-            'Go to %s' % _entity_name_formats[head['type']].format(**head),
-            functools.partial(_open_entity, head),
-            icon=_icon_path(_entity_icons.get(head['type'])),
-        )
-        head = head.parent()
 
     menu.addSeparator()
 
