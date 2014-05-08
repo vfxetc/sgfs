@@ -91,23 +91,22 @@ def _open_entity(entity):
 
 def build_for_path(path):
 
-    index = _clear_existing()
-
     entities = _sgfs.entities_from_path(path)
-    if not entities:
 
-        menu = _menu_bar.addMenu('Shotgun [detached]')
-        entity = None
-
-    else:
-
+    # Pick a nice name.
+    if entities:
         entity = entities[0]
-        name_pattern = _entity_name_formats.get(entity['type'], '{type}')
-        menu = _menu_bar.addMenu(
-            'Shotgun [%s]' % name_pattern.format(**entity),
-            index=index,
-        )
+        menu_name_pattern = _entity_name_formats.get(entity['type'], '{type}')
+        menu_name = 'Shotgun [%s]' % menu_name_pattern.format(**entity)
+    else:
+        menu_name = 'Shotgun [detached]'
 
+    # Append or insert the menu if it existed.
+    index = _clear_existing()
+    if index is not None:
+        menu = _menu_bar.addMenu(menu_name, index=index)
+    else:
+        menu = _menu_bar.addMenu(menu_name)
 
     if not entity:
         menu.addCommand('No entities found!').setEnabled(False)
