@@ -9,8 +9,6 @@ A number of command line tools have been created to deal with common situations.
 - a shot code (e.g. ``gb_001`` or ``PV_007_002``);
 - nothing, and it will use the current working directory.
 
-.. todo:: The parser will be made to accept task names, asset names, and a few more things.
-
 
 Basics
 ------
@@ -42,6 +40,7 @@ sgfs-tag
 ^^^^^^^^
 
 ::
+
     $ sgfs-tag <entity_type> <entity_id> <path_to_folder>
 
 

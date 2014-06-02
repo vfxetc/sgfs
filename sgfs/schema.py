@@ -7,9 +7,25 @@ from .structure import Structure
 
 class Schema(object):
     
+    """A template of file structures to create for Shotgun entities.
+
+    A Schema is a directed acyclic graph of file structure templates.
+    A schema is merged with a :class:`.Context` graph to create a concrete
+    :class:`.Structure` graph.
+
+    Schemas are defined as a set of template directories and YAML files to
+    describe them. They are located in the "schemas" directory within the
+    ``sgfs`` package. 
+
+
+    """
+
     def __init__(self, name=None, entity_type='Project', config_name=None):
         
+        #: The name of the schema, defaults to ``'v1'``.
         name = name or 'v1'
+
+        #: The path to the root of the schema.
         root = os.path.abspath(os.path.join(
             __file__, 
             os.pardir,
@@ -39,6 +55,24 @@ class Schema(object):
         return '<Schema %s:%s at 0x%x>' % (os.path.basename(self.root), self.entity_type, id(self))
     
     def pprint(self, depth=0):
+        """Print a representation of the graph.
+
+        ::
+
+            >>> schema = Schema('v1')
+            >>> schema.pprint()
+            Project "Project.yml" {
+                Asset "Asset.yml" {
+                    Task "Task.yml"
+                }
+                Sequence "Sequence.yml" {
+                    Shot "Shot.yml" {
+                        Task "Task.yml"
+                    }
+                }
+            }
+
+        """
         print '%s%s "%s"' % (
             '\t' * depth,
             self.entity_type,
@@ -54,7 +88,8 @@ class Schema(object):
         print '\t' * depth + '}'
     
     def build_structure(self, sgfs, context, root=None):
-        
+        """Render this schema into a :class:`.Structure`."""
+
         # Make sure that this schema matches the context we have been asked to
         # create a structure for.
         if self.entity_type != context.entity['type']:

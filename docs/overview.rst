@@ -6,7 +6,7 @@ Overview
 Tags
 ----
 
-Once folders have been created, the mapping bettween those folders and the Shotgun entities from which they originated are maintained via "tags". These tags exist within ``.sgfs.yml`` files within the top-level of the directory that corresponds to the given entity.
+Once folders have been created, the mapping between those folders and the Shotgun entities from which they originated are maintained via **tags**. These tags exist within ``.sgfs.yml`` files within the top-level of the directory that corresponds to the given entity.
 
 Location
 ^^^^^^^^
@@ -69,13 +69,37 @@ Usage of tags follows a few general rules:
 - if a directory is tagged more than once with the same entity, only the most recent tag will be returned and older metadata will be lost (although older Shotgun data will be merged into the session if not outdated).
 
 
-Everything Else
----------------
+
+.. _path_cache:
+
+The Path Cache
+--------------
+
+While :ref:`tags <tags>` create a link from directories to their corresponding entities, the **path cache** maintains the links from entities to directories in which they are tagged.
+
+The path cache is implemented as a `sqlite3 <http://www.sqlite.org/>`_ database located at ``.sgfs/cache.sqlite`` within each project, and accessible via the :class:`.PathCache` API.
+
+Since the data in the path cache and tags is redundant, the path cache should be treated as a derivative of the tags and may be reconstructed from the tags at any time via the :ref:`sgfs_relink` command.
 
 
-.. todo:: Document thoroughly:
 
-    - :class:`~sgfs.context.Context` overview
-    - :class:`~sgfs.schema.Schema` overview, configuration, and API
-    - :class:`~sgfs.structure.Structure` overview and API
-    - :class:`~sgfs.cache.PathCache` overview and API
+Caveats or Known Issues
+-----------------------
+
+- Projects must be tagged manually in order for other tools to be able to create structures within them (by default). This is partially a technical restriction (for the creation of the :ref:`path cache <path_cache>`, but also for safety. Manual tagging is done via the :ref:`sgfs_tag` command::
+
+    sgfs-tag Project 1234 path/to/project
+
+
+
+Contexts, Schemas, and Structures
+---------------------------------
+
+
+The :class:`.Context`, :class:`.Schema`, and :class:`.Structure` are three different (but related) directed acyclic graphs used in the construction of file structures on disk.
+
+A :class:`.Context` represents a set of Shotgun entities and their relationships.
+
+A :class:`.Schema` represents a template for file structures, and is defined via template structures and YAML files describing them.
+
+A :class:`.Structure` is the specific directories and files that should exist for a set of entities, and allows for creation or inspection of those structures. It is created by rendering Schema for a given Context.
