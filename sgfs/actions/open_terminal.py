@@ -1,4 +1,5 @@
 from subprocess import call
+import os
 import sys
 
 from sgfs import SGFS
@@ -28,4 +29,7 @@ def run(entity_type, selected_ids, **kwargs):
     if sys.platform.startswith('darwin'):
         call(['open', '-a', 'Terminal', path])
     else:
-        call(['gnome-terminal', '--working-directory', path])
+        terminal_cmd = 'gnome-terminal'
+        if 'MATE_DESKTOP_SESSION_ID' in os.environ:
+            terminal_cmd = 'mate-terminal'
+        call([terminal_cmd, '--working-directory', path])
