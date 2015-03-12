@@ -13,6 +13,8 @@ setup(
     author_email='sgfs@mikeboers.com',
     license='BSD-3',
     
+    metatools_entrypoints='entrypoints.yml',
+    
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
