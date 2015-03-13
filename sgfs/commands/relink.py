@@ -41,3 +41,6 @@ class RelinkCommand(Command):
 
 main = RelinkCommand()
 
+def main_rebuild(*args, **kwargs):
+    kwargs['recurse'] = True
+    return main(*args, **kwargs)

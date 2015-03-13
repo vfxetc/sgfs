@@ -13,7 +13,27 @@ setup(
     author_email='sgfs@mikeboers.com',
     license='BSD-3',
     
-    metatools_entrypoints='entrypoints.yml',
+    entry_points={
+        'console_scripts': [
+
+            # Low-level structure.
+            'sgfs-tag = sgfs.commands.tag:main',
+            'sgfs-create-structure = sgfs.commands.create_structure:main',
+
+            # Relinking or updating tags.
+            'sgfs-relink = sgfs.commands.relink:main',
+            'sgfs-rebuild-cache = gfs.commands.relink:main_rebuild',
+            'sgfs-update = sgfs.commands.update:main',
+
+            # Opening commands.
+            'sgfs-open = sgfs.commands.open:run_open',
+            'sgfs-shotgun = sgfs.commands.open:run_shotgun',
+            'sgfs-path = sgfs.commands.open:run_path',
+
+            'sgfs-rv = sgfs.commands.rv:run',
+
+        ],
+    },
     
     classifiers=[
         'Intended Audience :: Developers',
