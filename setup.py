@@ -22,7 +22,7 @@ setup(
 
             # Relinking or updating tags.
             'sgfs-relink = sgfs.commands.relink:main',
-            'sgfs-rebuild-cache = gfs.commands.relink:main_rebuild',
+            'sgfs-rebuild-cache = sgfs.commands.relink:main_rebuild',
             'sgfs-update = sgfs.commands.update:main',
 
             # Opening commands.
