@@ -33,7 +33,7 @@ class SGFS(object):
         self._root = root
         self._session = session
         self._shotgun = shotgun
-        self.schema_name = schema_name
+        self.schema_name = schema_name or os.environ.get('SGFS_SCHEMA')
     
     @utils.cached_property
     def root(self):
