@@ -53,9 +53,15 @@ class SGFS(object):
     @utils.cached_property
     def project_roots(self):
         # Scan the root looking for Project tags in its top level.
+        
+        # We look at links first so that they get overwritten by data in "real"
+        # directories later. This is so that the "real" directory has priority
+        # over a link to itself.
+        paths = [os.path.join(self.root, name) for name in os.listdir(self.root)]
+        paths.sort(key=lambda path: (not os.path.islink(path), path))
+
         roots = {}
-        for name in os.listdir(self.root):
-            path = os.path.join(self.root, name)
+        for path in paths:
             for tag in self.get_directory_entity_tags(path):
                 if tag['entity']['type'] == 'Project':
                     roots[tag['entity']] = path
