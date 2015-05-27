@@ -229,6 +229,11 @@ class Layout(QtGui.QHBoxLayout):
         if entity['type'] == 'Shot':
             seq = entity.parent()
             seq_path = sgfs.path_for_entity(seq)
+
+            # When remote, this entity may not exist.
+            if not seq_path:
+                return
+
             for shot_path, shot in sgfs.entities_in_directory(seq_path, "Shot", load_tags=None):
                 if shot.fetch('code').startswith(entity.fetch('code')[:6]):
                     entities.append((

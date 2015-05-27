@@ -15,7 +15,7 @@ from sgfs.ui.picker.nodes.shotgun import ShotgunPublishStream, ShotgunQuery
 from sgfs.ui.picker.nodes.sgfs import TemplateGlobPicker, DirectoryPicker
 
 
-def main():
+def _main():
     
     import sgfs.commands.utils as command_utils
     
@@ -99,10 +99,13 @@ def main():
     dialog.show()
     dialog.raise_()
 
-if __name__ == '__main__':
 
+def main():
     app = QtGui.QApplication(sys.argv)
-    
-    main()
+    _main()
     exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
 
