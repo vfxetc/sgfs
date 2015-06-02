@@ -56,14 +56,12 @@ def parse_spec(sgfs, spec, entity_types=None):
     # Shotgun detail URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/detail/([A-Za-z]+)/(\d+)', spec)
     if m:
-        data.update({'type': m.group(1).title(), 'id': int(m.group(2))})
-        return data
+        return {'type': m.group(1).title(), 'id': int(m.group(2))}
 
     # Shotgun project overview URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/page/\d+#([A-Z][A-Za-z]+)_(\d+)_', spec)
     if m:
-        data.update({'type': m.group(1).title(), 'id': int(m.group(2))})
-        return data
+        return {'type': m.group(1).title(), 'id': int(m.group(2))}
     
     # Shotgun project URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/page/(\d+)$', spec)
@@ -71,6 +69,7 @@ def parse_spec(sgfs, spec, entity_types=None):
         page = sgfs.session.find_one('Page', [('id', 'is', int(m.group(1)))], ['entity_type', 'project'])
         if page['entity_type'] != 'Project':
             raise ValueError('given URL is not a Project entity')
+        data = {}
         _expand_entity(data, page['project'])
         _expand_entity(data, page)
         return data
