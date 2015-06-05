@@ -31,7 +31,7 @@ def _data_from_path(sgfs, path, entity_types=None):
     return (entities[0] if entities else None, data)
 
 
-def parse_spec(sgfs, spec, entity_types=None):
+def parse_spec(sgfs, spec, entity_types=None, project_from_page=False):
 
     # We used to accept multiple parameters, but now we just take one.
     if not isinstance(spec, str):
@@ -68,6 +68,8 @@ def parse_spec(sgfs, spec, entity_types=None):
     if m:
         page = sgfs.session.find_one('Page', [('id', 'is', int(m.group(1)))], ['entity_type', 'project'])
         if page['entity_type'] != 'Project':
+            if project_from_page and page.get('project'):
+                return page['project']
             raise ValueError('given URL is not a Project entity')
         data = {}
         _expand_entity(data, page['project'])
