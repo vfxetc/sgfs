@@ -1,6 +1,6 @@
 from sgfs import SGFS
 
-from sgactions.utils import notify
+from sgactions.utils import notify, progress
 
 
 def run_create(**kwargs):
@@ -11,6 +11,9 @@ def run_preview(**kwargs):
 
 def _run(dry_run, entity_type, selected_ids, **kwargs):
     
+    title='Preview Folders' if dry_run else 'Creating Folders'
+    progress(title=title, message='Running; please wait...')
+
     sgfs = SGFS()
     
     entities = sgfs.session.merge([dict(type=entity_type, id=id_) for id_ in selected_ids])
@@ -20,6 +23,7 @@ def _run(dry_run, entity_type, selected_ids, **kwargs):
     commands = sgfs.create_structure(entities, dry_run=dry_run)
     
     notify(
-        title='Preview Folders' if dry_run else 'Creating Folders',
+        title=title,
         message='\n'.join(commands) or 'Everything is up to date.',
     )
+
