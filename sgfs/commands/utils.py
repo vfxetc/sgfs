@@ -49,19 +49,19 @@ def parse_spec(sgfs, spec, entity_types=None, project_from_page=False):
         if data:
             data.update(entity)
             data['__path__'] = path
-            return data
+            return sgfs.session.merge(data)
         else:
             raise ValueError('got not entities from path')
         
     # Shotgun detail URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/detail/([A-Za-z]+)/(\d+)', spec)
     if m:
-        return {'type': m.group(1).title(), 'id': int(m.group(2))}
+        return sgfs.session.merge({'type': m.group(1).title(), 'id': int(m.group(2))})
 
     # Shotgun project overview URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/page/\d+#([A-Z][A-Za-z]+)_(\d+)_', spec)
     if m:
-        return {'type': m.group(1).title(), 'id': int(m.group(2))}
+        return sgfs.session.merge({'type': m.group(1).title(), 'id': int(m.group(2))})
     
     # Shotgun project URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/page/(\d+)$', spec)
@@ -74,16 +74,16 @@ def parse_spec(sgfs, spec, entity_types=None, project_from_page=False):
         data = {}
         _expand_entity(data, page['project'])
         _expand_entity(data, page)
-        return data
+        return sgfs.session.merge(data)
         
     # Direct entities. E.g. `shot 12345`
     m = re.match(r'^([A-Za-z]{3,}):(\d+)$', spec)
     if m:
         type_, id_ = m.groups()
-        return {
+        return sgfs.session.merge({
             'type': type_[0].upper() + type_[1:],
             'id': int(id_),
-        }
+        })
     
     # TODO: do something with templates.
     

@@ -1,3 +1,19 @@
+Remote
+======
+
+- PostgreSQL based PathCache
+- projects still need to be identifiable
+    - option 1. could just tag them on every machine
+    - option 2. PathCache can identify project roots
+      PathCache.iter_project_roots
+    - option 3. override with envvars: SGFS_PROJECT_65_ROOT
+
+- since data is stored in tag files, which can easily not be transfered to
+  remote, it is interesting to consider moving that data into the cache as
+  well, just as a backup. If they both contain a last_updated date or event_id
+  then it is easy enough to reconcile them
+
+
 Picker
 =======
 
