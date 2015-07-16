@@ -49,7 +49,7 @@ def _main():
 
 
     # model.register_node_type(SGFSRoots)
-    model.register_node_type(functools.partial(ShotgunPublishStream, publish_types=['maya_scene']))
+    model.register_node_type(functools.partial(ShotgunPublishStream))
     # model.register_node_type(functools.partial(ShotgunQuery, entity_types=('EventLogEntry', 'ActionMenuItem', 'Step', 'PublishEvent', 'Asset', 'Sequence', 'Shot', 'Task', 'Version', 'Tool', 'Ticket', 'Project', 'HumanUser')))
     model.register_node_type(functools.partial(ShotgunQuery, entity_types=('Asset', 'Sequence', 'Shot', 'Project', 'Task')))
 
