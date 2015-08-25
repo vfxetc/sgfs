@@ -39,7 +39,7 @@ def any_task(entity=None, path=None, sgfs=None, extra_node_types=None):
     return model, view
 
 
-def publishes_from_path(path, sgfs=None, publish_types=None):
+def publishes_from_path(path, sgfs=None, publish_types=None, constrain_project=False):
     
     sgfs = sgfs or SGFS()
     
@@ -54,14 +54,16 @@ def publishes_from_path(path, sgfs=None, publish_types=None):
             entities.append(entity)
             entity = entity.parent()
     
-    if True:
+    if constrain_project:
         model = Model(root_state=state_from_entity(entities[0].project()), sgfs=sgfs)
+        model.register_node_type(functools.partial(ShotgunEntities,
+            entities=[entities[0].project()],
+        ))
     else:
         model = Model(sgfs=sgfs)
-    
-    model.register_node_type(functools.partial(ShotgunEntities,
-        entities=[entities[0].project()],
-    ))
+        model.register_node_type(functools.partial(ShotgunQuery,
+            entity_types=['Project'],
+        ))
     
     model.register_node_type(functools.partial(ShotgunQuery,
         entity_types=['Asset', 'Sequence', 'Shot', 'Task'],
