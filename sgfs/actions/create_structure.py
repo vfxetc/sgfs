@@ -1,6 +1,6 @@
 from sgfs import SGFS
 
-from sgactions.utils import notify, progress
+from sgactions.utils import notify, progress, alert
 
 
 def run_create(**kwargs):
@@ -12,7 +12,9 @@ def run_preview(**kwargs):
 def _run(dry_run, entity_type, selected_ids, **kwargs):
     
     title='Preview Folders' if dry_run else 'Creating Folders'
-    progress(title=title, message='Running; please wait...')
+    verb = 'previewing' if dry_run else 'creating'
+
+    progress(message=('Previewing' if dry_run else 'Creating') + ' folders for %s %ss; please wait...' % (len(selected_ids), entity_type))
 
     sgfs = SGFS()
     
@@ -20,10 +22,17 @@ def _run(dry_run, entity_type, selected_ids, **kwargs):
     heirarchy = sgfs.session.fetch_heirarchy(entities)
     sgfs.session.fetch_core(heirarchy)
     
-    commands = sgfs.create_structure(entities, dry_run=dry_run)
+    command_log = sgfs.create_structure(entities, dry_run=dry_run)
     
-    notify(
-        title=title,
-        message='\n'.join(commands) or 'Everything is up to date.',
-    )
+    if command_log:
+        details = '\n'.join(command_log)
+        if dry_run:
+            alert(title='Folder Preview', message=details)
+        else:
+            notify(
+                message='Created folders for %s %ss.' % (len(selected_ids), entity_type),
+                details=details,
+            )
+    else:
+        notify(message='Folders are already up to date.')
 

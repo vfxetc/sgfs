@@ -23,7 +23,7 @@ def run(entity_type, selected_ids, **kwargs):
         notify('No paths for %s %s' % (entity_type, selected_ids))
         return
     
-    notify('Opening:\n' + '\n'.join(sorted(paths)))
+    notify('Opened ' + ', '.join(sorted(paths)))
     
     path = paths[0]
     if sys.platform.startswith('darwin'):
