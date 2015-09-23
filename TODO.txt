@@ -220,6 +220,10 @@ SceneName
 Other
 =====
 
+- sgfs-tag --list [path]
+  sgfs-tag --create type id [path]
+  sgfs-tag --delete [[type] id] [path]
+
 - refactor relinking commands onto the path cache since it is so low level
 
 - document sgfs troubleshooting:

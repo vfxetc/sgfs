@@ -10,3 +10,7 @@ do_not_create:
     - Spotting
 
 name_expr: self['step']['short_name']
+
+templates:
+
+    "*_publish": published/{publisher.type}/{publish.name}/v{publish.version:04d}
