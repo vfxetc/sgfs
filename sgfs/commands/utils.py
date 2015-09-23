@@ -42,6 +42,13 @@ def parse_spec(sgfs, spec, entity_types=None, project_from_page=False):
         else:
             raise TypeError('spec must be string or single-item list; got %r' % spec)
 
+    # Accept integer IDs if we know we want a specific type.
+    if spec.isdigit():
+        if len(entity_types) == 1:
+            return {'type': entity_types[0], 'id': int(spec)}
+        else:
+            raise ValueError('int-only spec with %d entity_types' % len(entity_types))
+
     # Paths (which must have been created via Tank).
     path = os.path.abspath(spec)
     if os.path.exists(path):
