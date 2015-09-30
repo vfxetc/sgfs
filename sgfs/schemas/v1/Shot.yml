@@ -4,5 +4,8 @@ children:
     Task: Task.yml
 
 templates:
+
     plate_directory: Plates/{type}/{name}
+
+    plate_publish: "Plates/{publish.type}/{publish.name}/{publish.version:04d}"
 
