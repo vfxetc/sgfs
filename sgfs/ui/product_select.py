@@ -227,6 +227,7 @@ class Layout(QtGui.QHBoxLayout):
         
         # Populate shot combo with all reuses that match the current workspace.
         if entity['type'] == 'Shot':
+
             seq = entity.parent()
             seq_path = sgfs.path_for_entity(seq)
 
@@ -234,8 +235,22 @@ class Layout(QtGui.QHBoxLayout):
             if not seq_path:
                 return
 
+            # If the shot no longer exists, there could be a problem.
+            # I don't think this has ever actually come up.
+            if not entity.get('code'):
+                cmds.warning('Shot %s may not exist (it has no code cached); skipping' % entity['id'])
+                return
+
             for shot_path, shot in sgfs.entities_in_directory(seq_path, "Shot", load_tags=None):
-                if shot.fetch('code').startswith(entity.fetch('code')[:6]):
+
+                # Again, the shot may not exist. This one is must more likely
+                # to occour than the one a few lines up.
+                shot_code = shot.get('code')
+                if not shot_code:
+                    cmds.warning('Shot %s at %s may not exist (it has no code cached); skipping' % (shot['id'], shot_path))
+                    continue
+
+                if shot['code'].startswith(entity['code'][:6]):
                     entities.append((
                         shot['code'], shot_path
                     ))
