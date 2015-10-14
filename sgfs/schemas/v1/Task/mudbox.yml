@@ -6,4 +6,5 @@ steps_to_include:
     - Sculpt
     - Texture
     - Texturing
+    - Projection
     

@@ -19,6 +19,7 @@ steps_to_include:
     - Previs
     - Rigging
     - Rig
+    - Projection
 
 templates:
 
