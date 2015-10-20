@@ -5,7 +5,15 @@ children:
 
 templates:
 
+    # This is for tools in the era before plate publishing.
     plate_directory: Plates/{type}/{name}
 
-    plate_publish: "Plates/{publish.type}/{publish.name}/{publish.version:04d}"
+    # For now, all of our plates are DPX, so for human consumption it seems
+    # to make sense that the plates are in a "dpx" directory. We may revisit
+    # this with a "subtype" field in publishes at some point down the road.
+    plate_publish:             "Plates/published/dpx/{publish.name}/v{publish.version:04d}"
+    plate_proxy_publish:       "Plates/published/proxy/{publish.name}/v{publish.version:04d}"
+    reference_footage_publish: "Plates/published/reference/{publish.name}/v{publish.version:04d}"
+    audio_publish:             "Audio/published/{publish.name}/v{publish.version:04d}"
+
 
