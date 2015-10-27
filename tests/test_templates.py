@@ -133,7 +133,20 @@ class TestSGFSTemplates(TestCase):
         tpl = self.sgfs.find_template(self.tasks[0], 'maya_lightrig_folder')
         self.assertEqual(tpl.template.format(), 'data/generic')
 
+    def test_template_order(self):
 
-        
+        structure = self.sgfs.structure_from_entities([self.tasks[0]])
+
+        tpls = list(structure.iter_templates('tpl_order_xx'))
+        self.assertEqual(len(tpls), 2)
+        self.assertEqual(tpls[0].template.format(), 'static')
+        self.assertEqual(tpls[1].template.format(), 'short glob')
+
+        tpls = list(structure.iter_templates('tpl_order_xxx'))
+        self.assertEqual(len(tpls), 2)
+        self.assertEqual(tpls[0].template.format(), 'long glob')
+        self.assertEqual(tpls[1].template.format(), 'short glob')
+
+
         
         

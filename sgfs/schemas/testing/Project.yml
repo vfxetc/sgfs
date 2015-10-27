@@ -2,6 +2,12 @@ name_expr: |
     import re
     normalize = lambda x: re.sub(r'\W+', '_', x).strip('_')
     return normalize(self['name'])
+
 children:
     Asset: Asset.yml
     Sequence: Sequence.yml
+
+templates:
+    tpl_order_x*: short glob
+    tpl_order_xx: static
+    tpl_order_xxx*: long glob

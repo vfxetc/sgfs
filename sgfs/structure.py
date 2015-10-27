@@ -9,6 +9,14 @@ from .template import BoundTemplate
 
 
 
+def _template_pattern_sort_key(x):
+    parts = x.split('*')
+    return (
+        len(parts),     # Names before globs.
+        -len(parts[0]), # More specific globs come first.
+    )
+
+
 class Structure(object):
     
     @classmethod
@@ -112,10 +120,11 @@ class Structure(object):
     
     def iter_templates(self, name):
         for node in self.walk(depth_first=True):
-            for name_pattern, raw_template in node.config.get('templates', {}).iteritems():
+            template_pairs = node.config.get('templates', {}).items()
+            template_pairs.sort(key=lambda x: _template_pattern_sort_key(x[0]))
+            for name_pattern, raw_template in template_pairs:
                 if fnmatch.fnmatchcase(name, name_pattern):
                     yield BoundTemplate(raw_template, structure=node)
-            
 
 
 class Directory(Structure):
