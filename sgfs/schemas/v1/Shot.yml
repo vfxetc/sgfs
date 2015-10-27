@@ -5,7 +5,8 @@ children:
 
 templates:
 
-    # This is for tools in the era before plate publishing.
+    # This is for tools in the era before plate publishing. After "Pup-Star"
+    # this can very likely be removed.
     plate_directory: Plates/{type}/{name}
 
     # For now, all of our plates are DPX, so for human consumption it seems
@@ -16,4 +17,5 @@ templates:
     reference_footage_publish: "Plates/published/reference/{publish.name}/v{publish.version:04d}"
     audio_publish:             "Audio/published/{publish.name}/v{publish.version:04d}"
 
-
+    # Catch-all for publishes at either shot level, or tasks with no folders.
+    "*_publish":  published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
