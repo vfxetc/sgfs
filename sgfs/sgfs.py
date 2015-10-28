@@ -424,7 +424,10 @@ class SGFS(object):
                     did_update_tags = False
                     for raw_tag in raw_tags:
                         if entity.is_same_entity(raw_tag['entity']):
-                            raw_tag.setdefault('previous_paths', []).append(old_path)
+                            raw_tag.setdefault('path_history', []).append({
+                                'path': old_path,
+                                'updated_at': datetime.datetime.utcnow()
+                            })
                             raw_tag['path'] = path
                             did_update_tags = True
                     if did_update_tags:
