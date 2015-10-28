@@ -68,6 +68,7 @@ class UpdateCommand(Command):
                 return 1
         
         # Collect all the existing data.
+        # TODO: Should these allow_moved=True??
         tags_by_path = {}
         if opts.recurse:
             for arg in args:
@@ -117,14 +118,7 @@ class UpdateCommand(Command):
                 continue
             
             if changed:
-                serialized = yaml.dump_all(tags,
-                    explicit_start=True,
-                    indent=4,
-                    default_flow_style=False
-                )
-                call(['cp', os.path.join(path, '.sgfs.yml'), os.path.join(path, '.sgfs.%s.yml' % datetime.datetime.utcnow().strftime('%y%m%d.%H%M%S.%f'))])
-                with open(os.path.join(path, '.sgfs.yml'), 'w') as fh:
-                    fh.write(serialized)
+                sgfs._write_directory_tags(path, tags, replace=True)
 
             # print path
 

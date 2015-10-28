@@ -1,6 +1,8 @@
 from pprint import pprint, pformat
+import collections
 import datetime
 import itertools
+import logging
 import os
 import sys
 
@@ -80,4 +82,38 @@ class TestCase(BaseTestCase):
         if not os.path.exists(path):
             os.makedirs(path)
         return path
+
+
+class LogCapturer(logging.Handler, collections.Sequence):
+
+    def __init__(self, name=None, silent=False):
+        super(LogCapturer, self).__init__()
+        self.logger_name = name
+        self.silence_others = silent
+        self.records = []
+
+    def __enter__(self):
+        self.logger = logging.getLogger(self.logger_name)
+        if self.silence_others:
+            self.existing_handlers = self.logger.handlers[:]
+            self.logger.handlers[:] = []
+        self.logger.addHandler(self)
+        return self
+
+    def __exit__(self, *args):
+        if self.silence_others:
+            self.logger.handlers[:] = self.existing_handlers
+        else:
+            self.logger.removeHandler(self)
+
+    def emit(self, record):
+        self.records.append(record)
+
+    def __getitem__(self, i):
+        return self.records[i]
+
+    def __len__(self):
+        return len(self.records)
+
+capture_logs = LogCapturer
 

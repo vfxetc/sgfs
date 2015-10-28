@@ -1,10 +1,14 @@
 from subprocess import call
 import collections
 import errno
+import logging
 import os
 import sqlite3
 
 from sgsession import Entity
+
+
+log = logging.getLogger(__name__)
 
 
 class PathCache(collections.MutableMapping):
@@ -57,20 +61,47 @@ class PathCache(collections.MutableMapping):
         with self.conn:
             self.conn.execute('INSERT OR REPLACE into entity_paths values (?, ?, ?)', (entity['type'], entity['id'], path))
     
-    def __getitem__(self, entity):
+    def get(self, entity, default=None, check_tags=True):
+        """Get a path for an entity.
+
+        :param Entity entity: The entity to look up in the path cache.
+        :param default: What to return if the entity is not in the cache;
+            defaults to ``None``.
+        :param bool check_tags: Should we check for the entity in the directory
+            tags at the cached path before returning it?
+        :returns: The cached path.
+
+        """
+
         if not isinstance(entity, Entity):
-            raise TypeError('path cache keys must be entities; got %r %r' % (type(entity), entity))
+            raise TypeError('path cache keys are entities; got %r %r' % (type(entity), entity))
+
         with self.conn:
             c = self.conn.cursor()
             c.execute('SELECT path FROM entity_paths WHERE entity_type = ? AND entity_id = ?', (entity['type'], entity['id']))
             row = c.fetchone()
             if row is None:
-                raise KeyError(entity)
+                return default
             path = os.path.abspath(os.path.join(self.project_root, row[0]))
-            if any(tag['entity'] is entity for tag in self.sgfs.get_directory_entity_tags(path)):
-                return path
-            else:
-                raise KeyError(entity)
+
+        # Make sure that the entity is actually tagged in the given directory.
+        # This guards against moving tagged directories. This does NOT
+        # effectively guard against copied directories.
+        if check_tags:
+            if not any(tag['entity'] is entity for tag in self.sgfs.get_directory_entity_tags(path)):
+                log.warning('%s %d is not tagged at %s' % (
+                    entity['type'], entity['id'], path,
+                ))
+                return default
+
+        return path
+
+    def __getitem__(self, entity):
+        path = self.get(entity)
+        if path is None:
+            raise KeyError(entity)
+        else:
+            return path
     
     def __delitem__(self, entity):
         if not isinstance(entity, Entity):

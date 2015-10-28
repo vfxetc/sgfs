@@ -37,8 +37,12 @@ class TestCache(TestCase):
         os.unlink(os.path.join(root, '.sgfs.yml'))
         
         self.assertEqual(1, len(cache)) # This is still wierd, but expected.
-        self.assertEqual(cache.get(proj), None)
+        with capture_logs(silent=True) as logs:
+            self.assertEqual(cache.get(proj), None)
         
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0].levelname, 'WARNING')
+
         stat = os.stat(os.path.join(root, '.sgfs/cache.sqlite'))
         print oct(stat.st_mode)
         self.assertEqual(stat.st_mode & 0777, 0666)

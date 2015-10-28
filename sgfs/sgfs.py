@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 
 import yaml
@@ -9,6 +10,9 @@ from .cache import PathCache
 from .context import Context
 from .schema import Schema
 from . import utils
+
+
+log = logging.getLogger('sgfs')
 
 
 class SGFS(object):
@@ -136,6 +140,39 @@ class SGFS(object):
             if path is not None:
                 return path
 
+    def _write_directory_tags(self, path, tags, replace=False, backup=True):
+
+        serialized = yaml.dump_all(tags,
+            explicit_start=True,
+            indent=4,
+            default_flow_style=False
+        )
+
+        path = os.path.abspath(path)
+        tag_path = os.path.join(path, '.sgfs.yml')
+
+        umask = os.umask(0111) # Race condition when threaded?
+        try:
+            if replace and backup and os.path.exists(tag_path):
+                backup_path = os.path.join(path, '.sgfs.%s.yml' % datetime.datetime.utcnow().strftime('%y%m%d.%H%M%S.%f'))
+                with open(tag_path, 'r') as rfh, open(backup_path, 'w') as wfh:
+                    wfh.write(rfh.read())
+            with open(tag_path, 'w' if replace else 'a') as fh:
+                fh.write(serialized)
+        finally:
+            os.umask(umask)
+
+    def _read_directory_tags(self, path):
+
+        path = os.path.abspath(path)
+
+        tag_path = os.path.join(path, '.sgfs.yml')
+        if not os.path.exists(tag_path):
+            return []
+        
+        with open(tag_path) as fh:
+            return list(yaml.load_all(fh.read()))
+
     def tag_directory_with_entity(self, path, entity, meta=None, cache=True):
         """Tag a directory with the given entity, and add it to the cache.
         
@@ -147,23 +184,16 @@ class SGFS(object):
         :param bool cache: Add this to the path cache?
         
         """
+
+        path = os.path.abspath(path)
+
         tag = dict(meta or {})
         tag.update({
             'created_at': datetime.datetime.utcnow(),
             'entity': entity.as_dict(),
+            'path': path,
         })
-        serialized = yaml.dump(tag,
-            explicit_start=True,
-            indent=4,
-            default_flow_style=False
-        )
-        
-        # Write the tag, and set the permissions on it.
-        tag_path = os.path.join(path, '.sgfs.yml')
-        umask = os.umask(0111) # Race condition when threaded?
-        with open(tag_path, 'a') as fh:
-            fh.write(serialized)
-        os.umask(umask)
+        self._write_directory_tags(path, [tag])
             
         # Add it to the local project roots.
         if entity['type'] == 'Project':
@@ -176,7 +206,7 @@ class SGFS(object):
                 raise ValueError('could not get path cache for %r from %r' % (entity.project(), entity))
             path_cache[entity] = path
     
-    def get_directory_entity_tags(self, path, allow_duplicates=False, merge_into_session=True):
+    def get_directory_entity_tags(self, path, allow_duplicates=False, allow_moves=False, merge_into_session=True):
         """Get the tags for the given directory.
         
         The tags will not be returned in any specific order.
@@ -184,39 +214,51 @@ class SGFS(object):
         :param str path: The directory to get tags for.
         :param bool allow_duplicates: Return all tags, or just the most recent
             for each entity?
+        :param bool allow_moves: Return all tags, or just the ones that were
+            originally for this directory?
         :param bool merge_into_session: Merge raw data into the session, or
             return the raw data? This implies ``allow_duplicates``.
         :return: ``list`` of ``dict``.
         
         """
         
-        path = os.path.join(path, '.sgfs.yml')
-        if not os.path.exists(path):
-            return []
+        path = os.path.abspath(path)
+
+        tags = self._read_directory_tags(path)
         
-        with open(path) as fh:
-            tags = list(yaml.load_all(fh.read()))
-        
+        # Filter out moved tags.
+        if not allow_moves:
+            did_warn = False
+            unmoved = []
+            for tag in tags:
+                tagged_path = tag.get('path')
+                if tagged_path is not None and path != tagged_path:
+                    if not did_warn:
+                        print ('Directory at %s was moved from %s' % (path, tagged_path))
+                        did_warn = True
+                else:
+                    unmoved.append(tag)
+            tags = unmoved
+
+        # Take the newest version of each tag.
+        if not allow_duplicates:
+            newest_tags = {}
+            for tag in tags:
+                entity = tag['entity']
+                key = (entity['type'], entity['id'])
+                older_tag = newest_tags.get(key)
+                if older_tag is None or tag['created_at'] > older_tag['created_at']:
+                    newest_tags[key] = tag
+            tags = newest_tags.values()
+
         # Merge all the entity data before filtering out duplicates so that
         # older Shotgun data is still pulled in.
         if merge_into_session:
             for tag in tags:
                 tag['entity'] = self.session.merge(tag['entity'], created_at=tag['created_at'])
-        else:
-            return tags
         
-        if allow_duplicates:
-            return tags
-        
-        # Take the newest version of each tag.
-        entity_to_tag = {}
-        for tag in tags:
-            older = entity_to_tag.get(tag['entity'])
-            if older is None or tag['created_at'] > older['created_at']:
-                entity_to_tag[tag['entity']] = tag
-        
-        return entity_to_tag.values()
-    
+        return tags
+
     def entities_from_path(self, path, entity_type=None):
         """Get the most specific entities that have been tagged in a parent
         directory of the given path, optionally limited to a given type.
@@ -338,20 +380,65 @@ class SGFS(object):
         to_check = []
         if recurse:
             for path, dir_names, file_names in os.walk(root_path):
-                for tag in self.get_directory_entity_tags(path):
+                for tag in self.get_directory_entity_tags(path, allow_moves=True):
                     to_check.append((path, tag))
         else:
-            for tag in self.get_directory_entity_tags(root_path):
+            for tag in self.get_directory_entity_tags(root_path, allow_moves=True):
                 to_check.append((root_path, tag))
         
         # Update them.
         changed = []
+        old_tags_by_path = {}
         for path, tag in to_check:
-            old_path = cache.get(tag['entity'])
-            if old_path != path:
-                changed.append((old_path, path, tag))
-                if not dry_run:
-                    cache[tag['entity']] = path
+
+            entity = tag['entity']
+
+            # Make sure the old path does not exist and is not
+            # tagged the same way. If it is, it was copied, and we should
+            # not simply update the cache.
+            old_path = cache.get(entity, check_tags=False)
+            if old_path is not None and old_path != path:
+                
+                try:
+                    old_tags = old_tags_by_path[old_path] 
+                except KeyError:
+                    old_tags = old_tags_by_path[old_path] = self.get_directory_entity_tags(old_path, merge_into_session=False)
+
+                was_copied = False
+                for old_tag in old_tags:
+                    old_entity = old_tag['entity']
+                    if old_entity['type'] == entity['type'] and old_entity['id'] == entity['id']:
+                        was_copied = True
+                        break
+
+                if was_copied:
+                    log.warning('%s %s was copied from %s to %s; not updating cache' % (
+                        entity['type'], entity['id'], old_path, path,
+                    ))
+                    continue
+
+                # Update the tags to reflect their new location.
+                elif not dry_run:
+                    # WARNING: Potential race condition here.
+                    raw_tags = self._read_directory_tags(path)
+                    did_update_tags = False
+                    for raw_tag in raw_tags:
+                        if entity.is_same_entity(raw_tag['entity']):
+                            raw_tag.setdefault('previous_paths', []).append(old_path)
+                            raw_tag['path'] = path
+                            did_update_tags = True
+                    if did_update_tags:
+                        self._write_directory_tags(path, raw_tags, replace=True)
+                    else:
+                        # I want to know about this...
+                        log.error('Tagged paths for %s did not match, but tags not out of date.' % path)
+
+
+            # Update the path cache.
+            if not dry_run:
+                cache[tag['entity']] = path
+
+            changed.append((old_path, path, tag))
         
         return changed
     
