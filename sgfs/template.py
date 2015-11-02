@@ -1,6 +1,9 @@
 import ast
+import logging
 import os
 import re
+
+log = logging.getLogger(__name__)
 
 
 class MatchResult(dict):
@@ -126,14 +129,19 @@ class Template(object):
         m = re.search(r':(.+)', field_replacement)
         format_spec = m.group(1) if m else ''
         m = self._format_type_re.match(format_spec)
-        if not m:
-            raise ValueError('could not parse format spec %r' % format_spec)
-        fill, align, sign, number_prefix, zero_pad, width, comma, precision, type_ = m.groups()
+
+        if m:
+            fill, align, sign, number_prefix, zero_pad, width, comma, precision, type_ = m.groups()
         
-        # Get the pattern and parser, and finally return a RE.
-        pattern, parser = self._format_type_to_re[type_]
-        self._field_parsers.append(parser)
-        return '(%s)' % (pattern)
+            # Get the pattern and parser, and finally return a RE.
+            pattern, parser = self._format_type_to_re[type_]
+            self._field_parsers.append(parser)
+            return '(%s)' % (pattern)
+
+        else:
+            log.debug('Could not parse format spec %r' % format_spec)
+            return '(.*?)'
+
     
     # `self_` so that `self` can be passed via kwargs.
     def format(self_, *args, **kwargs):
