@@ -63,12 +63,12 @@ def parse_spec(sgfs, spec, entity_types=None, project_from_page=False):
     # Shotgun detail URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/detail/([A-Za-z]+)/(\d+)', spec)
     if m:
-        return sgfs.session.merge({'type': m.group(1).title(), 'id': int(m.group(2))})
+        return sgfs.session.merge({'type': m.group(1), 'id': int(m.group(2))})
 
     # Shotgun project overview URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/page/\d+#([A-Z][A-Za-z]+)_(\d+)_', spec)
     if m:
-        return sgfs.session.merge({'type': m.group(1).title(), 'id': int(m.group(2))})
+        return sgfs.session.merge({'type': m.group(1), 'id': int(m.group(2))})
     
     # Shotgun project URL.
     m = re.match(r'^https?://\w+\.shotgunstudio\.com/page/(\d+)$', spec)
@@ -84,7 +84,7 @@ def parse_spec(sgfs, spec, entity_types=None, project_from_page=False):
         return sgfs.session.merge(data)
         
     # Direct entities. E.g. `shot 12345`
-    m = re.match(r'^([A-Za-z]{3,}):(\d+)$', spec)
+    m = re.match(r'^([A-Za-z]{3,})[:_ -](\d+)(?:_|$)', spec)
     if m:
         type_, id_ = m.groups()
         return sgfs.session.merge({
