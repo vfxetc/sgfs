@@ -88,7 +88,7 @@ class Structure(object):
             child.pprint(depth + 1)
     
     def walk(self, depth_first=False):
-        """Walk depth-first, yielding ``(path, node)`` pairs."""
+        """Walk depth-first, yielding structure nodes."""
         if not depth_first:
             yield self
         for child in self.children:

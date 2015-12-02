@@ -3,6 +3,8 @@
 import os
 import re
 
+from sgsession import Entity
+
 
 def _expand_entity(data, entity, seen=None):
     
@@ -19,7 +21,7 @@ def _expand_entity(data, entity, seen=None):
     for k, v in entity.iteritems():
         if k != 'type':
             data.setdefault(_type + '_' + k, v)
-        if isinstance(v, dict):
+        if isinstance(v, Entity):
             _expand_entity(data, v, seen)
 
 
