@@ -28,7 +28,7 @@ setup(
             # Opening commands.
             'sgfs-open = sgfs.commands.open:run_open',
             'sgfs-shotgun = sgfs.commands.open:run_shotgun',
-            'sgfs-path = sgfs.commands.open:run_path',
+            'sgfs-which = sgfs.commands.open:run_path',
 
             'sgfs-rv = sgfs.commands.rv:run',
 

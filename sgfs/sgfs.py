@@ -664,3 +664,19 @@ class SGFS(object):
             if res is not None:
                 return template, res
 
+    def parse_user_input(self, spec, entity_types=None, **kwargs):
+
+        # Paths (which must have been created via SGFS).
+        path = os.path.abspath(spec)
+        if os.path.exists(path):
+            entities = self.entities_from_path(path, entity_type=entity_types)
+            if entities:
+                entity = entities[0]
+                # This is a little gross, but what we have been doing so far.
+                print 'setting __path__ to', path
+                entity.setdefault('__path__', path)
+                return entity
+        
+        # Delegate to the underlying session.
+        return self.session.parse_user_input(spec, entity_types, **kwargs)
+
