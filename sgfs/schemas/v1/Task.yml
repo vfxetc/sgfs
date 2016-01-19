@@ -1,9 +1,21 @@
 
 condition: |
-    if not self.get('step'):
-        raise ValueError('%(type)s %(id)s has no pipeline step' % self)
-    return all(self['step'][x] not in do_not_create for x in ('code', 'short_name'))
 
+    step = self.get('step')
+    if not step:
+        raise ValueError('%(type)s %(id)s has no pipeline step' % self)
+    step_code = step.get('code')
+
+    # We are trying to track down when the "code" is missing.
+    if not step_code:
+        step_code = step.fetch('code')
+        import logging, json
+        logging.getLogger('sgfs.schemas.v1.Task').warning('Task\'s step missing code: %s' % json.dumps(self, sort_keys=True, indent=4, default=str))
+
+    return step_code not in do_not_create
+
+# Be sure that this is the `code` field (which is typically displayed)
+# and not the `short_name` field.
 do_not_create:
     - Approval
     - Client
