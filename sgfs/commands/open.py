@@ -42,7 +42,7 @@ class OpenCommand(Command):
             print path
             self.open(path)
         else:
-            print >> sys.stderr, 'no path for', entity.minima;
+            print >> sys.stderr, 'no path for', entity.minimal
     
     def print_path(self, sgfs, entity):
         path = sgfs.path_for_entity(entity) or entity.get('__path__')
