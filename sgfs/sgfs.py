@@ -673,7 +673,7 @@ class SGFS(object):
             if entities:
                 entity = entities[0]
                 # This is a little gross, but what we have been doing so far.
-                print 'setting __path__ to', path
+                #print 'setting __path__ to', path
                 entity.setdefault('__path__', path)
                 return entity
         
