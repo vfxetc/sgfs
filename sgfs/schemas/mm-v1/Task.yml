@@ -1,0 +1,22 @@
+
+condition: |
+
+    step, step_code = self.fetch(['step', 'step.Step.short_name'])
+    if not step:
+        raise ValueError('%(type)s %(id)s has no pipeline step' % self)
+
+    return step_code not in do_not_create
+
+# Be sure that this is the `short_name` field (which is not typically displayed).
+do_not_create:
+    - null
+
+
+# The "short_name" is not displayed, and assumed to have underscores, etc..
+name_expr: self['step']['short_name']
+
+
+templates:
+
+    # Catch-all for publishes.
+    "*_publish":  published/{publisher.type}/{publisher.name}/v{publisher.version:04d}

@@ -1,0 +1,8 @@
+name_expr: |
+    import re
+    normalize = lambda x: re.sub(r'\W+', '_', x).strip('_')
+    return normalize(self['name'])
+
+children:
+    Asset: Asset.yml
+    Sequence: Sequence.yml

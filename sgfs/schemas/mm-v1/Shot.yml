@@ -1,0 +1,9 @@
+name_expr: self['code']
+
+children:
+    Task: Task.yml
+
+templates:
+
+    # Catch-all for publishes at either shot level, or tasks with no folders.
+    "*_publish":  published/{publisher.type}/{publisher.name}/v{publisher.version:04d}
