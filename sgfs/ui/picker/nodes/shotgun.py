@@ -3,8 +3,7 @@ from __future__ import absolute_import
 import functools
 import threading
 
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore, QtGui
 
 from sgfs.ui.picker.utils import debug, icon, call_open
 from sgfs.ui.picker.nodes.base import Node

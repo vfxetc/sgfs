@@ -2,8 +2,7 @@ import sys
 import functools
 import optparse
 
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore, QtGui
 
 from sgfs import SGFS
 

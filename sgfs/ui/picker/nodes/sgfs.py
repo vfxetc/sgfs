@@ -5,8 +5,7 @@ import os
 import fnmatch
 import re
 
-from PyQt4 import QtCore
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore
 
 from sgfs.ui.picker.utils import icon, call_open
 from sgfs.ui.picker.nodes.base import Node

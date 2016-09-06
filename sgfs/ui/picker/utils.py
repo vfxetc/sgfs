@@ -4,7 +4,7 @@ import time
 import thread
 import subprocess
 
-from PyQt4 import QtGui
+from uitools.qt import QtGui
 
 
 _debug_start = time.time()

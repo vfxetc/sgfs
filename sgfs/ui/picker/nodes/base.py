@@ -2,8 +2,7 @@ from __future__ import absolute_import
 
 import threading
 
-from PyQt4 import QtCore
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore
 
 from sgfs.ui.picker.childlist import ChildList
 

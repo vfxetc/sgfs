@@ -1,8 +1,7 @@
 import functools
 import threading
 
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore, QtGui
 
 from uitools.headeredlistview import HeaderedListView, HeaderDisplayRole
 

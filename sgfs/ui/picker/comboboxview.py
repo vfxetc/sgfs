@@ -1,7 +1,6 @@
 import functools
 
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore, QtGui
 
 
 class ComboBox(QtGui.QComboBox):

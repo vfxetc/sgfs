@@ -1,7 +1,6 @@
 import traceback
 
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore, QtGui
 
 from uitools.headeredlistview import HeaderDisplayRole
 
@@ -141,7 +140,7 @@ class Model(QtCore.QAbstractItemModel):
     def flags(self, index):
 
         if not index.isValid():
-            return QtCore.QVariant()
+            return None
         node = self.node_from_index(index)
 
         if node.view_data.get('disabled'):
@@ -153,7 +152,7 @@ class Model(QtCore.QAbstractItemModel):
     def data(self, index, role):
         
         if not index.isValid():
-            return QtCore.QVariant()
+            return None
 
         node = self.node_from_index(index)
         
@@ -161,7 +160,7 @@ class Model(QtCore.QAbstractItemModel):
             try:
                 return node.view_data[Qt.DisplayRole]
             except KeyError:
-                return QtCore.QVariant()
+                return None
         
         if role == Qt.DecorationRole:
             
@@ -175,7 +174,7 @@ class Model(QtCore.QAbstractItemModel):
             data = node.view_data.get(Qt.DecorationRole)
             
             if data is None:
-                return QtCore.QVariant()
+                return None
             
             if isinstance(data, QtGui.QColor):
                 key = (data.red(), data.green(), data.blue())
@@ -204,7 +203,7 @@ class Model(QtCore.QAbstractItemModel):
         if role == Qt.FontRole:
             if node.view_data.get(Qt.FontRole) is not None:
                 return node.view_data[Qt.FontRole]
-            return QtCore.QVariant()
+            return None
         
         if role == Qt.ForegroundRole:
             if node.error_count:
@@ -220,5 +219,5 @@ class Model(QtCore.QAbstractItemModel):
         try:
             return node.view_data[role]
         except KeyError:
-            return QtCore.QVariant()
+            return None
 

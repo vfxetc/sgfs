@@ -2,7 +2,7 @@ import functools
 import threading
 import Queue as queue
 
-from PyQt4 import QtCore
+from uitools.qt import QtCore
 
 
 class ThreadPool(object):
