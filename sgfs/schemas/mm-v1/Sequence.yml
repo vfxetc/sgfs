@@ -1,4 +1,4 @@
-name_expr: '"Seq/" + self["code"]'
+name_expr: '"Sequences/" + self["code"]'
 
 children:
     Shot: Shot.yml
