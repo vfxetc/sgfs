@@ -65,6 +65,21 @@ def __before_reload__():
         _pick_and_set_workspace_dialog.close()
 
 
+def open_workspace():
+
+    path = workspace_path()
+    
+    sgfs = SGFS()
+    entities = sgfs.entities_from_path(workspace_path(), ['Task', 'PublishEvent'])
+    if entities:
+        path = sgfs.path_for_entity(entities[0]) or path
+
+    if sys.platform == 'darwin':
+        call(['open', path])
+    else:
+        call(['xdg-open', path])
+
+
 def pick_workspace():
     """Shelf tool to open task-picking dialog to set the workspace."""
 
