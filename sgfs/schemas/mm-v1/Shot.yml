@@ -1,4 +1,4 @@
-name_expr: self['code']
+name_expr: '"shots/%s" % self["code"]'
 
 children:
     Task: Task.yml
