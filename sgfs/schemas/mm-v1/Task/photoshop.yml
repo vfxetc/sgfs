@@ -2,9 +2,9 @@ condition: self['step']['short_name'] in steps_to_include
 
 steps_to_include:
     # Asset pipeline
-    - Texture
-    - Surface
+    - texture
+    - surface
     # Shot pipeline
-    - Art
-    - Matte_Painting
+    - art
+    - matte_Painting
 

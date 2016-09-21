@@ -2,12 +2,12 @@ condition: self['step']['short_name'] in steps_to_include
 
 steps_to_include:
     # Asset pipeline
-    - Model
+    - model
     # Shot pipeline
-    - Anim
-    - FX
-    - Layout
-    - Light
+    - anim
+    - fx
+    - layout
+    - light
 
 templates:
 
