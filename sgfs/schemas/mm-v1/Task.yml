@@ -1,15 +1,20 @@
 
 condition: |
 
-    step, step_code = self.fetch(['step', 'step.Step.short_name'])
+    step, step_code, type_ = self.fetch(['step', 'step.Step.short_name', 'step.Step.entity_type'])
     if not step:
         raise ValueError('%(type)s %(id)s has no pipeline step' % self)
 
-    return step_code not in do_not_create
+    if '%s/%s' % (type_, step_code) in do_not_create:
+        return False
+
+    return True
 
 # Be sure that this is the `short_name` field (which is not typically displayed).
 do_not_create:
-    - null
+    - Sequence/anim
+    - Sequence/layout
+    - Sequence/vfx
 
 
 # The "short_name" is not displayed, and assumed to have underscores, etc..
