@@ -59,7 +59,7 @@ class SceneNameWidget(QtGui.QWidget):
         spinner = self._version_spinner = QtGui.QSpinBox()
         spinner.textFromValue = lambda x: '%04d' % x
         spinner.setValue(self._namer.version)
-        spinner.setMinimum(1)
+        spinner.setMinimum(0)
         spinner.setMaximum(9999)
         spinner.valueChanged.connect(self.update_preview)
         self._add_form_column('Version', spinner)
