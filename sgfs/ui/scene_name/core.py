@@ -37,7 +37,7 @@ class SceneName(object):
         self.step_name = kwargs.get('step_name')
         self.sub_directory = ''
         self.directory = 'scenes'
-        self.version = 1
+        self.version = 0
         
         self._sgfs = SGFS()
 
@@ -127,9 +127,15 @@ class SceneName(object):
         if remaining and warn_on_remaining:
             self.warning('workspace may be too specific; %r remains' % remaining)
         
-        self.entity_type = task.fetch('entity')['type']
+        entity = task.fetch('entity')
+        self.entity_type = entity['type']
+        self.entity_name = entity.name
+
+        self.step_name = task.fetch('step.Step.short_name')
+        
         self.workspace = task_workspace
         
+
         self._step_names = []
         
     
