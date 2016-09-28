@@ -21,6 +21,8 @@ TODO:
 import os
 import re
 
+from sgfs import SGFS
+
 
 class SceneName(object):
 
@@ -37,6 +39,8 @@ class SceneName(object):
         self.directory = 'scenes'
         self.version = 1
         
+        self._sgfs = SGFS()
+
         # Callbacks.
         self.warning = kwargs.pop('warning', self.warning)
         self.error = kwargs.pop('error', self.error)
@@ -86,26 +90,45 @@ class SceneName(object):
 
     def _split_workspace(self, workspace):
 
-        # Isolate the entity from the standard WesternX structure, e.g.:
-        # - /Volumes/VFX/Projects/Super_Buddies/Assets/Character/Cow
-        # - /Volumes/VFX/Projects/Testing_Sandbox/SEQ/GP/GP_001_001
-        m = re.match(r'(/.+?)/(SEQ|Assets)/([^/]+)/([^/]+)/([^/]+)(?:/(maya|nuke))?', workspace)
-        return m, workspace[m.end(0):].strip('/') if m else workspace
+        tasks = self._sgfs.entities_from_path(workspace, ['Task'])
+        if not tasks:
+            self.error('No Tasks in current workspace')
+            return # Incase error is not an exception.
+
+        if len(tasks) > 1:
+            warning_parts = ['%s Tasks in current workspace; picking first of:' % len(tasks)]
+            for task in tasks:
+                warning_parts.append(str(task))
+            self.warning('\n'.join(warning_parts))
+            
+        task = tasks[0]
+
+        try:
+            task_workspace = self._sgfs.path_from_template(task, 'maya_workspace')
+        except ValueError as e:
+            self.warning('No maya_workspace template: %s' % e)
+            task_workspace = os.path.join(self._sgfs.path_for_entity(task), 'maya')
+
+        remaining = os.path.relpath(workspace, task_workspace)
+        if remaining == os.path.curdir:
+            remaining = ''
+
+        return task, task_workspace, remaining
+
 
     def _parse_workspace(self, workspace, warn_on_remaining=True):
         
-        m, remaining = self._split_workspace(workspace)
+        task, task_workspace, remaining = self._split_workspace(workspace)
 
-        if not m:
-            self.error('Could not parse WesternX workspace.')
+        if remaining.startswith(os.path.pardir):
+            self.error('Entity not in workspace; SGFS seems broken! %s not in %s' % (task, workspace))
             return
 
         if remaining and warn_on_remaining:
             self.warning('workspace may be too specific; %r remains' % remaining)
         
-        filename_dir, parent_type, parent_name, self.entity_name, self.step_name, software = m.groups()
-        self.entity_type = 'Shot' if parent_type == 'SEQ' else 'Asset'
-        self.workspace = m.group(0)
+        self.entity_type = task.fetch('entity')['type']
+        self.workspace = task_workspace
         
         self._step_names = []
         
@@ -116,7 +139,7 @@ class SceneName(object):
             rel_filename = os.path.relpath(filename, self.workspace)
             if rel_filename.startswith('.'):
                 self.warning('file not in workspace; %r not in %r' % (filename, self.workspace))
-                _, rel_filename = self._split_workspace(filename)
+                _, _, rel_filename = self._split_workspace(filename)
         else:
             rel_filename = filename
 

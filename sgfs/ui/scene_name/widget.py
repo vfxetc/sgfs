@@ -7,8 +7,7 @@ careful in changing this until our tools have migrated.
 
 import os
 
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Qt, QtCore, QtGui
 
 from .core import SceneName
 
