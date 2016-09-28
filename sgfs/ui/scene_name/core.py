@@ -39,6 +39,10 @@ class SceneName(object):
         self.directory = 'scenes'
         self.version = 0
         
+        self.sep = ','
+        self._all_seps_class = '[%s]' % re.escape('-_,.')
+        self._strip_seps_re = re.compile(r'(^%s+)|(%s+$)' % (self._all_seps_class, self._all_seps_class))
+
         self._sgfs = SGFS()
 
         # Callbacks.
@@ -88,6 +92,9 @@ class SceneName(object):
     def error(self, message):
         raise ValueError(message)
 
+    def _strip_seps(self, x):
+        return self._strip_seps_re.sub('', x)
+
     def _split_workspace(self, workspace):
 
         tasks = self._sgfs.entities_from_path(workspace, ['Task'])
@@ -132,7 +139,7 @@ class SceneName(object):
         self.entity_name = entity.name
 
         self.step_name = task.fetch('step.Step.short_name')
-        
+
         self.workspace = task_workspace
         
 
@@ -167,9 +174,11 @@ class SceneName(object):
         else:
             self.revision = 0
         
+
         # Completely strip versioning out of the basename.
-        filename = re.sub(r'_?[rv]\d+/?', '', filename)
-        
+        filename = re.sub(r'[_]?[rv]\d+[_/]?', '', filename)
+        filename = self._strip_seps(filename)
+
         # Assign (sub)directory around versioning.
         directory_parts = re.split(r'v\d+(?:/revisions?)?(?:/|$)', directory)
         if len(directory_parts) > 1:
@@ -179,17 +188,19 @@ class SceneName(object):
         
         # Strip entity name.
         if self.entity_name and filename.lower().startswith(self.entity_name.lower()):
-            filename = filename[len(self.entity_name):].lstrip('_')
+            filename = filename[len(self.entity_name):]
+            filename = self._strip_seps(filename)
         else:
             self.warning('Could not find shot/asset name prefix.')
         
         # Strip step name.
         if self.step_name and filename.lower().startswith(self.step_name.lower()):
-            filename = filename[len(self.step_name):].lstrip('_')
+            filename = filename[len(self.step_name):]
+            filename = self._strip_seps(filename)
         else:
             self.warning('Could not find task/step prefix.')
             
-        self.detail = filename.strip('_')
+        self.detail = filename
     
     def get_step_names(self):
         
@@ -226,9 +237,10 @@ class SceneName(object):
             'v%04d' % self.version,
             'r%04d' % self.revision if self.revision else None,
         ]
-        basename = '_'.join(x.strip() for x in parts if x)
-        basename = re.sub(r'[^a-zA-Z0-9]+', '_', basename)
-        basename = basename.strip('_')
+        parts = [x for x in parts if x]
+        parts = [re.sub(r'[^\w-]+', '_', x) for x in parts]
+        parts = [self._strip_seps(x) for x in parts]
+        basename = self.sep.join(parts)
         return basename + self.extension
     
     def get_directory(self):
