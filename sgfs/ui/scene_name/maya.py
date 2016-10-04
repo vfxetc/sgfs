@@ -30,7 +30,7 @@ class MayaDialog(Dialog):
             'filename': cmds.file(q=True, sceneName=True) or None,
             'warning': self._warning,
             'error': self._error,
-            'extension': '.mb',
+            'extension': '.ma',
         }, parent)
     
     def _warning(self, message):
