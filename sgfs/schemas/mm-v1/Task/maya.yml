@@ -1,6 +1,8 @@
 condition: self['step']['short_name'] in steps_to_include
 
 steps_to_include:
+    # Sequence pipeline
+    - story
     # Asset pipeline
     - model
     - rig
