@@ -64,7 +64,8 @@ class MayaDialog(Dialog):
     
     def _save(self, path):
         cmds.file(rename=path)
-        cmds.file(save=True, type='mayaBinary')
+        # TODO: Take 'mayaAscii' vs 'mayaBinary' from siteconfig.
+        cmds.file(save=True, type='mayaAscii')
 
 
 def run():
