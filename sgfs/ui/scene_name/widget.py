@@ -167,8 +167,20 @@ class Dialog(QtGui.QDialog):
         # Save button.
         save_button = QtGui.QPushButton('Save')
         save_button.clicked.connect(self._on_save_button)
-        self.layout().addWidget(save_button)
+        #self.layout().addWidget(save_button)
     
+        # Cancel button.
+        cancel_button = QtGui.QPushButton('Cancel')
+        cancel_button.clicked.connect(self._on_cancel_button)
+        #self.layout().addWidget(cancel_button)
+
+        # Adding Save ane Cancel button to a box so they can be on the same line
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(save_button)
+        hbox.addWidget(cancel_button)
+        self.layout().addLayout(hbox)
+
+
     def show(self):
         super(Dialog, self).show()
         self.setMinimumSize(self.size())
@@ -189,5 +201,8 @@ class Dialog(QtGui.QDialog):
             os.makedirs(dir_name)
         print 'Save to', repr(path)
         self._save(path)
+        self.close()
+
+    def _on_cancel_button(self):
         self.close()
 
