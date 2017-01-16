@@ -244,18 +244,11 @@ class SceneName(object):
         return basename + self.extension
     
     def get_directory(self):
-        
-        path = os.path.join(self.workspace, self.directory)
-            
-        # Add '/v0001/revisions' if in an Asset and this is a maya scene.
-        # Because the artists said so. That's why.
-        if self.entity_type == 'Asset' and self.directory.startswith('scenes'):
-            path = os.path.join(path, 'v' + '%04d' % self.version)
-            if self.revision:
-                path = os.path.join(path, 'revisions')
-                
-        path = os.path.join(path, self.sub_directory)
-        return path
+        return os.path.join(
+            self.workspace,
+            self.directory,
+            self.sub_directory,
+        )
     
     def get_path(self):
         return os.path.join(self.get_directory(), self.get_basename())
