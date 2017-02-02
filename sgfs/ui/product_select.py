@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from PyQt4 import QtCore, QtGui
+from uitools.qt import QtCore, QtGui
 Qt = QtCore.Qt
 
 from maya import cmds
