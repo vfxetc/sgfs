@@ -665,6 +665,21 @@ class SGFS(object):
                 return template, res
 
     def parse_user_input(self, spec, entity_types=None, **kwargs):
+        """Parse user input into an entity.
+
+        :param str spec: The string of input from the user.
+        :param tuple entity_types: Acceptable entity types. Effective against
+            paths.
+        :param kwargs: Passed to :meth:`~sgsession.session.Session.parse_user_input`.
+        :return: :class:`.Entity` or ``None``.
+
+        This is a wrapper around :meth:`~sgsession.session.Session.parse_user_input`
+        which adds the ability to parse paths, looking for SGFS tags, e.g.::
+
+            >>> sgfs.parse_user_input('/path/to/task123')
+            <Entity Task:123 at 0x110863618>
+
+        """
 
         # Paths (which must have been created via SGFS).
         path = os.path.abspath(spec)
