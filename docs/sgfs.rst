@@ -19,6 +19,8 @@ Entities
 .. automethod:: sgfs.sgfs.SGFS.entities_from_path
 .. automethod:: sgfs.sgfs.SGFS.entities_in_directory
 .. automethod:: sgfs.sgfs.SGFS.path_for_entity
+.. automethod:: sgfs.sgfs.SGFS.parse_user_input
+
 
 Templates
 ---------
