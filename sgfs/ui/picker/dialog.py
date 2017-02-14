@@ -41,6 +41,11 @@ class TemplatePickerDialog(QtGui.QDialog):
         self._button.setEnabled(False)
         self._button.clicked.connect(self._onSelect)
         button_layout.addWidget(self._button)
+
+        self._makeButton = QtGui.QPushButton("Make Folder")
+        self._makeButton.setEnabled(False)
+        self._makeButton.clicked.connect(self._onSelectMakeFolder)
+        button_layout.addWidget(self._makeButton)
         
         # Trigger a button update.
         self._onNodeChanged(self._picker.currentNode())
@@ -55,22 +60,29 @@ class TemplatePickerDialog(QtGui.QDialog):
         
         self._node = node
         self._enable = False
-
         if 'self' in node.state:
             try:
                 self._path = self._model.sgfs.path_from_template(node.state['self'], self._templateName)
             except ValueError:
+                self._makeButton.setEnabled(True)
                 pass
             else:
                 self._enable = os.path.exists(self._path)
-
         self._button.setEnabled(self._enable)
+
     
     def _onCancel(self):
         self.hide()
     
     def _onSelect(self):
         self.hide()
+
+    def _onSelectMakeFolder(self):
+        self._model.sgfs.create_structure(self._node.state['self'])
+        
+        print "os path exists", os.path.exists(self._path)
+        self.hide()
+        
 
 
 
