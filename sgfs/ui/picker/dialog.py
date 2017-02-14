@@ -37,16 +37,16 @@ class TemplatePickerDialog(QtGui.QDialog):
 
         button_layout.addStretch()
 
-        self._button = QtGui.QPushButton("Select")
-        self._button.setEnabled(False)
-        self._button.clicked.connect(self._onSelect)
-        button_layout.addWidget(self._button)
-
         self._makeButton = QtGui.QPushButton("Make Folder")
         self._makeButton.setEnabled(False)
         self._makeButton.clicked.connect(self._onSelectMakeFolder)
         button_layout.addWidget(self._makeButton)
         
+        self._selectButton = QtGui.QPushButton("Select")
+        self._selectButton.setEnabled(False)
+        self._selectButton.clicked.connect(self._onSelect)
+        button_layout.addWidget(self._selectButton)
+
         # Trigger a button update.
         self._onNodeChanged(self._picker.currentNode())
     
@@ -60,16 +60,18 @@ class TemplatePickerDialog(QtGui.QDialog):
         
         self._node = node
         self._enable = False
+        self._path = None
+
         if 'self' in node.state:
             try:
                 self._path = self._model.sgfs.path_from_template(node.state['self'], self._templateName)
             except ValueError:
-                self._makeButton.setEnabled(True)
                 pass
             else:
                 self._enable = os.path.exists(self._path)
-        self._button.setEnabled(self._enable)
-
+        
+        self._selectButton.setEnabled(self._enable) 
+        self._makeButton.setEnabled(self._path and not self._enable)
     
     def _onCancel(self):
         self.hide()
@@ -79,9 +81,7 @@ class TemplatePickerDialog(QtGui.QDialog):
 
     def _onSelectMakeFolder(self):
         self._model.sgfs.create_structure(self._node.state['self'])
-        
-        print "os path exists", os.path.exists(self._path)
-        self.hide()
+        self._onNodeChanged(self._node) # Not the best behaviour in the world.
         
 
 
