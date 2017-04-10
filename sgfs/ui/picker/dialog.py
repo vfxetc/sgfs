@@ -71,7 +71,7 @@ class TemplatePickerDialog(QtGui.QDialog):
                 self._enable = os.path.exists(self._path)
         
         self._selectButton.setEnabled(self._enable) 
-        self._makeButton.setEnabled(self._path and not self._enable)
+        self._makeButton.setEnabled(bool(self._path and not self._enable))
     
     def _onCancel(self):
         self.hide()
