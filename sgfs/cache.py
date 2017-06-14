@@ -56,8 +56,15 @@ class PathCache(collections.MutableMapping):
         if not isinstance(path, basestring):
             raise TypeError('path cache values must be basestring; got %r %r' % (type(path), path))
         
-        path = os.path.relpath(os.path.abspath(path), self.project_root)
+        abs_path = os.path.abspath(path)
+        rel_path = os.path.relpath(abs_path, self.project_root)
         
+        if rel_path.startswith(os.path.pardir + os.path.sep):
+            path = abs_path
+        else:
+            path = rel_path
+
+
         with self.conn:
             self.conn.execute('INSERT OR REPLACE into entity_paths values (?, ?, ?)', (entity['type'], entity['id'], path))
     
@@ -121,22 +128,25 @@ class PathCache(collections.MutableMapping):
                 yield self.sgfs.session.merge(dict(type=row[0], id=row[1]))
     
     def walk_directory(self, path, entity_type=None, must_exist=True):
-        relative = os.path.relpath(path, self.project_root)
+
+        abs_path = os.path.abspath(path)
+        root_path = os.path.relpath(abs_path, self.project_root)
         
         # Special case the Projects.
-        if relative == '.':
-            relative = ''
+        if root_path == '.':
+            root_path = ''
             
-        if relative.startswith('.'):
-            raise ValueError('path not in project; %r' % path)
-        
+        # We're looking outside of the primary root.
+        elif root_path.startswith(os.path.pardir + os.path.sep):
+            root_path = abs_path
+
         with self.conn:
 
             c = self.conn.cursor()
             if entity_type is not None:
-                c.execute('SELECT entity_type, entity_id, path FROM entity_paths WHERE entity_type = ? AND path LIKE ?', (entity_type, relative + '%'))
+                c.execute('SELECT entity_type, entity_id, path FROM entity_paths WHERE entity_type = ? AND path LIKE ?', (entity_type, root_path + '%'))
             else:
-                c.execute('SELECT entity_type, entity_id, path FROM entity_paths WHERE path LIKE ?', (relative + '%', ))
+                c.execute('SELECT entity_type, entity_id, path FROM entity_paths WHERE path LIKE ?', (root_path + '%', ))
             
             for row in c:
                 entity = self.sgfs.session.merge(dict(type=row[0], id=row[1]))

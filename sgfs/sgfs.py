@@ -82,7 +82,7 @@ class SGFS(object):
         if isinstance(project, basestring):
             path = os.path.abspath(project)
             for project_root in self.project_roots.itervalues():
-                if path.startswith(project_root):
+                if path.startswith(project_root): # TODO: Do better.
                     return PathCache(self, project_root)
             return
         
@@ -309,7 +309,7 @@ class SGFS(object):
             path = os.path.dirname(path)
         return ()
     
-    def entities_in_directory(self, path, entity_type=None, load_tags=False):
+    def entities_in_directory(self, path, entity_type=None, load_tags=False, primary_root=None):
         """Iterate across every :class:`~sgsession.entity.Entity` within the
         given directory.
         
@@ -318,6 +318,8 @@ class SGFS(object):
         :param str path: The path to walk for entities.
         :param str entity_type: Restrict to this type; None returns all.
         :param bool load_tags: Load data cached in tags? None implies automatic.
+        :param str primary_root: Any directory within the primary project root.
+            None implies the given path.
         :return: Iterator of ``(path, entity)`` tuples.
         
         E.g.::
@@ -331,7 +333,9 @@ class SGFS(object):
             
         """
         path = os.path.abspath(path)
-        cache = self.path_cache(path)
+        cache = self.path_cache(primary_root or path)
+        if cache is None:
+            raise ValueError('No SGFS cache above directory.', path)
         for path, entity in cache.walk_directory(path, entity_type):
             if load_tags or (load_tags is None and len(entity) == 2):
                 self.get_directory_entity_tags(path)
