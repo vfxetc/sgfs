@@ -6,3 +6,4 @@ name_expr: |
 children:
     Asset: Asset.yml
     Sequence: Sequence.yml
+    CustomEntity06: Book.yml

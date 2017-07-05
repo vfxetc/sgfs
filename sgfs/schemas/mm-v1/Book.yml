@@ -1,0 +1,4 @@
+name_expr: '"books/" + self["code"]'
+
+children:
+    CustomEntity21: BookPage.yml
