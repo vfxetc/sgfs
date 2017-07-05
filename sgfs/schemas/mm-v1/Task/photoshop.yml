@@ -1,10 +1,15 @@
-condition: self['step']['short_name'] in steps_to_include
+condition: self['step']['short_name'] in steps_to_include.get(self['step']['entity_type'], {})
 
 steps_to_include:
-    # Asset pipeline
-    - texture
-    - surface
-    # Shot pipeline
-    - art
-    - matte_Painting
+
+    Asset:
+        - texture
+        - surface
+    Shot:
+        - art
+        - matte_Painting
+
+    # BookPage
+    CustomEntity21:
+        - layout
 

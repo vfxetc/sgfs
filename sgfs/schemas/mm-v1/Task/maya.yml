@@ -1,17 +1,17 @@
-condition: self['step']['short_name'] in steps_to_include
+condition: self['step']['short_name'] in steps_to_include.get(self['step']['entity_type'], {})
 
 steps_to_include:
-    # Sequence pipeline
-    - story
-    # Asset pipeline
-    - model
-    - rig
-    # Shot pipeline
-    - anim
-    - fx
-    - layout
-    - light
-    - render
+    Sequence:
+        - story
+    Asset:
+        - model
+        - rig
+    Shot:
+        - anim
+        - fx
+        - layout
+        - light
+        - render
 
 templates:
 
