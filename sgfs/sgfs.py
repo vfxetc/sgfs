@@ -396,7 +396,7 @@ class SGFS(object):
         for path, tag in to_check:
 
             entity = tag['entity']
-
+            
             # Make sure the old path does not exist and is not
             # tagged the same way. If it is, it was copied, and we should
             # not simply update the cache.

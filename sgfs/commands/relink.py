@@ -17,9 +17,11 @@ class RelinkCommand(Command):
         self.add_option('-n', '--dry-run', action="store_true", dest="dry_run")
         
     def run(self, sgfs, opts, args, recurse=False, **kwargs):
+        
         if len(args) != 1:
             self.print_usage()
             return 1
+
         changed = sgfs.rebuild_cache(args[0], recurse=recurse or opts.recurse, dry_run=opts.dry_run)
         for old, new, tag in changed:
             print old or '<does not exist>'

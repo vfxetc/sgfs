@@ -8,7 +8,7 @@ from . import Command
 class RepairCommand(Command):
     """%prog [options] path+
     
-    Find and relink entities into the SGFS cache.
+    Repair broken .sgfs.yml tags.
     
     """
     
