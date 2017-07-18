@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 class PathCache(collections.MutableMapping):
     
-    def __init__(self, sgfs, project_root):
+    def __init__(self, sgfs, project_root, name=None):
         
         self.sgfs = sgfs
         self.project_root = os.path.abspath(project_root)
@@ -23,9 +23,9 @@ class PathCache(collections.MutableMapping):
         # supporting multiple named caches with ``.sgfs/cache/{name}.sqlite``.
         # We will read from them all, and write to one.
 
-        cache_dir = os.path.join(project_root, '.sgfs', 'cache')
+        cache_dir = os.path.join(project_root, '.sgfs', 'caches')
 
-        self.write_name = os.environ.get('SGFS_CACHE_NAME', 'primary')
+        self.write_name = name or os.environ.get('SGFS_CACHE', '500-primary')
         self.write_path = os.path.join(cache_dir, self.write_name + '.sqlite')
         read_paths = [self.write_path]
 
@@ -49,6 +49,8 @@ class PathCache(collections.MutableMapping):
                 continue
             read_paths.append(os.path.join(cache_dir, name))
 
+        # We sort them so that they are always in a predictable order regardless
+        # of which is the writer and the behaviour of the filesystem.
         self.read_paths = sorted(set(read_paths))
 
         # If it doesn't exist then touch it with read/write permissions for all.
@@ -194,7 +196,7 @@ class PathCache(collections.MutableMapping):
             
             for row in cur:
                 entity = self.sgfs.session.merge(dict(type=row[0], id=row[1]))
-                path = os.path.join(self.project_root, row[2])
+                path = os.path.normpath(os.path.join(self.project_root, row[2]))
                 if must_exist and not os.path.exists(path):
                     continue
                 yield path, entity

@@ -37,7 +37,7 @@ if sys.version_info < (2, 6):
 
 # Force some defaults for testing.
 os.environ['SGFS_SCHEMA'] = 'testing'
-os.environ['SGFS_CACHE_NAME'] = 'primary'
+os.environ.pop('SGFS_CACHE', None)
 
 
 def mini_uuid():
@@ -93,11 +93,16 @@ class TestCase(BaseTestCase):
         makedirs(path)
         return path
 
+    def SGFS(self, **kwargs):
+        kwargs.setdefault('root', self.sandbox)
+        kwargs.setdefault('session', self.session)
+        return SGFS(**kwargs)
+
     def setUp(self):
         self.shotgun = Shotgun()
         self.fixture = Fixture(self.shotgun)
         self.session = Session(self.shotgun)
-        self.sgfs = SGFS(root=self.sandbox, session=self.session)
+        self.sgfs = self.SGFS()
 
 
 class LogCapturer(logging.Handler, collections.Sequence):

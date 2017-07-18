@@ -27,13 +27,14 @@ class SGFS(object):
     
     """
     
-    def __init__(self, root=None, session=None, shotgun=None, schema_name=None):
+    def __init__(self, root=None, session=None, shotgun=None, schema_name=None, cache_name=None):
         # This constructor is very light weight, not really doing anything
         # until you ask for it.
         self._root = root
         self._session = session
         self._shotgun = shotgun
-        self.schema_name = schema_name or os.environ.get('SGFS_SCHEMA')
+        self.schema_name = schema_name
+        self.cache_name = cache_name
     
     @utils.cached_property
     def root(self):
@@ -71,7 +72,7 @@ class SGFS(object):
                     roots[tag['entity']] = path
         return roots
     
-    def path_cache(self, project):
+    def path_cache(self, project, name=None):
         """Get a :class:`~sgfs.cache.PathCache` for a given path or entity..
         
         :param project: Either a ``str`` path within a project, or an
@@ -79,17 +80,20 @@ class SGFS(object):
         :return: A :class:`~sgfs.cache.PathCache` or ``None``.
         
         """
+
+        name = name or self.cache_name
+
         if isinstance(project, basestring):
             path = os.path.abspath(project)
             for project_root in self.project_roots.itervalues():
                 if path.startswith(project_root): # TODO: Do better.
-                    return PathCache(self, project_root)
-            return
+                    return PathCache(self, project_root, name)
         
-        project = project.project()
-        project_root = self.project_roots.get(project)
-        if project_root is not None:
-            return PathCache(self, project_root)
+        else:
+            project = project.project()
+            project_root = self.project_roots.get(project)
+            if project_root is not None:
+                return PathCache(self, project_root, name)
     
     def path_for_entity(self, entity):
         """Get the path on disk for the given entity.

@@ -22,7 +22,7 @@ class TestCache(TestCase):
         self.assertEqual(1, len(cache))
         self.assertEqual(cache.get(proj), root)
         
-        stat = os.stat(os.path.join(root, '.sgfs/cache/primary.sqlite'))
+        stat = os.stat(os.path.join(root, '.sgfs/caches/500-primary.sqlite'))
         print oct(stat.st_mode)
         self.assertEqual(stat.st_mode & 0777, 0666)
     
@@ -43,7 +43,7 @@ class TestCache(TestCase):
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].levelname, 'WARNING')
 
-        stat = os.stat(os.path.join(root, '.sgfs/cache/primary.sqlite'))
+        stat = os.stat(os.path.join(root, '.sgfs/caches/500-primary.sqlite'))
         print oct(stat.st_mode)
         self.assertEqual(stat.st_mode & 0777, 0666)
     
@@ -91,6 +91,41 @@ class TestCache(TestCase):
         self.assertIs(entity, pub)
         self.assertEqual(path, pub_dir)
 
+    def test_multiple_read_caches(self):
+
+
+        sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
+        proj = sgfs.session.merge(self.fix.Project('Test Project ' + mini_uuid()))        
+        sgfs.create_structure(proj, allow_project=True)
+
+        cache1 = sgfs.path_cache(proj)
+        cache2 = sgfs.path_cache(proj, name='600-test')
+        
+        self.assertEqual(len(cache1), 1)
+
+        root = cache1.get(proj)
+        pub_dir = os.path.join(root, 'Test Publish')
+        os.makedirs(pub_dir)
+
+        pub = self.fix.PublishEvent('Test Publish', project=proj)
+        pub = sgfs.session.merge(pub)
+
+        cache2[pub] = pub_dir
+
+        os.stat(os.path.join(root, '.sgfs/caches/500-primary.sqlite'))
+        os.stat(os.path.join(root, '.sgfs/caches/600-test.sqlite'))
+
+        # A new cache will see 2 entities.
+        pairs = list(sgfs.entities_in_directory(root))
+        self.assertEqual(len(pairs), 2)
+        self.assertEqual(pairs[0][0], root)
+        self.assertIs(pairs[0][1], proj)
+        self.assertEqual(pairs[1][0], pub_dir)
+        self.assertIs(pairs[1][1], pub)
+
+
+
+
 
 
 class TestOldCacheLocations(TestCase):
@@ -103,7 +138,7 @@ class TestOldCacheLocations(TestCase):
 
     def assert_readable_path(self, name):
         check_call(['mv', 
-            os.path.join(self.root, '.sgfs/cache/primary.sqlite'),
+            os.path.join(self.root, '.sgfs/caches/500-primary.sqlite'),
             os.path.join(self.root, name),
         ])
         cache = self.sgfs.path_cache(self.project)
