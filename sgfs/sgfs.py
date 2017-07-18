@@ -7,10 +7,11 @@ import yaml
 from sgsession import Session
 from sgsession.utils import shotgun_api3_connect
 
+from . import utils
 from .cache import PathCache
 from .context import Context
+from .dirmap import DirMap
 from .schema import Schema
-from . import utils
 
 
 log = logging.getLogger('sgfs')
@@ -28,7 +29,7 @@ class SGFS(object):
     
     """
     
-    def __init__(self, root=None, session=None, shotgun=None, schema_name=None, cache_name=None):
+    def __init__(self, root=None, session=None, shotgun=None, schema_name=None, cache_name=None, dir_map=None):
         # This constructor is very light weight, not really doing anything
         # until you ask for it.
         self._root = root
@@ -36,6 +37,7 @@ class SGFS(object):
         self._shotgun = shotgun
         self.schema_name = schema_name
         self.cache_name = cache_name
+        self._dir_map = dir_map
     
     @utils.cached_property
     def root(self):
@@ -72,6 +74,10 @@ class SGFS(object):
                     roots[tag['entity']] = path
         return roots
     
+    @utils.cached_property
+    def dir_map(self):
+        return DirMap(self._dir_map or os.environ.get('SGFS_DIR_MAP', ''))
+
     def path_cache(self, project, name=None):
         """Get a :class:`~sgfs.cache.PathCache` for a given path or entity..
         
@@ -94,7 +100,8 @@ class SGFS(object):
             project_root = self.project_roots.get(project)
             if project_root is not None:
                 return PathCache(self, project_root, name)
-    
+
+
     def path_for_entity(self, entity):
         """Get the path on disk for the given entity.
         
@@ -236,9 +243,9 @@ class SGFS(object):
             unmoved = []
             for tag in tags:
                 tagged_path = tag.get('path')
-                if tagged_path is not None and path != tagged_path:
+                if tagged_path is not None and path != self.dir_map.get(tagged_path):
                     if not did_warn:
-                        print ('Directory at %s was moved from %s' % (path, tagged_path))
+                        log.warning('Directory at %s was moved from %s' % (path, tagged_path))
                         did_warn = True
                 else:
                     unmoved.append(tag)
