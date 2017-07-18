@@ -42,7 +42,7 @@ class SGFS(object):
         if root is None:
             root = os.environ.get('SGFS_ROOT')
             if root is None:
-                raise ValueError('one of root or $SGFS_ROOT must not be None')
+                raise ValueError('One of SGFS.root or $SGFS_ROOT must not be None.')
         return os.path.abspath(root)
     
     @utils.cached_property

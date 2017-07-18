@@ -35,8 +35,9 @@ if sys.version_info < (2, 6):
                 raise
 
 
-# Force the default over to the testing schema.
+# Force some defaults for testing.
 os.environ['SGFS_SCHEMA'] = 'testing'
+os.environ['SGFS_CACHE_NAME'] = 'primary'
 
 
 def mini_uuid():
@@ -92,12 +93,9 @@ class TestCase(BaseTestCase):
         makedirs(path)
         return path
 
-
-class SGTestCase(TestCase):
-
     def setUp(self):
-        self.raw_shotgun = Shotgun()
-        self.shotgun = Fixture(self.raw_shotgun)
+        self.shotgun = Shotgun()
+        self.fixture = Fixture(self.shotgun)
         self.session = Session(self.shotgun)
         self.sgfs = SGFS(root=self.sandbox, session=self.session)
 

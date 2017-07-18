@@ -1,3 +1,63 @@
+Multi-root and multi-home
+=========================
+
+
+~ multiple caches for different machines:
+    √ one is flagged as the one for writing, and the rest are for reading
+    √ .sgfs/cache/master.sqlite (default) and mikeb.sqlite
+    - explicitly test multiple
+    - test when one of them is bad
+
+- Tagging primary vs. artifacts:
+
+    Idea 1: multiple named roots that entities may be tagged in each
+        - sgfs.path_for_entity(entity, root='artifacts')
+        - have an SGFS cache in each project root
+
+    Idea 2: Arbitrary "tag_type" / "context" / "namespace" on each tag.
+        - May have same project tagged with different context, which
+          would result in a path cache there. Projects would need to be
+          discoverable via SGFS_ROOT="/path1:/path2" or a per-project
+          mechanism (e.g. SGFS_PROJECT_52=/path1:/path2)
+        - Would allow for multiple paths for a single entity in the same
+          project beside themselves.
+        - Only allow tags within already tagged locations. The current
+          practise of absolute paths would be discouraged.
+        - "path" in tags should be relative to the containing project. Should
+          repair all existing tags. This would only be a problem for the
+          Project which would then be allowed to move.
+
+- Support projects in different locations on different machines.
+
+    Idea 1: For each root, could be provided a set of potential locations.
+        - One, and only one, must exist on the local machine and be tagged such.
+        - sgfs.localize(path) could translate it the local version.
+        - sgfs.localize(path, context='markmedia') could translate to
+          the specific one.
+
+    Idea 2: Largely the same, except the locations are named.
+        - The current location must be named, or assumed "primary".
+
+- multiple roots on different machines:
+
+    - both SGFS_ROOT (which is assumed to contain projects) but also pre-project
+    - so, multiple sets of dirmap: one global and one per-project
+
+    - sgfs.localize('/Volumes/CGroot/Projects/SitG')
+      -> '/Volumes/heap/sitg/work/film'
+    - sgfs.localize('/Volumes/CGroot/Projects/Sandbox')
+      -> '/Users/mikeboers/Documents/MarkMedia/Projects/Sandbox'
+
+
+- per-host config (via SGFS_CONFIG or entry_points)
+- per-project config (via .sgfs/config.py or entry_points)
+
+- rename some functions
+    - SGFS.entities_{above,at,below}_path
+
+
+
+
 Remote
 ======
 

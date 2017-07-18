@@ -1,4 +1,4 @@
-from subprocess import call
+from subprocess import check_call
 import os
 
 from common import *
@@ -22,7 +22,7 @@ class TestCache(TestCase):
         self.assertEqual(1, len(cache))
         self.assertEqual(cache.get(proj), root)
         
-        stat = os.stat(os.path.join(root, '.sgfs/cache.sqlite'))
+        stat = os.stat(os.path.join(root, '.sgfs/cache/primary.sqlite'))
         print oct(stat.st_mode)
         self.assertEqual(stat.st_mode & 0777, 0666)
     
@@ -43,26 +43,9 @@ class TestCache(TestCase):
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].levelname, 'WARNING')
 
-        stat = os.stat(os.path.join(root, '.sgfs/cache.sqlite'))
+        stat = os.stat(os.path.join(root, '.sgfs/cache/primary.sqlite'))
         print oct(stat.st_mode)
         self.assertEqual(stat.st_mode & 0777, 0666)
-
-    def test_old_cache_location(self):
-        
-        sgfs = SGFS(root=self.sandbox, shotgun=self.sg)
-        proj = sgfs.session.merge(self.fix.Project('Test Project ' + mini_uuid()))        
-        sgfs.create_structure(proj, allow_project=True)
-
-        root = os.path.abspath(os.path.join(self.sandbox, proj['name'].replace(' ', '_')))
-        call(['mv', 
-            os.path.join(root, '.sgfs/cache.sqlite'),
-            os.path.join(root, '.sgfs-cache.sqlite'),
-        ])
-
-        cache = sgfs.path_cache(proj)
-        
-        self.assertEqual(1, len(cache))
-        self.assertEqual(cache.get(proj), root)
     
     def test_out_of_root_paths(self):
 
@@ -97,7 +80,7 @@ class TestCache(TestCase):
         self.assertIs(entities[0], pub)
 
         return
-        
+
         # Assert that the publish is within the root.
         # TODO: Implement this!
         self.assertRaises(ValueError, list, sgfs.entities_in_directory(root_b))
@@ -109,4 +92,26 @@ class TestCache(TestCase):
         self.assertEqual(path, pub_dir)
 
 
+
+class TestOldCacheLocations(TestCase):
+
+    def setUp(self):
+        super(TestOldCacheLocations, self).setUp()
+        self.project = self.session.merge(self.fixture.Project('Test Project ' + mini_uuid()))        
+        self.sgfs.create_structure(self.project, allow_project=True)
+        self.root = os.path.abspath(os.path.join(self.sandbox, self.project['name'].replace(' ', '_')))
+
+    def assert_readable_path(self, name):
+        check_call(['mv', 
+            os.path.join(self.root, '.sgfs/cache/primary.sqlite'),
+            os.path.join(self.root, name),
+        ])
+        cache = self.sgfs.path_cache(self.project)
+        self.assertEqual(1, len(cache))
+        self.assertEqual(cache.get(self.project), self.root)
         
+    def test_1st_cache_location(self):
+        self.assert_readable_path('.sgfs-cache.sqlite')
+
+    def test_2nd_cache_location(self):
+        self.assert_readable_path('.sgfs/cache.sqlite')
