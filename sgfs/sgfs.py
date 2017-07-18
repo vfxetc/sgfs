@@ -5,6 +5,7 @@ import os
 import yaml
 
 from sgsession import Session
+from sgsession.utils import shotgun_api3_connect
 
 from .cache import PathCache
 from .context import Context
@@ -51,8 +52,7 @@ class SGFS(object):
         # Set the session, building it from a generic Shotgun if nothing was
         # given. This requires a `shotgun_api3_registry.connect()` function.
         if not self._shotgun and not self._session:
-            import shotgun_api3_registry
-            self._shotgun = shotgun_api3_registry.connect(auto_name_stack_depth=1)
+            self._shotgun = shotgun_api3_connect(auto_name_stack_depth=1)
         return self._session or Session(self._shotgun)
         
     @utils.cached_property
