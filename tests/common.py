@@ -1,6 +1,7 @@
 from pprint import pprint, pformat
 import collections
 import datetime
+import errno
 import itertools
 import logging
 import os
@@ -8,8 +9,10 @@ import sys
 
 from mock import Mock
 
-from sgmock import Fixture
-from sgmock import TestCase as BaseTestCase
+from sgfs import SGFS, Schema, Context, Structure, Template, BoundTemplate
+from sgmock import Fixture, TestCase as BaseTestCase
+from sgsession import Session, Entity
+
 
 _shotgun_server = os.environ.get('SHOTGUN', 'mock')
 if _shotgun_server == 'mock':
@@ -19,10 +22,6 @@ else:
     import shotgun_api3_registry
     def Shotgun():
         return shotgun_api3_registry.connect('sgsession.tests', server=_shotgun_server)
-
-from sgsession import Session, Entity
-
-from sgfs import SGFS, Schema, Context, Structure, Template, BoundTemplate
 
 
 if sys.version_info < (2, 6):
@@ -36,6 +35,10 @@ if sys.version_info < (2, 6):
                 raise
 
 
+# Force the default over to the testing schema.
+os.environ['SGFS_SCHEMA'] = 'testing'
+
+
 def mini_uuid():
     return os.urandom(4).encode('hex')
 
@@ -45,13 +48,20 @@ def timestamp():
 def minimal(entity):
     return dict(type=entity['type'], id=entity['id'])
 
+def makedirs(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
 
 if os.path.abspath(os.path.join(__file__, '..', '..')) == os.path.abspath('.'):
     sandbox = './sandbox'
 else:
     sandbox = os.path.abspath(os.path.join(__file__, '..', '..', 'sandbox'))
 sandbox = os.path.join(sandbox, datetime.datetime.now().isoformat('T'))
-os.makedirs(sandbox)
+makedirs(sandbox)
 
 
 class TestCase(BaseTestCase):
@@ -79,9 +89,17 @@ class TestCase(BaseTestCase):
     @property
     def sandbox(self):
         path = os.path.join(sandbox, self.full_name)
-        if not os.path.exists(path):
-            os.makedirs(path)
+        makedirs(path)
         return path
+
+
+class SGTestCase(TestCase):
+
+    def setUp(self):
+        self.raw_shotgun = Shotgun()
+        self.shotgun = Fixture(self.raw_shotgun)
+        self.session = Session(self.shotgun)
+        self.sgfs = SGFS(root=self.sandbox, session=self.session)
 
 
 class LogCapturer(logging.Handler, collections.Sequence):

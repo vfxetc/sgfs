@@ -25,7 +25,7 @@ class TestSchema(TestCase):
     
     def test_graph_shape(self):
         
-        schema = Schema('v1')
+        schema = Schema()
         schema.pprint()
         
         self.assertEqual(schema.entity_type, 'Project')
