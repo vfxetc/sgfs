@@ -7,7 +7,8 @@ steps_to_include:
         - surface
     Shot:
         - art
-        - matte_Painting
+        - matte_painting
+        - mograph
 
     # BookPage
     CustomEntity21:
