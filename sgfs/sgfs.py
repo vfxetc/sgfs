@@ -4,13 +4,13 @@ import os
 
 import yaml
 
+from dirmap import DirMap
 from sgsession import Session
 from sgsession.utils import shotgun_api3_connect
 
 from . import utils
 from .cache import PathCache
 from .context import Context
-from .dirmap import DirMap
 from .schema import Schema
 
 
