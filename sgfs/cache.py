@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 
 class PathCache(collections.MutableMapping):
     
+    default_name = '500-primary'
+
     def __init__(self, sgfs, project_root, name=None):
         
         self.sgfs = sgfs
@@ -26,7 +28,7 @@ class PathCache(collections.MutableMapping):
 
         cache_dir = os.path.join(project_root, '.sgfs', 'caches')
 
-        self.write_name = name or os.environ.get('SGFS_CACHE', '500-primary')
+        self.write_name = name or os.environ.get('SGFS_CACHE_NAME', self.default_name)
         self.write_path = os.path.join(cache_dir, self.write_name + '.sqlite')
         read_paths = [self.write_path]
 

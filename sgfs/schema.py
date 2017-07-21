@@ -23,11 +23,11 @@ class Schema(object):
     def __init__(self, name=None, entity_type='Project', config_name=None):
         
         #: The name of the schema, taken from :envvar:`SGFS_SCHEMA`.
-        name = name or os.environ.get('SGFS_SCHEMA')
+        self.name = name = name or os.environ.get('SGFS_SCHEMA')
         if not name:
-            raise ValueError('schema must be given or set by $SGFS_SCHEMA')
+            raise ValueError("Schema name/path must be given or set by $SGFS_SCHEMA")
 
-        #: The path to the root of the schema.
+        #: The path to the root of the schema. A absolute "name" will have priority.
         root = os.path.abspath(os.path.join(
             __file__, 
             os.pardir,

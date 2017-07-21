@@ -35,8 +35,13 @@ class SGFS(object):
         self._root = root
         self._session = session
         self._shotgun = shotgun
-        self.schema_name = schema_name
-        self.cache_name = cache_name
+
+        # This code is roughly a duplicate of that in the classes themselves,
+        # because we'd like to have actual names here before the schema or
+        # pache caches are constructed.
+        self.schema_name = schema_name or os.environ.get('SGFS_SCHEMA')
+        self.cache_name = cache_name or os.environ.get('SGFS_CACHE_NAME', PathCache.default_name)
+
         self._dir_map = dir_map
     
     @utils.cached_property
