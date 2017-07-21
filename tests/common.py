@@ -98,11 +98,14 @@ class TestCase(BaseTestCase):
         kwargs.setdefault('session', self.session)
         return SGFS(**kwargs)
 
+    sgfs_kwargs = {}
+    session_kwargs = {}
+
     def setUp(self):
         self.shotgun = Shotgun()
         self.fixture = Fixture(self.shotgun)
-        self.session = Session(self.shotgun)
-        self.sgfs = self.SGFS()
+        self.session = Session(self.shotgun, **self.session_kwargs)
+        self.sgfs = self.SGFS(**self.sgfs_kwargs)
 
 
 class LogCapturer(logging.Handler, collections.Sequence):

@@ -76,7 +76,7 @@ class SGFS(object):
     
     @utils.cached_property
     def dir_map(self):
-        return DirMap(self._dir_map or os.environ.get('SGFS_DIR_MAP', ''))
+        return DirMap(self._dir_map or os.environ.get('SGFS_DIR_MAP'))
 
     def path_cache(self, project, name=None):
         """Get a :class:`~sgfs.cache.PathCache` for a given path or entity..
@@ -182,7 +182,11 @@ class SGFS(object):
             return []
         
         with open(tag_path) as fh:
-            return list(yaml.load_all(fh.read()))
+            tags = list(yaml.load_all(fh.read()))
+
+        tags = self.dir_map.deep_apply(tags)
+
+        return tags
 
     def tag_directory_with_entity(self, path, entity, meta=None, cache=True):
         """Tag a directory with the given entity, and add it to the cache.
@@ -236,14 +240,14 @@ class SGFS(object):
         path = os.path.abspath(path)
 
         tags = self._read_directory_tags(path)
-        
+
         # Filter out moved tags.
         if not allow_moves:
             did_warn = False
             unmoved = []
             for tag in tags:
                 tagged_path = tag.get('path')
-                if tagged_path is not None and path != self.dir_map.get(tagged_path):
+                if tagged_path is not None and path != tagged_path:
                     if not did_warn:
                         log.warning('Directory at %s was moved from %s' % (path, tagged_path))
                         did_warn = True

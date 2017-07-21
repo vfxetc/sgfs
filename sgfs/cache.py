@@ -16,6 +16,7 @@ class PathCache(collections.MutableMapping):
     def __init__(self, sgfs, project_root, name=None):
         
         self.sgfs = sgfs
+        self.dir_map = sgfs.dir_map
         self.project_root = os.path.abspath(project_root)
         
         # In the beginning, the cache was a single SQLite file called ``.sgfs-cache.sqlite``,
@@ -94,13 +95,16 @@ class PathCache(collections.MutableMapping):
         if not isinstance(path, basestring):
             raise TypeError('path cache values must be basestring; got %r %r' % (type(path), path))
         
-        abs_path = os.path.abspath(path)
-        rel_path = os.path.relpath(abs_path, self.project_root)
-        
-        if rel_path.startswith(os.path.pardir + os.path.sep):
-            path = abs_path
-        else:
-            path = rel_path
+
+        path = os.path.abspath(path)
+        project_root = self.project_root
+
+        # os.path.relpath, but only if the path is within.
+        if path.startswith(project_root):
+            if len(path) == len(project_root):
+                path = '.'
+            elif path[len(project_root)] == os.path.sep:
+                path = path[len(project_root) + 1:]
 
         with self.write_con() as con:
             con.execute('INSERT OR REPLACE into entity_paths values (?, ?, ?)', (entity['type'], entity['id'], path))
@@ -135,7 +139,13 @@ class PathCache(collections.MutableMapping):
             if row is None:
                 continue
 
-            path = os.path.abspath(os.path.join(self.project_root, row[0]))
+            # DirMap the external ones, and make the internal ones absolute.
+            path = row[0]
+            if os.path.isabs(path):
+                path = self.dir_map(path)
+            else:
+                # Need to normpath because very old caches might be strange.
+                path = os.path.normpath(os.path.join(self.project_root, path))
 
             # Make sure that the entity is actually tagged in the given directory.
             # This guards against moving tagged directories. This does NOT
