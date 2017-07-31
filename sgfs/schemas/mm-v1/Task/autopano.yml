@@ -1,0 +1,7 @@
+condition: self['step']['short_name'] in steps_to_include.get(self['step']['entity_type'], {})
+
+steps_to_include:
+
+    Shot:
+        - vr_stitching
+
