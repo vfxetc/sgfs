@@ -2,6 +2,11 @@ condition: self['step']['short_name'] in steps_to_include.get(self['step']['enti
 
 steps_to_include:
 
+    Sequence:
+        - edit
+    
     Shot:
         - mograph
+
+
 
