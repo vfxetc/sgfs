@@ -13,4 +13,5 @@ steps_to_include:
     # BookPage
     CustomEntity21:
         - layout
+        - colour
 
