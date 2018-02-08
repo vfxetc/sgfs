@@ -1,0 +1,8 @@
+condition: self['step']['short_name'] in steps_to_include.get(self['step']['entity_type'], {})
+
+steps_to_include:
+
+    # BookIssue
+    CustomEntity04:
+        - printlayout
+
