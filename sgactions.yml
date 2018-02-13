@@ -7,7 +7,7 @@
         title: Preview Folders
         icon: folder-explore
     list_order: 21
-    entity_types: [Sequence, Asset, Shot, Task, CustomEntity06, CustomEntity21]
+    entity_types: [Sequence, Asset, Shot, Task, CustomEntity06, CustomEntity04, CustomEntity21]
     selection_required: true
 
 -
@@ -18,7 +18,7 @@
         title: Create Folders
         icon: folder-add
     list_order: 22
-    entity_types: [Sequence, Asset, Shot, Task, CustomEntity06, CustomEntity21]
+    entity_types: [Sequence, Asset, Shot, Task, CustomEntity06, CustomEntity04, CustomEntity21]
     selection_required: true
 
 -
@@ -29,7 +29,7 @@
         title: Jump to Folder
         icon: folder-go
     list_order: 23
-    entity_types: [Sequence, Asset, Shot, Task, PublishEvent, CustomEntity06, CustomEntity21]
+    entity_types: [Sequence, Asset, Shot, Task, PublishEvent, CustomEntity06, CustomEntity04, CustomEntity21]
     selection_required: true
 
 -
@@ -40,7 +40,7 @@
         title: Jump to Terminal
         icon: application-osx-terminal
     list_order: 24
-    entity_types: [Sequence, Asset, Shot, Task, PublishEvent, CustomEntity06, CustomEntity21]
+    entity_types: [Sequence, Asset, Shot, Task, PublishEvent, CustomEntity06, CustomEntity04, CustomEntity21]
     selection_required: true
 
 -

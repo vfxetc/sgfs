@@ -1,6 +1,7 @@
 name_expr: '"issues/%s" % self["code"]'
 
 children:
+    CustomEntity21: BookPage.yml
     Task: Task.yml
 
 templates:
