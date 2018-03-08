@@ -1,11 +1,11 @@
 import os
 
-from uitools.qt import QtGui
+from uitools.qt import Q
 
 from . import presets as picker_presets
 
 
-class TemplatePickerDialog(QtGui.QDialog):
+class TemplatePickerDialog(Q.Widgets.Dialog):
     
     def __init__(self, *args, **kwargs):
         self._templateName = kwargs.pop('templateName')
@@ -18,7 +18,7 @@ class TemplatePickerDialog(QtGui.QDialog):
         self.setMinimumWidth(1000)
         self.setMinimumHeight(400)
         
-        self.setLayout(QtGui.QVBoxLayout())
+        self.setLayout(Q.VBoxLayout())
         
         self._model, self._picker = self._buildPicker()
 
@@ -28,21 +28,21 @@ class TemplatePickerDialog(QtGui.QDialog):
 
         self.layout().addWidget(self._picker)
         
-        button_layout = QtGui.QHBoxLayout()
+        button_layout = Q.HBoxLayout()
         self.layout().addLayout(button_layout)
 
-        self._cancelButton = QtGui.QPushButton("Cancel")
+        self._cancelButton = Q.PushButton("Cancel")
         self._cancelButton.clicked.connect(self._onCancel)
         button_layout.addWidget(self._cancelButton)
 
         button_layout.addStretch()
 
-        self._makeButton = QtGui.QPushButton("Make Folder")
+        self._makeButton = Q.PushButton("Make Folder")
         self._makeButton.setEnabled(False)
         self._makeButton.clicked.connect(self._onSelectMakeFolder)
         button_layout.addWidget(self._makeButton)
         
-        self._selectButton = QtGui.QPushButton("Select")
+        self._selectButton = Q.PushButton("Select")
         self._selectButton.setEnabled(False)
         self._selectButton.clicked.connect(self._onSelect)
         button_layout.addWidget(self._selectButton)

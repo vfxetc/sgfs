@@ -14,6 +14,15 @@ class Model(QtCore.QAbstractItemModel):
     
     _pixmaps = {}
     
+    # There appears to be a bug in Maya's PySide 2, in which the default
+    # arguments aren't registered as metatypes and you get this sort of message:
+    #    QObject::connect: Cannot queue arguments of type 'QList<QPersistentModelIndex>'
+    #    (Make sure 'QList<QPersistentModelIndex>' is registered using qRegisterMetaType().)
+    # You don't get that if you call in the same thread, so we "fix" the problem
+    # with these extra signals which just pass on the request.
+    _legacy_layoutAboutToBeChanged = QtCore.pyqtSignal()
+    _legacy_layoutChanged = QtCore.pyqtSignal()
+
     def __init__(self, root_state=None, sgfs=None, shotgun=None, session=None):
         super(Model, self).__init__()
         
@@ -31,6 +40,13 @@ class Model(QtCore.QAbstractItemModel):
         self.threadpool = ThreadPool(8, lifo=True)
         
         self._node_types = []
+
+        # See comment above.
+        for name in 'layoutChanged', 'layoutAboutToBeChanged':
+            old = getattr(self, name)
+            new = getattr(self, '_legacy_' + name)
+            setattr(self, name, new)
+            new.connect(old.emit)
     
     def _thread_target(self):
         while True:
@@ -113,12 +129,14 @@ class Model(QtCore.QAbstractItemModel):
     def index(self, row, col, parent):
         
         if col > 0:
+            #print 'HERE2', QtCore.QModelIndex()
             return QtCore.QModelIndex()
         
         node = self.node_from_index(parent)
         try:
             child = node.children()[row]
         except IndexError:
+            #print 'HERE3', QtCore.QModelIndex()
             return QtCore.QModelIndex()
         
         if child.index is None:
@@ -128,6 +146,7 @@ class Model(QtCore.QAbstractItemModel):
                 debug('\tchild.parent is also None')
                 child.parent = node
         
+        #print 'HERE1', child.index
         return child.index
     
     def parent(self, child):

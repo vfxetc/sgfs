@@ -1,7 +1,7 @@
 import functools
 import threading
 
-from uitools.qt import Qt, QtCore, QtGui
+from uitools.qt import Q
 
 from uitools.headeredlistview import HeaderedListView, HeaderDisplayRole
 
@@ -15,7 +15,7 @@ from sgfs.ui.picker.nodes import base
 class ResizingListView(HeaderedListView):
     
     # This needs to be a signal so that it runs in the main thread.
-    layoutChanged = QtCore.pyqtSignal()
+    layoutChanged = Q.pyqtSignal()
 
     def __init__(self, master, *args, **kwargs):
         super(ResizingListView, self).__init__(*args, **kwargs)
@@ -29,7 +29,7 @@ class ResizingListView(HeaderedListView):
 
     # We need a hook for resizing columns after the column view has
     # inserted this column; see self._deferResize().
-    _columnViewSetUp = QtCore.pyqtSignal()
+    _columnViewSetUp = Q.pyqtSignal()
 
     def setRootIndex(self, index):
         super(ResizingListView, self).setRootIndex(index)
@@ -46,7 +46,7 @@ class ResizingListView(HeaderedListView):
         # Only bother if we already have a size.
         width = self.sizeHintForColumn(0)
         if width > 0:
-            self._columnViewSetUp.connect(self._handleDeferredResize, Qt.QueuedConnection)
+            self._columnViewSetUp.connect(self._handleDeferredResize, Q.QueuedConnection)
             self._columnViewSetUp.emit()
 
     def _handleDeferredResize(self):
@@ -90,15 +90,15 @@ class ResizingListView(HeaderedListView):
 
         # Force it to perform a reflow of the columns.
         size = self._master.size()
-        self._master.resizeEvent(QtGui.QResizeEvent(size, size))
+        self._master.resizeEvent(Q.ResizeEvent(size, size))
 
 
 
 
-class ColumnView(QtGui.QColumnView):
+class ColumnView(Q.ColumnView):
     
     # Emitted whenever a different node is selected.
-    nodeChanged = QtCore.pyqtSignal([object])
+    nodeChanged = Q.pyqtSignal([object])
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('verticalScrollMode', self.ScrollPerPixel)
@@ -127,7 +127,7 @@ class ColumnView(QtGui.QColumnView):
             # We need there to be some preview widget to latch on to.
             widget = self.previewWidget()
             if not widget:
-                widget = self._preview_sentinel = QtGui.QWidget()
+                widget = self._preview_sentinel = Q.Widgets.Widget()
                 self.setPreviewWidget(widget)
                 
             # The protected preview column owns the preview widget.
@@ -158,7 +158,7 @@ class ColumnView(QtGui.QColumnView):
         self.initializeColumn(view)
         view.restoreAfterInitialize()
         
-        view.setContextMenuPolicy(Qt.CustomContextMenu)
+        view.setContextMenuPolicy(Q.CustomContextMenu)
         view.customContextMenuRequested.connect(functools.partial(self._on_context_menu, view))
         
         # We must hold a reference to this somewhere so that it isn't
@@ -171,7 +171,7 @@ class ColumnView(QtGui.QColumnView):
         index = view.indexAt(point)
         node = self.model().node_from_index(index)
         
-        menu = QtGui.QMenu()
+        menu = Q.Menu()
         if node.parent and not isinstance(node, base.Group):
             node.parent.add_child_menu_actions(node, menu)
         
