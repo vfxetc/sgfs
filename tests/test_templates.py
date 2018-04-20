@@ -104,7 +104,7 @@ class TestSGFSTemplates(TestCase):
         # self.assets = map(minimal, assets)
 
         self.session = Session(self.sg)
-        self.sgfs = SGFS(root=self.sandbox, session=self.session, schema_name='testing')
+        self.sgfs = SGFS(root=self.sandbox, session=self.session)
         self = None
     
     def test_shot_workspace(self):

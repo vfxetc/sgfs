@@ -35,8 +35,10 @@ if sys.version_info < (2, 6):
                 raise
 
 
+schema_path = os.path.abspath(os.path.join(__file__, '..', 'schema'))
+
 # Force some defaults for testing.
-os.environ['SGFS_SCHEMA'] = 'testing'
+os.environ['SGFS_SCHEMA'] = schema_path
 os.environ.pop('SGFS_CACHE_NAME', None)
 os.environ.pop('SGFS_DIR_MAP', None)
 os.environ.pop('SGSESSION_DIR_MAP', None)
