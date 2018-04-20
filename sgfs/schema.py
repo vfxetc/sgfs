@@ -1,8 +1,10 @@
 import os
+import pkg_resources
 
 import yaml
 
 from .structure import Structure
+from .utils import cached_property
 
 
 class Schema(object):
@@ -27,15 +29,19 @@ class Schema(object):
         if not name:
             raise ValueError("Schema name/path must be given or set by $SGFS_SCHEMA")
 
-        #: The path to the root of the schema. A absolute "name" will have priority.
-        root = os.path.abspath(os.path.join(
-            __file__, 
-            os.pardir,
-            'schemas',
-            name,
-        ))
-        if not os.path.exists(root):
-            raise ValueError('schema %r does not exist' % name)
+        if os.path.isabs(self.name):
+            root = self.name
+
+        else:
+            eps = list(pkg_resources.iter_entry_points('sgfs_schema_locators'))
+            eps.sort(key=lambda ep: ep.name)
+            for ep in eps:
+                func = ep.load()
+                root = func(self.name)
+                if root:
+                    break
+            else:
+                raise ValueError("No sgfs_schema_locators returned a root.", self.name)
         
         self.root = root
         self.entity_type = entity_type
