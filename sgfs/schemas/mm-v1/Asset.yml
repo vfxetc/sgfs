@@ -1,7 +1,0 @@
-name_expr: |
-    import re
-    normalize = lambda x: re.sub(r'\W+', '_', x).strip('_')
-    return 'assets/' + normalize(self['sg_asset_type']).lower() + '/' + normalize(self['code'])
-
-children:
-    Task: Task.yml

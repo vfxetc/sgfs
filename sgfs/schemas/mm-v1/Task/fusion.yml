@@ -1,9 +1,0 @@
-condition: self['project']['id'] not in projects_to_exclude and self['step']['short_name'] in steps_to_include.get(self['step']['entity_type'], {})
-
-projects_to_exclude: [112] # SitG
-
-steps_to_include:
-
-    Shot:
-        - comp
-

@@ -1,5 +1,0 @@
-name_expr: '"sequences/" + self["code"]'
-
-children:
-    Shot: Shot.yml
-    Task: Task.yml

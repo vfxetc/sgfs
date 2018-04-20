@@ -1,4 +1,0 @@
-name_expr: '"SEQ/" + self["code"]'
-
-children:
-    Shot: Shot.yml
