@@ -47,11 +47,14 @@ class Schema(object):
         default_template = os.path.join(root, os.path.splitext(self.config_name)[0])
         if os.path.exists(default_template):
             self.config.setdefault('template', default_template)
-        
+    
+    @cached_property
+    def children(self):
         # Load all the children.
-        self.children = {}
+        children = {}
         for child_type, child_config_name in self.config.get('children', {}).iteritems():
-            self.children[child_type] = Schema(root, child_type, child_config_name)
+            children[child_type] = Schema(self.root, child_type, child_config_name)
+        return children
     
     def __repr__(self):
         return '<Schema %s:%s at 0x%x>' % (os.path.basename(self.root), self.entity_type, id(self))
