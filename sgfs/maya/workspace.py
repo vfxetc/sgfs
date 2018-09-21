@@ -93,6 +93,21 @@ def pick_workspace():
     dialog.raise_()
 
 
+def assert_workspace():
+
+    scene_path = cmds.file(q=True, sceneName=True)
+    if not scene_path:
+        raise ValueError("Scene is not saved.")
+
+    sgfs = SGFS()
+    tasks = sgfs.entities_from_path(scene_path, ['Task'])
+    if not tasks:
+        raise ValueError("Scene is not in a task.")
+
+    path = sgfs.path_for_entity(tasks[0])
+    workspace_path(path)
+
+
 def open_parent_in_shotgun():
     """Shelf tool to open Asset or Shot for current workspace."""
 
