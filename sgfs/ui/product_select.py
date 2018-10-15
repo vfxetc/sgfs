@@ -9,8 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from uitools.qt import QtCore, QtGui
-Qt = QtCore.Qt
+from uitools.qt import Q
 
 from maya import cmds
 
@@ -27,13 +26,13 @@ def silk(name):
 
 
 def silk_icon(name, size=16):
-    icon = QtGui.QIcon(silk(name))
+    icon = Q.Icon(silk(name))
     if size != 16:
-        icon = QtGui.QIcon(icon.pixmap(size, size))
+        icon = Q.Icon(icon.pixmap(size, size))
     return icon
 
 
-class ComboBox(QtGui.QComboBox):
+class ComboBox(Q.ComboBox):
     
     def __init__(self, *args, **kwargs):
         super(ComboBox, self).__init__(*args, **kwargs)
@@ -44,7 +43,7 @@ class ComboBox(QtGui.QComboBox):
         return self._conform_item_data(data)
     
     def _conform_item_data(self, data):
-        if isinstance(data, QtCore.QString):
+        if isinstance(data, Q.String):
             return str(data)
         if isinstance(data, dict):
             return dict((self._conform_item_data(k), self._conform_item_data(v)) for k, v in data.iteritems())
@@ -70,11 +69,11 @@ class ComboBox(QtGui.QComboBox):
             yield self.itemData(i)
 
 
-class Labeled(QtGui.QVBoxLayout):
+class Labeled(Q.VBoxLayout):
 
     def __init__(self, label, widget):
         super(Labeled, self).__init__()
-        self._label = QtGui.QLabel(label)
+        self._label = Q.Label(label)
         self.addWidget(self._label)
         self._widget = widget
         self.addWidget(widget)
@@ -84,7 +83,7 @@ class Labeled(QtGui.QVBoxLayout):
         self._widget.setVisible(visible)
 
 
-class Section(QtGui.QVBoxLayout):
+class Section(Q.VBoxLayout):
 
     def __init__(self, parent, widget, index, name, iter_func):
         super(Section, self).__init__()
@@ -95,7 +94,7 @@ class Section(QtGui.QVBoxLayout):
         self._name = name
         self._iter_func = iter_func
         
-        self._label = QtGui.QLabel(name, parent=parent)
+        self._label = Q.Label(name, parent=parent)
         self.addWidget(self._label)
         
         self._combobox = ComboBox(parent=parent)
@@ -131,7 +130,7 @@ class Section(QtGui.QVBoxLayout):
 _custom_sentinel = object()
 
 
-class Layout(QtGui.QHBoxLayout):
+class Layout(Q.HBoxLayout):
     
     def __init__(self, parent=None, browse_name='Product', browse_filter=''):
         super(Layout, self).__init__()
@@ -173,13 +172,13 @@ class Layout(QtGui.QHBoxLayout):
         for section in self._sections:
             self.addLayout(section)
         
-        self._custom_field = QtGui.QLineEdit(parent=self._parent)
+        self._custom_field = Q.LineEdit(parent=self._parent)
         self._custom_field.editingFinished.connect(self._on_custom_edited)
         self._custom_pair = Labeled("Custom Path", self._custom_field)
         self.addLayout(self._custom_pair)
         
-        self._browse_button = QtGui.QPushButton(silk_icon('folder', 12), "Browse", parent=self._parent)
-        self._browse_button.setMaximumSize(QtCore.QSize(75, 20))
+        self._browse_button = Q.PushButton(silk_icon('folder', 12), "Browse", parent=self._parent)
+        self._browse_button.setMaximumSize(Q.Size(75, 20))
         self._browse_button.clicked.connect(self._on_browse)
         self._browse_pair = Labeled("", self._browse_button)
         self.addLayout(self._browse_pair)
@@ -299,7 +298,7 @@ class Layout(QtGui.QHBoxLayout):
             yield name, path, 1 if step_code.lower().startswith('anim') else 0
     
     def _browse(self):
-        return str(QtGui.QFileDialog.getOpenFileName(self.parentWidget(), "Select %s" % self._browse_name, self.root(), self._browse_filter))
+        return str(Q.FileDialog.getOpenFileName(self.parentWidget(), "Select %s" % self._browse_name, self.root(), self._browse_filter))
         
     def _on_browse(self):
         path = self._browse()
