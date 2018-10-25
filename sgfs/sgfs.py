@@ -329,6 +329,12 @@ class SGFS(object):
             path = os.path.dirname(path)
         return ()
     
+    def entity_from_path(self, path, entity_type=None):
+        entities = self.entities_from_path(path, entity_type)
+        if len(entities) != 1:
+            raise ValueError("Loaded {} of {} from {}".format(len(entities), entity_type or 'any type', path))
+        return entities[0]
+
     def entities_in_directory(self, path, entity_type=None, load_tags=False, primary_root=None):
         """Iterate across every :class:`~sgsession.entity.Entity` within the
         given directory.
