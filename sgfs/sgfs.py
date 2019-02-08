@@ -29,12 +29,18 @@ class SGFS(object):
     
     """
     
-    def __init__(self, root=None, session=None, shotgun=None, schema_name=None, cache_name=None, dir_map=None):
+    def __init__(self, root=None, session=None, shotgun=None, schema_name=None,
+        cache_name=None, dir_map=None):
+
         # This constructor is very light weight, not really doing anything
         # until you ask for it.
-        self._root = root
         self._session = session
         self._shotgun = shotgun
+
+        root = root or os.environ.get('SGFS_ROOT')
+        if root:
+            root = os.path.abspath(root)
+        self.root = root
 
         # This code is roughly a duplicate of that in the classes themselves,
         # because we'd like to have actual names here before the schema or
@@ -43,16 +49,6 @@ class SGFS(object):
         self.cache_name = cache_name or os.environ.get('SGFS_CACHE_NAME', PathCache.default_name)
 
         self._dir_map = dir_map
-    
-    @utils.cached_property
-    def root(self):
-        # Take the given root, or look it up in the environment.
-        root = self._root
-        if root is None:
-            root = os.environ.get('SGFS_ROOT')
-            if root is None:
-                raise ValueError('One of SGFS.root or $SGFS_ROOT must not be None.')
-        return os.path.abspath(root)
     
     @utils.cached_property
     def session(self):
@@ -64,12 +60,25 @@ class SGFS(object):
         
     @utils.cached_property
     def project_roots(self):
+
+        raw_env_paths = os.environ.get('SGFS_PROJECTS')
+        if not (self.root or raw_env_paths):
+            raise ValueError("SGFS must be given root, or have $SGFS_ROOT or $SGFS_PROJECTS set.")
+
+        paths = []
+
         # Scan the root looking for Project tags in its top level.
-        
+        if self.root:
+            paths.extend(os.path.join(self.root, name) for name in os.listdir(self.root))
+
+        # Also consider the paths we've been directly given.
+        raw_env_paths = os.environ.get('SGFS_PROJECTS')
+        if raw_env_paths:
+            paths.extend(raw_env_paths.split(':'))
+
         # We look at links first so that they get overwritten by data in "real"
         # directories later. This is so that the "real" directory has priority
         # over a link to itself.
-        paths = [os.path.join(self.root, name) for name in os.listdir(self.root)]
         paths.sort(key=lambda path: (not os.path.islink(path), path))
 
         roots = {}
