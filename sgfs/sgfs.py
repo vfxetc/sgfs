@@ -396,7 +396,7 @@ class SGFS(object):
             for tag in self.get_directory_entity_tags(path, **kwargs):
                 yield path, tag
     
-    def rebuild_cache(self, path, recurse=False, dry_run=False):
+    def rebuild_cache(self, path, recurse=False, dry_run=False, verbose=False, cache_path=None):
         """Rebuilds the cache for a given directory.
         
         This is useful when a tagged directory has been moved, breaking the
@@ -411,9 +411,11 @@ class SGFS(object):
         """
         
         root_path = os.path.abspath(path)
-        cache = self.path_cache(root_path)
+
+        cache_path = cache_path or path
+        cache = self.path_cache(cache_path)
         if cache is None:
-            raise ValueError('Could not get path cache from %r' % path)
+            raise ValueError("Could not get path cache from {}".format(cache_path))
         
         # Find all the tags.
         to_check = []
@@ -436,49 +438,55 @@ class SGFS(object):
             # tagged the same way. If it is, it was copied, and we should
             # not simply update the cache.
             old_path = cache.get(entity, check_tags=False)
-            if old_path is not None and old_path != path:
-                
-                try:
-                    old_tags = old_tags_by_path[old_path] 
-                except KeyError:
-                    old_tags = old_tags_by_path[old_path] = self.get_directory_entity_tags(old_path, merge_into_session=False)
 
-                was_copied = False
-                for old_tag in old_tags:
-                    old_entity = old_tag['entity']
-                    if old_entity['type'] == entity['type'] and old_entity['id'] == entity['id']:
-                        was_copied = True
-                        break
+            if old_path == path:
+                # Nothing to do!
+                continue
 
-                if was_copied:
-                    log.warning('%s %s was copied from %s to %s; not updating cache' % (
-                        entity['type'], entity['id'], old_path, path,
-                    ))
-                    continue
+            try:
+                old_tags = old_tags_by_path[old_path] if old_path else []
+            except KeyError:
+                old_tags = old_tags_by_path[old_path] = self.get_directory_entity_tags(old_path, merge_into_session=False)
 
-                # Update the tags to reflect their new location.
-                elif not dry_run:
-                    # WARNING: Potential race condition here.
-                    raw_tags = self._read_directory_tags(path)
-                    did_update_tags = False
-                    for raw_tag in raw_tags:
-                        if entity.is_same_entity(raw_tag['entity']):
-                            raw_tag.setdefault('path_history', []).append({
-                                'path': old_path,
-                                'updated_at': datetime.datetime.utcnow()
-                            })
-                            raw_tag['path'] = path
-                            did_update_tags = True
-                    if did_update_tags:
-                        self._write_directory_tags(path, raw_tags, replace=True)
-                    else:
-                        # I want to know about this...
-                        log.error('Tagged paths for %s did not match, but tags not out of date.' % path)
+            was_copied = False
+            for old_tag in old_tags:
+                old_entity = old_tag['entity']
+                if old_entity['type'] == entity['type'] and old_entity['id'] == entity['id']:
+                    was_copied = True
+                    break
 
+            if was_copied:
+                log.warning('%s %s was copied from %s to %s; not updating cache' % (
+                    entity['type'], entity['id'], old_path, path,
+                ))
+                continue
+
+            if verbose:
+                print path
+                print '    was {}'.format(old_path) if old_path else '    did not exist'
+
+            # Update the tags to reflect their new location.
+            elif not dry_run:
+                # WARNING: Potential race condition here.
+                raw_tags = self._read_directory_tags(path)
+                did_update_tags = False
+                for raw_tag in raw_tags:
+                    if entity.is_same_entity(raw_tag['entity']):
+                        raw_tag.setdefault('path_history', []).append({
+                            'path': old_path,
+                            'updated_at': datetime.datetime.utcnow()
+                        })
+                        raw_tag['path'] = path
+                        did_update_tags = True
+                if did_update_tags:
+                    self._write_directory_tags(path, raw_tags, replace=True)
+                else:
+                    # I want to know about this...
+                    log.error('Tagged paths for %s did not match, but tags not out of date.' % path)
 
             # Update the path cache.
             if not dry_run:
-                cache[tag['entity']] = path
+                cache[entity] = path
 
             changed.append((old_path, path, tag))
         
